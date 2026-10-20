@@ -1,0 +1,116 @@
+/* Export panel. Uses the CSS variables from app.css. */
+.export-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.export-group > legend,
+.export-heading {
+  padding: 0;
+  margin: 6px 0 2px;
+  font-weight: 700;
+}
+
+.export-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap, 44px);
+  cursor: pointer;
+}
+
+.export-check input {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.export-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.export-field > span {
+  font-weight: 600;
+}
+
+.export-field input,
+.export-field textarea {
+  width: 100%;
+  min-height: var(--tap, 44px);
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
+.export-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.export-field input:focus,
+.export-field textarea:focus {
+  outline: 3px solid var(--text);
+  outline-offset: 1px;
+}
+
+.export-fields-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.export-fixed-note {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--accent);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.export-thumb {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: #111;
+}
+
+.export-thumb[hidden] {
+  display: none;
+}
+
+.export-notice {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 4px solid var(--accent);
+  background: var(--surface-2);
+  font-size: 0.9rem;
+}
+
+.export-link {
+  align-self: flex-start;
+  min-height: var(--tap, 44px);
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

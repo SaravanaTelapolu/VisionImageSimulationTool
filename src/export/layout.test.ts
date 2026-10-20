@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captionPadFor, labelBandFor, layoutExport, lineHeightFor, MIN_FONT_PX } from './layout';
+import { AUTO_STACK_ASPECT, captionPadFor, labelBandFor, layoutExport, lineHeightFor, MIN_FONT_PX } from './layout';
 
 const portrait = { w: 600, h: 800 };
 const landscape = { w: 800, h: 600 };
@@ -42,7 +42,7 @@ describe('layoutExport', () => {
     expect(l.height).toBe(o.h + l.gap + s.h);
   });
 
-  it('auto: square stacks', () => {
+  it('auto: square images go side by side', () => {
     const l = layoutExport({
       simulated: { w: 500, h: 500 },
       original: { w: 500, h: 500 },
@@ -50,8 +50,22 @@ describe('layoutExport', () => {
       captionLines: 0,
       labels: false,
     });
-    expect(l.width).toBe(500);
-    expect(l.panels[1]!.y).toBeGreaterThan(0);
+    expect(l.height).toBe(500);
+    expect(l.panels[1]!.x).toBeGreaterThan(0);
+    expect(l.panels[1]!.y).toBe(0);
+  });
+
+  it('auto: only clearly landscape images (aspect > 1.15) stack', () => {
+    const at = (w: number, h: number) =>
+      layoutExport({ simulated: { w, h }, original: { w, h }, orientation: 'auto', captionLines: 0, labels: false });
+    // 1.15 exactly and slightly wider than square still sit side by side
+    expect(at(1150, 1000).panels[1]!.x).toBeGreaterThan(0);
+    expect(at(1100, 1000).panels[1]!.x).toBeGreaterThan(0);
+    // just over the threshold stacks
+    const stacked = at(1160, 1000);
+    expect(stacked.panels[1]!.x).toBe(0);
+    expect(stacked.panels[1]!.y).toBeGreaterThan(0);
+    expect(AUTO_STACK_ASPECT).toBe(1.15);
   });
 
   it('explicit orientation overrides auto', () => {
