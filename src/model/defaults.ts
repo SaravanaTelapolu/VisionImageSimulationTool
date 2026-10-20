@@ -23,7 +23,7 @@ export function defaultGlobals(): ProfileGlobals {
   return {
     distortWaveSize: 0.05,
     distortAngle: 30,
-    distortMaxAmplitude: 0.02,
+    distortMaxAmplitude: 0.008,
     ghostOffset: [0.01, 0],
     darkSpotShade: 0,
   };

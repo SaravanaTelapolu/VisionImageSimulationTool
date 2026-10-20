@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { defaultEllipse, newRegion } from '../../../model/defaults';
 import { addRegion, duplicateRegion, moveRegion, removeRegion, setRegionVisible, updateRegion } from '../../../model/ops';
 import type { Region } from '../../../model/types';
-import { activeTab, applyEdit, profile, selectedRegionId } from '../../../state/store';
+import { startPlacing } from '../../../state/edit';
+import { activeTab, applyEdit, image, profile, selectedRegionId } from '../../../state/store';
 import { cleanRegionName, nextRegionName, selectionAfterDelete, shapeLabel } from './helpers';
 import { CopyIcon, DownIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon, UpIcon } from './icons';
 import './regions.css';
@@ -10,9 +11,11 @@ import './regions.css';
 const LONG_PRESS_MS = 550;
 
 function addEllipse(): void {
-  // TODO(W2 placement mode): when src/state/edit.ts exports startPlacing, call
-  // startPlacing('ellipse') here instead so the user taps the photo to place the spot.
-  // Until then the ellipse is added at the fixation point (cx = 0, cy = 0 in profile units).
+  // With a photo loaded the user taps where the spot is; otherwise it lands on the fixation point.
+  if (image.value) {
+    startPlacing('ellipse');
+    return;
+  }
   const region = newRegion(defaultEllipse(), nextRegionName(profile.value, 'ellipse'));
   applyEdit((p) => addRegion(p, region));
   selectedRegionId.value = region.id;
