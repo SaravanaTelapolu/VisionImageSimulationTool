@@ -1,10 +1,13 @@
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Download, type Locator, type Page } from '@playwright/test';
 
 const PHOTO = fileURLToPath(new URL('../fixtures/photo.png', import.meta.url));
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** A screenshot pair counts as changed above this many differing pixels, as unchanged below SAME_PIXELS. */
+const CHANGED_PIXELS = 300;
+const SAME_PIXELS = 1000; // re-composited frames differ by a few dozen anti-aliased pixels (seen on mobile)
 
 /** Collects console errors and uncaught page errors; assert with `expect(errors).toEqual([])`. */
 function watchErrors(page: Page): string[] {
@@ -16,22 +19,53 @@ function watchErrors(page: Page): string[] {
   return errors;
 }
 
-/** Hash of the pixels the user sees in the image area (preview canvas + region outlines). */
-async function viewportHash(page: Page): Promise<string> {
-  const shot = await page.locator('.viewport').screenshot({ animations: 'disabled' });
-  return createHash('sha1').update(shot).digest('hex');
+/** The pixels the user sees in the image area (preview canvas + region outlines), as base64 PNG. */
+async function shot(page: Page): Promise<string> {
+  const png = await page.locator('.viewport').screenshot({ animations: 'disabled' });
+  return png.toString('base64');
 }
 
 /** Waits until the visible image area stops changing (renders are coalesced on animation frames). */
-async function settledHash(page: Page): Promise<string> {
-  let last = await viewportHash(page);
+async function settledShot(page: Page): Promise<string> {
+  let last = await shot(page);
   for (let i = 0; i < 20; i++) {
     await page.waitForTimeout(150);
-    const next = await viewportHash(page);
+    const next = await shot(page);
     if (next === last) return next;
     last = next;
   }
   return last;
+}
+
+/** Number of pixels that differ visibly between two screenshots (decoded inside the page). */
+async function pixelDiff(page: Page, a: string, b: string): Promise<number> {
+  return page.evaluate(
+    async ([x, y]) => {
+      const load = async (b64: string) => {
+        const blob = await (await fetch('data:image/png;base64,' + b64)).blob();
+        const bmp = await createImageBitmap(blob);
+        const c = document.createElement('canvas');
+        c.width = bmp.width;
+        c.height = bmp.height;
+        const ctx = c.getContext('2d')!;
+        ctx.drawImage(bmp, 0, 0);
+        return ctx.getImageData(0, 0, c.width, c.height);
+      };
+      const [ia, ib] = await Promise.all([load(x!), load(y!)]);
+      if (ia.width !== ib.width || ia.height !== ib.height) return Number.MAX_SAFE_INTEGER;
+      let n = 0;
+      for (let i = 0; i < ia.data.length; i += 4) {
+        const d = Math.max(
+          Math.abs(ia.data[i]! - ib.data[i]!),
+          Math.abs(ia.data[i + 1]! - ib.data[i + 1]!),
+          Math.abs(ia.data[i + 2]! - ib.data[i + 2]!),
+        );
+        if (d > 24) n++;
+      }
+      return n;
+    },
+    [a, b] as const,
+  );
 }
 
 function tab(page: Page, name: 'Regions' | 'Effects' | 'Compare' | 'Export'): Locator {
@@ -95,7 +129,7 @@ test('amsler grid: add a spot, blur it, flip, undo and export PNGs', async ({ pa
   await expect(regions.getByText('Spot 1')).toBeVisible();
 
   // Effects -> blur to the maximum (keyboard on the range input).
-  const withSpot = await settledHash(page);
+  const withSpot = await settledShot(page);
   await openTab(page, 'Effects');
   const blur = page.getByRole('slider', { name: 'Blur', exact: true });
   await blur.focus();
@@ -103,26 +137,31 @@ test('amsler grid: add a spot, blur it, flip, undo and export PNGs', async ({ pa
   const max = await blur.getAttribute('max');
   await expect(blur).toHaveValue(max!);
   await expect
-    .poll(async () => settledHash(page), { message: 'the preview should change when blur is raised' })
-    .not.toBe(withSpot);
-  const blurred = await settledHash(page);
+    .poll(async () => pixelDiff(page, withSpot, await settledShot(page)), {
+      message: 'the preview should change when blur is raised',
+    })
+    .toBeGreaterThan(CHANGED_PIXELS);
+  const blurred = await settledShot(page);
   await expectPreviewRunning(page);
 
   // Flip shows the original (no simulation), flipping back restores the blurred preview.
   const flip = page.getByRole('button', { name: /Tap to show (original|simulated)/ });
   await flip.click();
   await expect(page.locator('.badge')).toHaveText('Original');
-  const original = await settledHash(page);
-  expect(original).not.toBe(blurred);
+  const original = await settledShot(page);
+  expect(await pixelDiff(page, original, blurred)).toBeGreaterThan(CHANGED_PIXELS);
   await flip.click();
   await expect(page.locator('.badge')).toHaveCount(0);
-  await expect.poll(async () => settledHash(page)).toBe(blurred);
+  const restored = await settledShot(page);
+  expect(await pixelDiff(page, restored, blurred)).toBeLessThan(SAME_PIXELS);
 
   // Undo: first the blur, then the spot itself.
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   await undo.click();
   await expect(blur).not.toHaveValue(max!);
-  await expect.poll(async () => settledHash(page)).toBe(withSpot);
+  await expect
+    .poll(async () => pixelDiff(page, withSpot, await settledShot(page)))
+    .toBeLessThan(SAME_PIXELS);
   await undo.click();
   await openTab(page, 'Regions');
   await expect(regions).toHaveCount(0);
