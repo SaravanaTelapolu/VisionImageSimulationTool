@@ -22,7 +22,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W2-3 | Regions + Effects panels | Sonnet | running | worktree, started 22:20 |
 | W2-4 | Storage | Sonnet | done | merged |
 | W3-1 | Compare + present | Sonnet | todo | |
-| W3-2 | Profiles + timeline | Sonnet | todo | |
+| W3-2 | Profiles + timeline | Sonnet | running | worktree, started 22:35; timeline takes a renderWithProfile prop so it does not wait for W2-1 |
 | W3-3 | Export panel | Sonnet | todo | |
 | W3-4 | Freehand + brush | Sonnet | todo | |
 | W4-1 | PWA offline | Sonnet | running | worktree, started 22:25 (independent of UI, started early) |
