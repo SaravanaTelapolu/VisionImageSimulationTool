@@ -4,7 +4,10 @@ import { removeRegion, updateShape } from '../../model/ops';
 import type { EllipseShape, ImageFrame, Region, Vec2 } from '../../model/types';
 import { cancelPlacing, placeShapeAt, placingShape } from '../../state/edit';
 import { applyEdit, endEdit, imageFrame, profile, selectedRegionId } from '../../state/store';
+import '../../state/masks'; // starts the mask decode/cache sync
 import type { ViewportInfo } from '../viewport/context';
+import { BrushLayer } from './brush';
+import { FreehandLayer, PathEditor } from './freehand';
 import {
   dragRadius,
   ellipseAxes,
@@ -180,6 +183,9 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       if (active.current.size > 1 || drag.current) return;
+      // Freehand drawing and brush painting handle their own strokes (see FreehandLayer / BrushLayer).
+      const tool = placingShape.peek();
+      if (tool === 'path' || tool === 'brush') return;
       drag.current = {
         id: e.pointerId,
         kind: 'tap',
@@ -191,8 +197,19 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
         grabOffset: 0,
       };
     };
+    // While placing a spot, the fixation crosshair must not swallow the tap: take the press before it does.
+    const onFixationCapture = (e: PointerEvent) => {
+      if (placingShape.peek() !== 'ellipse') return;
+      if (!(e.target instanceof Element) || !e.target.closest('.fixation')) return;
+      e.stopPropagation();
+      onDown(e);
+    };
     root.addEventListener('pointerdown', onDown);
-    return () => root.removeEventListener('pointerdown', onDown);
+    root.addEventListener('pointerdown', onFixationCapture, true);
+    return () => {
+      root.removeEventListener('pointerdown', onDown);
+      root.removeEventListener('pointerdown', onFixationCapture, true);
+    };
   }, [hasFrame]);
 
   // Crosshair cursor while placing.
@@ -299,7 +316,12 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
       {selected && selected.visible && selected.shape.type === 'ellipse' && !placing && (
         <EllipseHandlesView shape={selected.shape} frame={frame} px={px} begin={begin} />
       )}
-      {placing && <PlacingBanner info={info} />}
+      {selected && selected.visible && selected.shape.type === 'path' && !placing && (
+        <PathEditor regionId={selected.id} shape={selected.shape} info={info} />
+      )}
+      <BrushLayer info={info} />
+      <FreehandLayer info={info} />
+      {placing === 'ellipse' && <PlacingBanner info={info} />}
     </g>
   );
 }
