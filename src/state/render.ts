@@ -11,18 +11,26 @@
 // The preview re-renders (coalesced with requestAnimationFrame) whenever the profile, fixation or
 // brush masks change. Effect maps are rebuilt only when regions, fixation or masks change (by
 // reference), and each rebuild makes new arrays so the renderer re-uploads them.
+//
+// Map builds run in a Web Worker (W3-6, src/render/mapWorkerClient.ts) with latest-wins semantics.
+// The first build after an image change is done synchronously (so the first frame is never blank);
+// after that, renders keep using the previous maps while a rebuild is in flight and one more render
+// is scheduled when the new maps arrive. Without a usable worker the builds stay synchronous.
 import { effect, signal, untracked } from '@preact/signals';
 import { centredFrame } from '../model/coords';
 import type { ImageFrame, Profile } from '../model/types';
 import { createRenderer, isWebGL2Supported, scaleRenderParams, type WebGLRenderer } from '../render/createRenderer';
+import { mapSizeFor } from '../render/effectMaps';
+import { createMapBuilder, type MapBuilder } from '../render/mapWorkerClient';
+import type { EffectMaps } from '../render/types';
 import {
   EXPORT_MAP_MAX_SIDE,
   PREVIEW_MAP_MAX_SIDE,
   buildMapsForFrame,
   buildRenderParams,
-  createMapMemo,
   previewSizeFor,
   scaleFrame,
+  type MapMemoInput,
 } from '../ui/preview/math';
 import { maskData } from './masks';
 import { fixation, image, previewCanvas, profile, type PhotoState } from './store';
@@ -53,7 +61,15 @@ interface PreviewSource {
 let renderer: WebGLRenderer | null = null;
 let source: PreviewSource | null = null;
 let rafId = 0;
-const memo = createMapMemo(PREVIEW_MAP_MAX_SIDE);
+
+// Effect-map state of the live preview.
+let builder: MapBuilder | null = null;
+/** Maps the renderer currently uses. */
+let currentMaps: EffectMaps | null = null;
+/** Input of the newest map build requested (finished or in flight). */
+let requested: MapMemoInput | null = null;
+/** Bumped whenever the map state is reset, so results of builds started earlier are dropped. */
+let mapGeneration = 0;
 
 // --- Helpers -------------------------------------------------------------------------------
 
@@ -105,16 +121,73 @@ function ensureRenderer(): WebGLRenderer | null {
   }
 }
 
+function resetMaps(): void {
+  mapGeneration++;
+  currentMaps = null;
+  requested = null;
+}
+
+function sameMapInput(a: MapMemoInput, b: MapMemoInput): boolean {
+  return (
+    a.regions === b.regions &&
+    a.masks === b.masks &&
+    a.fixation.x === b.fixation.x &&
+    a.fixation.y === b.fixation.y &&
+    a.frame.width === b.frame.width &&
+    a.frame.height === b.frame.height
+  );
+}
+
+/**
+ * Maps to render with for `input`. Unchanged input: the current maps. Changed input: with a worker,
+ * start a rebuild and return the previous maps (a render is scheduled when the new ones arrive);
+ * otherwise (no previous maps, or no worker) build now.
+ */
+function mapsFor(input: MapMemoInput): EffectMaps {
+  if (currentMaps && requested && sameMapInput(requested, input)) return currentMaps;
+  const b = (builder ??= createMapBuilder());
+  if (!currentMaps || !b.usesWorker) {
+    const t0 = performance.now();
+    const maps = buildMapsForFrame(input.regions, input.frame, input.masks, PREVIEW_MAP_MAX_SIDE);
+    lastMapMs.value = performance.now() - t0;
+    currentMaps = maps;
+    requested = input;
+    return maps;
+  }
+  requested = input;
+  const gen = mapGeneration;
+  const size = mapSizeFor(input.frame.width, input.frame.height, PREVIEW_MAP_MAX_SIDE);
+  b.build({
+    regions: input.regions,
+    frame: input.frame,
+    mapWidth: size.width,
+    mapHeight: size.height,
+    masks: input.masks,
+  }).then(
+    (maps) => {
+      if (!maps || gen !== mapGeneration) return; // superseded or stale
+      currentMaps = maps;
+      if (b.lastMs !== null) lastMapMs.value = b.lastMs;
+      scheduleRender();
+    },
+    (err) => {
+      console.warn('[preview] Effect-map build failed.', err);
+      if (gen === mapGeneration) requested = null; // try again on the next render
+    },
+  );
+  return currentMaps;
+}
+
 function onContextLost(): void {
   cancelFrame();
-  memo.clear();
+  resetMaps();
   previewStatus.value = 'lost';
   previewCanvas.value = null; // the viewport falls back to the plain image
 }
 
 function onContextRestored(): void {
   if (!renderer || renderer.contextLost || !source) return;
-  memo.clear();
+  resetMaps();
   previewStatus.value = 'ready';
   renderFrame();
   previewCanvas.value = renderer.canvas;
@@ -140,10 +213,8 @@ function renderFrame(): void {
   const prof = profile.peek();
   const fix = fixation.peek();
   const frame = scaleFrame(fix, img, src);
-  const t0 = performance.now();
-  const { maps, built } = memo.get({ regions: prof.regions, fixation: fix, masks: maskData.peek(), frame });
+  const maps = mapsFor({ regions: prof.regions, fixation: fix, masks: maskData.peek(), frame });
   const t1 = performance.now();
-  if (built) lastMapMs.value = t1 - t0;
   r.render(buildRenderParams(prof, frame, maps));
   r.finish(); // wait for the GPU so the timing is real (the frame has to finish anyway)
   lastRenderMs.value = performance.now() - t1;
@@ -152,7 +223,7 @@ function renderFrame(): void {
 
 function setImageSource(img: PhotoState | null): void {
   cancelFrame();
-  memo.clear();
+  resetMaps();
   if (!img) {
     source = null;
     previewCanvas.value = null;
@@ -215,6 +286,9 @@ export function initPreview(): () => void {
     stopImage();
     stopParams();
     cancelFrame();
+    resetMaps();
+    builder?.dispose();
+    builder = null;
     stopEffects = null;
   };
   return stopEffects;
