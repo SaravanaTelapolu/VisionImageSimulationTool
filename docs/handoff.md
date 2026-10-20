@@ -1,6 +1,6 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-20T22:09+05:30
+HEARTBEAT: 2026-10-21T01:28+05:30
 BUILD_STATUS: IN_PROGRESS
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
@@ -22,14 +22,16 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 ## Current state
 
 - Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: W0, W1-A, W1-B, W1-D, W1-E, W1-F, W1-G (merged into develop).
-- Running: W1-C renderer, W2-2 ellipse editing, W2-3 panels, W2-4 storage — each in its own worktree; find them with `git worktree list`.
-- Next: when W1-C lands, merge it and start W2-1 integration (Opus). Then wave 3.
+- Done: W0, all of W1, W2-2, W2-3, W2-4 (merged into develop).
+- Running: W2-1 integration (Opus), W3-4 freehand/brush, W3-2 profiles UI, W4-1 PWA — each in its own worktree (see `git worktree list`; branches named worktree-agent-*).
+- Next: after W2-1 merges → W3-1 compare/present and W3-3 export panel (both build on the src/state/render.ts API), mount ProfilesPanel/TimelineView (W3-2) and InstallPrompt (W4-1) in App, then W4-2 accessibility, W4-3 Playwright smoke, W4-4 Opus review.
 
 ## Known gotchas
 
 - Agent worktrees (`isolation: worktree`) are sometimes created from `main` instead of `develop`. Every agent prompt must start with: "run `git log --oneline -1`; if HEAD is not a descendant of develop, run `git merge --ff-only develop` before `npm ci`".
 - `.claude/worktrees/` is git-ignored; never `git add` it.
+- Usage limits stop every agent at once. An agent with no commits may lose its worktree (auto-cleaned); tell agents to commit early. Resume a stopped agent by messaging it; restart it if its worktree is gone.
+- In bash, never put backticks inside a double-quoted `node -e` script — the shell runs them. Use a script file.
 
 ## Auto-resume set-up (overnight 2026-10-20)
 

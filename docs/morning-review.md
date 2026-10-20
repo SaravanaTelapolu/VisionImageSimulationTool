@@ -23,6 +23,9 @@ Tick or answer inline; the next session reads this file.
 | D9 | Fixation point is per image (view state), not saved in the profile | Profiles stay image-independent; the crosshair defaults to the centre |
 | D10 | Undo keeps 100 steps; a continuous slider drag is one step | Plan asks for ≥ 50 |
 | D11 | +y is down in profile coordinates | Screen convention |
+| D12 | Default max distortion lowered to 0.8% of the shorter side | At 2% the renderer agent found 100% distortion folds lines into a mess |
+| D13 | Full-size export above 4096 px (or the GPU limit) is downscaled, not tiled | Simpler; phone photos are usually around 4000 px. See Q5 |
+| D14 | "Spot" asks you to tap the photo where it goes; without a photo it lands on the crosshair | Faster than dragging from the centre |
 
 ## Questions (answer when convenient; the build continues on the assumption shown)
 
@@ -32,6 +35,11 @@ Tick or answer inline; the next session reads this file.
 | Q2 | Which effects match your right eye? | All effects built; none pre-set |
 | Q3 | Standard viewing distance for comparable snapshots? | 40 cm default, editable |
 | Q4 | Preferred export: PNG or JPEG, captions on or off? | PNG, caption on, side-by-side optional |
+| Q5 | Should exports keep the full resolution of very large photos (> 4096 px) by tiling? | No: downscaled to 4096 px |
+
+## Overnight incidents
+
+- ~22:57–01:20: the Claude usage limit stopped all agents; the build resumed automatically at 01:28.
 
 ## Notes from agents
 
@@ -46,4 +54,8 @@ Choices the agents made, which you may want to change:
   - One finger on the photo is kept for editing; pan and zoom use two fingers (or the mouse on desktop).
   - Moving the crosshair is not an undo step.
   - The bottom sheet pushes the photo up rather than covering it.
+- **Renderer (W1-C):** a blur of N px is a Gaussian with N px standard deviation (like CSS blur). Checked on a desktop GPU only; phone speed is untested.
+- **Panels (W2-3):** effect sliders are grouped Sharpness / Spots / Shape / Tone; feather is disabled for whole-image regions.
+- **Storage (W2-4):** deleting a profile also deletes its saved photo; a new check-up copies the eye map but not the photo.
+- **Editing (W2-2):** tapping overlapping spots cycles through them; arrow keys nudge on desktop.
 - **Calibration (W1-G):** viewing distance is accepted from 10 to 150 cm. The guide has 5 steps; the last one is tips.
