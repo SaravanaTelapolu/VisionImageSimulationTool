@@ -25,7 +25,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W3-2 | Profiles + timeline | Sonnet | todo | |
 | W3-3 | Export panel | Sonnet | todo | |
 | W3-4 | Freehand + brush | Sonnet | todo | |
-| W4-1 | PWA offline | Haiku/Sonnet | todo | |
+| W4-1 | PWA offline | Sonnet | running | worktree, started 22:25 (independent of UI, started early) |
 | W4-2 | Accessibility pass | Sonnet | todo | |
 | W4-3 | Playwright smoke | Sonnet | todo | |
 | W4-4 | Final review | Opus | todo | |
