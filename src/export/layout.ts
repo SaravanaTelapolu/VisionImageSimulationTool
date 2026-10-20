@@ -30,6 +30,8 @@ export interface LayoutOptions {
 }
 
 export const MIN_FONT_PX = 14;
+/** 'auto' stacks the panels only when the image is wider than this (width / height). */
+export const AUTO_STACK_ASPECT = 1.15;
 const FONT_FRACTION = 0.028;
 
 export const lineHeightFor = (fontPx: number): number => Math.round(fontPx * 1.35);
@@ -40,14 +42,15 @@ export const labelBandFor = (fontPx: number): number => Math.round(fontPx * 1.6)
 /**
  * Lays out the export image. The simulated image keeps its own pixel size; the original (if any)
  * is scaled to the same height (horizontal) or width (vertical). The original comes first.
- * 'auto' places portrait images side by side and landscape (or square) images stacked.
+ * 'auto' places portrait and square images (and near-square ones up to aspect 1.15) side by side;
+ * only clearly landscape images (aspect > 1.15) are stacked.
  * Labels sit in a band above each panel (panel.y already includes the band).
  */
 export function layoutExport(opts: LayoutOptions): ExportLayout {
   const sim = opts.simulated;
   const orig = opts.original;
   const horizontal =
-    opts.orientation === 'horizontal' || (opts.orientation === 'auto' && sim.h > sim.w);
+    opts.orientation === 'horizontal' || (opts.orientation === 'auto' && sim.w / sim.h <= AUTO_STACK_ASPECT);
 
   const items: { size: Size; label: string }[] = [];
   if (orig) items.push({ size: orig, label: 'Original' });
