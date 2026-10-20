@@ -28,7 +28,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W3-6 | Effect-map Web Worker (phone performance) | Sonnet | done | merged; worker path not yet run in a browser |
 | W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt mounted by W3-1 |
 | W4-2 | Accessibility + UX pass (incl. two-step share, wipe knob, compare auto-switch) | Sonnet | running | worktree, started 02:01; uses the built-in browser |
-| W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | running | worktree, started 02:05 |
+| W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | running | worktree, started 01:55 |
 | W4-4 | Opus code review → docs/code-review-findings.md | Opus | running | worktree, started 02:01; fixes follow as W5 tasks |
 
 ## Original-plan phases
@@ -46,7 +46,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 
 ## Log (newest first)
 
-- 2026-10-21 02:01 IST — Merged W3-4 (freehand/brush), W3-6 (map worker), W3-3 (export panel), W3-1 (compare/present/wiring). 513 tests, build green. All original phases 0–6 are implemented. Launched W4-2 (a11y/UX), W4-4 (Opus review); W4-3 (e2e) running since 02:05.
+- 2026-10-21 02:01 IST — Merged W3-4 (freehand/brush), W3-6 (map worker), W3-3 (export panel), W3-1 (compare/present/wiring). 513 tests, build green. All original phases 0–6 are implemented. Launched W4-2 (a11y/UX), W4-4 (Opus review); W4-3 (e2e) running since 01:55.
 
 - 2026-10-21 01:45 IST — Merged W4-1 (PWA), W3-2 (profiles UI), W2-1 (integration). 399 tests, build green. Added renderTick signal (354a8b6). Launched W3-1 (compare/present/wiring), W3-3 (export panel), W3-6 (map Web Worker). W3-4 told to fix crosshair-tap-while-placing.
 
