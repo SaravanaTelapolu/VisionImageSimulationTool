@@ -1,6 +1,6 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-20T21:50+05:30
+HEARTBEAT: 2026-10-20T21:47+05:30
 BUILD_STATUS: IN_PROGRESS
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
@@ -25,6 +25,11 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 - Done: W0 (scaffold + contracts + docs), commit a88a281.
 - Running: wave 1 (W1-A … W1-G), each in its own worktree under .claude/worktrees with its own branch. Find them with `git worktree list`; each agent commits with a message starting with its task ID.
 - Next: merge each finished wave-1 branch into develop, then wave 2.
+
+## Known gotchas
+
+- Agent worktrees (`isolation: worktree`) are sometimes created from `main` instead of `develop`. Every agent prompt must start with: "run `git log --oneline -1`; if HEAD is not a descendant of develop, run `git merge --ff-only develop` before `npm ci`".
+- `.claude/worktrees/` is git-ignored; never `git add` it.
 
 ## Auto-resume set-up (overnight 2026-10-20)
 
