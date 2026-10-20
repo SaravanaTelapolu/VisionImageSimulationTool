@@ -17,7 +17,7 @@ Tick or answer inline; the next session reads this file.
 | D3 | All work on local branch `develop`; nothing pushed | Pushing publishes to GitHub; left for you |
 | D4 | Blur strength (0–40 px) is defined at a 768 px shorter side and scaled for other sizes | Same look on preview and full-size export |
 | D5 | Dark-spot shade (grey ↔ black) is one setting per profile, not per region | Keeps shaders simple, like wave size and ghost offset in the plan |
-| D6 | Distortion: per-region strength; wave size, direction and max amplitude (default 2% of shorter side) per profile | Matches the plan's "set once per profile" note |
+| D6 | Distortion: per-region strength; wave size, direction and max amplitude (default 0.8% of shorter side, see D12) per profile | Matches the plan's "set once per profile" note |
 | D7 | Size change applies to ellipse regions only, up to 8 | Plan's uniform-based design |
 | D8 | Effect maps rasterised in TypeScript at ≤ 512 px and upscaled on the GPU | Fast, testable, maps are smooth anyway |
 | D9 | Fixation point is per image (view state), not saved in the profile | Profiles stay image-independent; the crosshair defaults to the centre |
