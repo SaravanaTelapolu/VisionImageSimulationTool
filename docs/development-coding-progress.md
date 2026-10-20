@@ -28,8 +28,12 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W3-6 | Effect-map Web Worker (phone performance) | Sonnet | done | merged; worker path not yet run in a browser |
 | W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt mounted by W3-1 |
 | W4-2 | Accessibility + UX pass (incl. two-step share, wipe knob, compare auto-switch) | Sonnet | running | worktree, started 02:01; uses the built-in browser |
-| W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | running | worktree, started 01:55 |
-| W4-4 | Opus code review → docs/code-review-findings.md | Opus | running | worktree, started 02:01; fixes follow as W5 tasks |
+| W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | done | merged 07198be; 3/3 pass on desktop + mobile projects (swiftshader WebGL) |
+| W4-4 | Opus code review → docs/code-review-findings.md | Opus | done | merged ec94301: 0 critical, 3 high, 5 medium, 11 low |
+| W5-1 | Review H2: fast freehand coverage | Sonnet | running | worktree, started 02:23 |
+| W5-2 | Review H1, H3, M5, L4, L8–L11: render fixes | Opus | running | worktree, started 02:23 |
+| W5-3 | Review M2–M4, L1, L3, L5, L6: state/storage/export fixes | Sonnet | running | worktree, started 02:23 |
+| W5-4 | Rerun e2e after all merges; update tests for two-step share | Orchestrator/Sonnet | todo | |
 
 ## Original-plan phases
 
@@ -45,6 +49,8 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | 7 Offline and polish | PWA done; a11y, e2e, review running |
 
 ## Log (newest first)
+
+- 2026-10-21 02:23 IST — Merged W4-4 review findings and W4-3 e2e tests. Fix wave launched: W5-1 (H2), W5-2 (Opus: H1, H3, M5, L4, L8–L11), W5-3 (M2–M4, L1, L3, L5, L6). W4-2 (still running) also took M1, L2, L7.
 
 - 2026-10-21 02:01 IST — Merged W3-4 (freehand/brush), W3-6 (map worker), W3-3 (export panel), W3-1 (compare/present/wiring). 513 tests, build green. All original phases 0–6 are implemented. Launched W4-2 (a11y/UX), W4-4 (Opus review); W4-3 (e2e) running since 01:55.
 

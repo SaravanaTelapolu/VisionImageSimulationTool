@@ -1,6 +1,6 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-21T02:07+05:30
+HEARTBEAT: 2026-10-21T02:23+05:30
 BUILD_STATUS: IN_PROGRESS
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
@@ -22,9 +22,9 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 ## Current state
 
 - Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: W0–W3 and W4-1. Every feature in F1–F9 is implemented; the app runs with `npm run dev`.
-- Running: W4-2 accessibility/UX, W4-3 Playwright smoke, W4-4 Opus review (writes docs/code-review-findings.md) — each in its own worktree.
-- Next: merge W4-2/W4-3/W4-4 → fix Critical/High review findings (W5 fix tasks, Sonnet; Opus for render maths) → rerun e2e → final docs → BUILD_STATUS: COMPLETE.
+- Done: W0–W3, W4-1, W4-3 (e2e), W4-4 (review: docs/code-review-findings.md). Every feature in F1–F9 is implemented.
+- Running: W4-2 accessibility/UX (+ review M1, L2, L7), W5-1, W5-2, W5-3 review fixes — each in its own worktree.
+- Next: merge W4-2 and W5-* → run `npm run e2e` (Edge, ~3 min) and fix → final docs → BUILD_STATUS: COMPLETE.
 
 ## Known gotchas
 
