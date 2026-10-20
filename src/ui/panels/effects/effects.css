@@ -1,0 +1,70 @@
+.fx-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.fx-prompt {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.fx-link {
+  align-self: flex-start;
+  min-height: var(--tap, 44px);
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.fx-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.fx-name-input {
+  min-height: var(--tap, 44px);
+  padding: 0 10px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg, #000);
+  color: var(--text);
+  font: inherit;
+}
+
+.fx-group {
+  margin: 0 0 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.fx-group-title {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.fx-details {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.fx-summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap, 44px);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fx-details-body {
+  padding-bottom: 8px;
+}
