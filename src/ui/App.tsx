@@ -3,6 +3,7 @@ import { image, photoError, photoLoading, uiTextScale, viewMode } from '../state
 import { PhotoPicker } from './PhotoPicker';
 import { Sheet } from './Sheet';
 import { TopBar } from './TopBar';
+import { RegionOverlay } from './edit/RegionOverlay';
 import { Viewport } from './viewport/Viewport';
 
 const BASE_FONT_PX = 16;
@@ -20,7 +21,7 @@ export function App() {
       <TopBar />
       <div class="workspace">
         <main class="stage">
-          <Viewport />
+          <Viewport overlay={(info) => <RegionOverlay info={info} />} />
           {hasImage && viewMode.value === 'original' && (
             <div class="badge" role="status">
               Original
