@@ -25,7 +25,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W3-2 | Profiles + timeline | Sonnet | done | merged; to mount in App (needs renderWithProfile from W2-1) |
 | W3-3 | Export panel | Sonnet | running | worktree, started 01:45 |
 | W3-4 | Freehand + brush | Sonnet | done | merged 8062c06; touch untested on a real phone |
-| W3-6 | Effect-map Web Worker (phone performance) | Sonnet | running | worktree, started 01:45 |
+| W3-6 | Effect-map Web Worker (phone performance) | Sonnet | done | merged; worker path not yet run in a browser |
 | W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt to be mounted in App after W2-1 |
 | W4-2 | Accessibility pass | Sonnet | todo | |
 | W4-3 | Playwright smoke | Sonnet | todo | |
