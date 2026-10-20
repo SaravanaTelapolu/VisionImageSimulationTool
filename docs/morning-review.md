@@ -26,6 +26,10 @@ Tick or answer inline; the next session reads this file.
 | D12 | Default max distortion lowered to 0.8% of the shorter side | At 2% the renderer agent found 100% distortion folds lines into a mess |
 | D13 | Full-size export above 4096 px (or the GPU limit) is downscaled, not tiled | Simpler; phone photos are usually around 4000 px. See Q5 |
 | D14 | "Spot" asks you to tap the photo where it goes; without a photo it lands on the crosshair | Faster than dragging from the centre |
+| D15 | Profiles get a 5th tab ("Profiles"); the timeline opens from the Compare and Profiles tabs | Easier to find than a menu; still fits at 360 px |
+| D16 | Effect maps are built in a Web Worker | Desktop showed frames close to 30 ms; a phone would miss the 50 ms target |
+| D17 | Side-by-side export: square photos go side by side, only clearly landscape ones stack | Square-on-square stacked was tall and awkward to view |
+| D18 | Test images are picked from the ⋯ menu, the empty screen and the Compare tab | No room in the top bar at 360 px |
 
 ## Questions (answer when convenient; the build continues on the assumption shown)
 
@@ -58,4 +62,7 @@ Choices the agents made, which you may want to change:
 - **Panels (W2-3):** effect sliders are grouped Sharpness / Spots / Shape / Tone; feather is disabled for whole-image regions.
 - **Storage (W2-4):** deleting a profile also deletes its saved photo; a new check-up copies the eye map but not the photo.
 - **Editing (W2-2):** tapping overlapping spots cycles through them; arrow keys nudge on desktop.
+- **Integration (W2-1):** Ctrl+Z / Ctrl+Y undo and redo on desktop; the ⋯ menu shows the render time (Performance) for checking speed on your phone.
+- **Profiles (W3-2):** Amsler is the default timeline picture. Opening a profile also loads its saved photo if you saved one. Delete, and leaving unsaved changes, both need a second tap.
+- **PWA (W4-1):** the app colours are black (#000) for the install splash screen.
 - **Calibration (W1-G):** viewing distance is accepted from 10 to 150 cm. The guide has 5 steps; the last one is tips.

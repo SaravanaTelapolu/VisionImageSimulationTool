@@ -17,14 +17,15 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W1-E | Export composer | Sonnet | done | merged 536ddd9 |
 | W1-F | UI shell | Sonnet | done | merged 4aa6087 (UI not yet seen in a browser) |
 | W1-G | Calibration guide | Sonnet | done | merged b5106f7 (not yet wired into App) |
-| W2-1 | Integration, live preview | Opus | running | worktree; interrupted by usage limit 22:57, resumed 01:28 |
+| W2-1 | Integration, live preview | Opus | done | merged a41a954; verified in browser (desktop + mobile width): live preview, flip, undo/redo, export, context loss |
 | W2-2 | Ellipse editing | Sonnet | done | merged d8919ad; tap-to-place wired in 0822672 |
 | W2-3 | Regions + Effects panels | Sonnet | done | merged (placement-mode TODO for W2-2 hook-up) |
 | W2-4 | Storage | Sonnet | done | merged |
-| W3-1 | Compare + present | Sonnet | todo | |
+| W3-1 | Compare + present + app wiring (Profiles tab, timeline, install prompt) | Sonnet | running | worktree, started 01:45; uses the built-in browser |
 | W3-2 | Profiles + timeline | Sonnet | done | merged; to mount in App (needs renderWithProfile from W2-1) |
-| W3-3 | Export panel | Sonnet | todo | |
+| W3-3 | Export panel | Sonnet | running | worktree, started 01:45 |
 | W3-4 | Freehand + brush | Sonnet | running | first attempt lost to usage limit; restarted 01:29 in a new worktree |
+| W3-6 | Effect-map Web Worker (phone performance) | Sonnet | running | worktree, started 01:45 |
 | W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt to be mounted in App after W2-1 |
 | W4-2 | Accessibility pass | Sonnet | todo | |
 | W4-3 | Playwright smoke | Sonnet | todo | |
@@ -35,15 +36,17 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | Phase | Status |
 | --- | --- |
 | 0 Scaffold and deploy | done locally; deploy deferred to Saravana |
-| 1 Rendering core | renderer done; wiring in W2-1 |
-| 2 Ellipse regions | editing + panels done; wiring in W2-1 |
-| 3 All effects and undo | effects + undo done; wiring in W2-1 |
-| 4 Calibrate, compare, present | todo |
-| 5 Profiles and history | todo |
+| 1 Rendering core | done (needs phone check) |
+| 2 Ellipse regions | done (needs phone check) — first useful version |
+| 3 All effects and undo | done (needs phone check) |
+| 4 Calibrate, compare, present | calibration + test images wired; compare/present running (W3-1) |
+| 5 Profiles and history | storage + profiles UI merged; mounting in W3-1, export panel W3-3 |
 | 6 Freehand and brush | running (W3-4) |
-| 7 Offline and polish | todo |
+| 7 Offline and polish | PWA merged; a11y/smoke/review pending |
 
 ## Log (newest first)
+
+- 2026-10-21 01:45 IST — Merged W4-1 (PWA), W3-2 (profiles UI), W2-1 (integration). 399 tests, build green. Added renderTick signal (354a8b6). Launched W3-1 (compare/present/wiring), W3-3 (export panel), W3-6 (map Web Worker). W3-4 told to fix crosshair-tap-while-placing.
 
 - 2026-10-21 01:28 IST — Usage limit hit at ~22:57 (reset 01:20); all running agents stopped. Resumed W2-1, W3-2, W4-1 in their worktrees; W3-4 had no saved work and was restarted. Lesson: agents should commit early and often.
 - 2026-10-20 22:55 IST — Merged W2-3 (panels), W1-C (renderer), W2-2 (ellipse editing); 344 tests pass, build green. Orchestrator: regions panel now uses tap-to-place; default distortion amplitude lowered 0.02 → 0.008; added shared src/state/masks.ts. Launched W2-1 integration (Opus) and W3-4 freehand/brush.

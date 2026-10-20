@@ -1,6 +1,6 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-21T01:33+05:30
+HEARTBEAT: 2026-10-21T01:45+05:30
 BUILD_STATUS: IN_PROGRESS
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
@@ -22,9 +22,9 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 ## Current state
 
 - Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: W0, all of W1, W2-2, W2-3, W2-4 (merged into develop).
-- Running: W2-1 integration (Opus), W3-4 freehand/brush, W3-2 profiles UI, W4-1 PWA — each in its own worktree (see `git worktree list`; branches named worktree-agent-*).
-- Next: after W2-1 merges → W3-1 compare/present and W3-3 export panel (both build on the src/state/render.ts API), mount ProfilesPanel/TimelineView (W3-2) and InstallPrompt (W4-1) in App, then W4-2 accessibility, W4-3 Playwright smoke, W4-4 Opus review.
+- Done: W0, W1, W2 (all), W3-2, W4-1 — the app runs with a live preview (`npm run dev`).
+- Running: W3-1 compare/present/wiring, W3-3 export panel, W3-4 freehand/brush, W3-6 map worker — each in its own worktree (`git worktree list`, branches worktree-agent-*).
+- Next: merge wave 3 → W4-2 accessibility pass, W4-3 Playwright smoke test, W4-4 Opus final review → set BUILD_STATUS: COMPLETE.
 
 ## Known gotchas
 
