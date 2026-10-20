@@ -21,15 +21,15 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W2-2 | Ellipse editing | Sonnet | done | merged d8919ad; tap-to-place wired in 0822672 |
 | W2-3 | Regions + Effects panels | Sonnet | done | merged (placement-mode TODO for W2-2 hook-up) |
 | W2-4 | Storage | Sonnet | done | merged |
-| W3-1 | Compare + present + app wiring (Profiles tab, timeline, install prompt) | Sonnet | running | worktree, started 01:45; uses the built-in browser |
-| W3-2 | Profiles + timeline | Sonnet | done | merged; to mount in App (needs renderWithProfile from W2-1) |
+| W3-1 | Compare + present + app wiring (Profiles tab, timeline, install prompt) | Sonnet | done | merged f2302c5; verified in browser (wipe, side by side, present, profiles, timeline, 360 px) |
+| W3-2 | Profiles + timeline | Sonnet | done | merged; mounted by W3-1 |
 | W3-3 | Export panel | Sonnet | done | merged; share sheet untested on a phone |
 | W3-4 | Freehand + brush | Sonnet | done | merged 8062c06; touch untested on a real phone |
 | W3-6 | Effect-map Web Worker (phone performance) | Sonnet | done | merged; worker path not yet run in a browser |
-| W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt to be mounted in App after W2-1 |
-| W4-2 | Accessibility pass | Sonnet | todo | |
-| W4-3 | Playwright smoke | Sonnet | todo | |
-| W4-4 | Final review | Opus | todo | |
+| W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt mounted by W3-1 |
+| W4-2 | Accessibility + UX pass (incl. two-step share, wipe knob, compare auto-switch) | Sonnet | running | worktree, started 02:01; uses the built-in browser |
+| W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | running | worktree, started 02:05 |
+| W4-4 | Opus code review → docs/code-review-findings.md | Opus | running | worktree, started 02:01; fixes follow as W5 tasks |
 
 ## Original-plan phases
 
@@ -39,12 +39,14 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | 1 Rendering core | done (needs phone check) |
 | 2 Ellipse regions | done (needs phone check) — first useful version |
 | 3 All effects and undo | done (needs phone check) |
-| 4 Calibrate, compare, present | calibration + test images wired; compare/present running (W3-1) |
-| 5 Profiles and history | storage + profiles UI merged; mounting in W3-1, export panel W3-3 |
+| 4 Calibrate, compare, present | done (needs phone check) |
+| 5 Profiles and history | done (needs phone check) |
 | 6 Freehand and brush | done (needs phone check) |
-| 7 Offline and polish | PWA merged; a11y/smoke/review pending |
+| 7 Offline and polish | PWA done; a11y, e2e, review running |
 
 ## Log (newest first)
+
+- 2026-10-21 02:01 IST — Merged W3-4 (freehand/brush), W3-6 (map worker), W3-3 (export panel), W3-1 (compare/present/wiring). 513 tests, build green. All original phases 0–6 are implemented. Launched W4-2 (a11y/UX), W4-4 (Opus review); W4-3 (e2e) running since 02:05.
 
 - 2026-10-21 01:45 IST — Merged W4-1 (PWA), W3-2 (profiles UI), W2-1 (integration). 399 tests, build green. Added renderTick signal (354a8b6). Launched W3-1 (compare/present/wiring), W3-3 (export panel), W3-6 (map Web Worker). W3-4 told to fix crosshair-tap-while-placing.
 

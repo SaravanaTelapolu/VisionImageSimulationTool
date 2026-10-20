@@ -30,6 +30,9 @@ Tick or answer inline; the next session reads this file.
 | D16 | Effect maps are built in a Web Worker | Desktop showed frames close to 30 ms; a phone would miss the 50 ms target |
 | D17 | Side-by-side export: square photos go side by side, only clearly landscape ones stack | Square-on-square stacked was tall and awkward to view |
 | D18 | Test images are picked from the ⋯ menu, the empty screen and the Compare tab | No room in the top bar at 360 px |
+| D19 | Sharing is two steps: "Prepare images", then "Share" | Android only opens the share sheet straight after a tap; rendering can take seconds |
+| D20 | Present mode keeps the screen on while open, where the browser allows it | So the screen doesn't dim while the doctor looks |
+| D21 | Side-by-side compare is view-only; editing switches back to Single | It replaces the editable view |
 
 ## Questions (answer when convenient; the build continues on the assumption shown)
 
@@ -65,4 +68,7 @@ Choices the agents made, which you may want to change:
 - **Integration (W2-1):** Ctrl+Z / Ctrl+Y undo and redo on desktop; the ⋯ menu shows the render time (Performance) for checking speed on your phone.
 - **Profiles (W3-2):** Amsler is the default timeline picture. Opening a profile also loads its saved photo if you saved one. Delete, and leaving unsaved changes, both need a second tap.
 - **PWA (W4-1):** the app colours are black (#000) for the install splash screen.
+- **Freehand/brush (W3-4):** brush size is 1–30 % of the shorter side; a second finger cancels the current stroke. Freehand and Brush need a photo first.
+- **Export (W3-3):** the caption and labels go on the Simulated and Side-by-side files; the Original file stays clean. Side-by-side is capped at 2048 px on the long side.
+- **Compare (W3-1):** with no photo loaded, the timeline uses the Amsler grid.
 - **Calibration (W1-G):** viewing distance is accepted from 10 to 150 cm. The guide has 5 steps; the last one is tips.
