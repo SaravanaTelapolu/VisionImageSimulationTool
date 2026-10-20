@@ -18,9 +18,9 @@ export interface PhotoState {
 }
 
 export type ViewMode = 'simulated' | 'original';
-export type TabId = 'regions' | 'effects' | 'compare' | 'export';
+export type TabId = 'regions' | 'effects' | 'compare' | 'export' | 'profiles';
 
-export const TAB_IDS: readonly TabId[] = ['regions', 'effects', 'compare', 'export'];
+export const TAB_IDS: readonly TabId[] = ['regions', 'effects', 'compare', 'export', 'profiles'];
 
 export const UI_TEXT_SCALE_MIN = 0.85;
 export const UI_TEXT_SCALE_MAX = 1.5;

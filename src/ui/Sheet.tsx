@@ -5,20 +5,17 @@ import { ChevronUpIcon } from './icons';
 import { ComparePanel } from './panels/compare/Panel';
 import { EffectsPanel } from './panels/effects/Panel';
 import { ExportPanel } from './panels/export/Panel';
+import { ProfilesPanel } from './panels/profiles';
 import { RegionsPanel } from './panels/regions/Panel';
+import { TAB_LABELS } from './tabs';
+import { TabIcon } from './tabIcons';
+import { openTimeline } from '../state/ui';
 
 type Snap = 'collapsed' | 'half' | 'full';
 const SNAPS: readonly Snap[] = ['collapsed', 'half', 'full'];
 
 /** Bottom-sheet height on phones. Ignored at >= 900 px, where the sheet is a sidebar. */
 export const sheetSnap = signal<Snap>('half');
-
-const TAB_LABELS: Record<TabId, string> = {
-  regions: 'Regions',
-  effects: 'Effects',
-  compare: 'Compare',
-  export: 'Export',
-};
 
 function step(delta: number): void {
   const i = SNAPS.indexOf(sheetSnap.value) + delta;
@@ -36,6 +33,8 @@ function Panel({ tab }: { tab: TabId }) {
       return <ComparePanel />;
     case 'export':
       return <ExportPanel />;
+    case 'profiles':
+      return <ProfilesPanel onOpenTimeline={openTimeline} />;
   }
 }
 
@@ -98,7 +97,8 @@ export function Sheet() {
               tabIndex={tab === t ? 0 : -1}
               onClick={() => selectTab(t)}
             >
-              {TAB_LABELS[t]}
+              <TabIcon tab={t} />
+              <span class="tab-label">{TAB_LABELS[t]}</span>
             </button>
           ))}
         </div>

@@ -1,0 +1,108 @@
+/* Full-screen presentation mode. Black background, the picture fills the screen. */
+
+.present {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+.present-pic {
+  position: absolute;
+}
+
+.present-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.present-badge {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+  font-size: clamp(1.4rem, 5vw, 2.6rem);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.present-warn {
+  position: absolute;
+  top: 70px;
+  left: 12px;
+  right: 12px;
+  margin: 0;
+  text-align: center;
+  color: #ffd54a;
+  pointer-events: none;
+}
+
+.present-buttons {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  cursor: default;
+}
+
+.present-btn {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.present-btn[aria-pressed='true'] {
+  background: #ffd54a;
+  border-color: #ffd54a;
+  color: #000;
+}
+
+.present-btn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.present-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  justify-content: center;
+  padding: 6px max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  background: rgba(0, 0, 0, 0.55);
+  color: #e6e6ee;
+  font-size: 0.8rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.present-hint {
+  color: #9a9aa8;
+}

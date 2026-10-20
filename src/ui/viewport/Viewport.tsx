@@ -1,8 +1,12 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { image, previewCanvas, viewMode } from '../../state/store';
+import { compareMode, wipePos } from '../../state/ui';
+import { clampWipe, clipLeft } from '../panels/compare/logic';
 import { ViewportContext, type ViewportInfo } from './context';
 import { FixationCrosshair } from './FixationCrosshair';
+import { WipeDivider } from './WipeDivider';
+import '../panels/compare/compare.css';
 import {
   clampView,
   fitView,
@@ -40,7 +44,10 @@ function dist(a: Point, b: Point): number {
 export function Viewport({ overlay }: ViewportProps) {
   const img = image.value;
   const preview = previewCanvas.value;
-  const showPreview = preview !== null && viewMode.value === 'simulated';
+  const wipe = compareMode.value === 'wipe';
+  // In wipe mode the original is always drawn underneath and the simulated layer is clipped over it.
+  const showPreview = preview !== null && (wipe || viewMode.value === 'simulated');
+  const showOriginal = !showPreview || wipe;
 
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -214,6 +221,9 @@ export function Viewport({ overlay }: ViewportProps) {
   }, [img, box, view]);
 
   const scale = info?.scale ?? 1;
+  const pos = clampWipe(wipePos.value);
+  const previewClip =
+    wipe && img ? `inset(0 0 0 ${clipLeft(pos, box.width, view.tx, scale, img.width)}px)` : undefined;
   const contentStyle = img
     ? {
         width: `${img.width}px`,
@@ -230,14 +240,14 @@ export function Viewport({ overlay }: ViewportProps) {
             <canvas
               ref={canvasRef}
               class="viewport-canvas"
-              style={{ display: showPreview ? 'none' : 'block' }}
+              style={{ display: showOriginal ? 'block' : 'none' }}
               role="img"
               aria-label={`Photo: ${img.name}`}
             />
             <div
               ref={hostRef}
               class="viewport-preview"
-              style={{ display: showPreview ? 'block' : 'none' }}
+              style={{ display: showPreview ? 'block' : 'none', clipPath: previewClip }}
             />
           </div>
           {info && (
@@ -252,6 +262,9 @@ export function Viewport({ overlay }: ViewportProps) {
                 {overlay?.(info)}
               </ViewportContext.Provider>
             </svg>
+          )}
+          {wipe && box.width > 0 && (
+            <WipeDivider pos={pos} width={box.width} onChange={(p) => (wipePos.value = clampWipe(p))} />
           )}
         </>
       )}

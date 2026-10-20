@@ -15,11 +15,16 @@ import {
   undo,
   viewMode,
 } from '../state/store';
-import { calibrationOpen, closeCalibration, openCalibration } from '../state/ui';
+import { restoreLastProfile } from '../state/profiles';
+import { calibrationOpen, closeCalibration, compareMode, openCalibration, presentOpen, timelineOpen } from '../state/ui';
+import { InstallPrompt } from '../pwa';
 import { CalibrationGuide } from './calibration/CalibrationGuide';
 import { PhotoPicker, TestImagePicker } from './PhotoPicker';
 import { PreviewNotice } from './preview/PreviewNotice';
+import { SideBySide } from './panels/compare/SideBySide';
+import { PresentMode } from './present/PresentMode';
 import { Sheet } from './Sheet';
+import { TimelineHost } from './TimelineHost';
 import { TopBar } from './TopBar';
 import { RegionOverlay } from './edit/RegionOverlay';
 import { Viewport } from './viewport/Viewport';
@@ -60,6 +65,9 @@ function Calibration() {
         applyEdit((q) => (q.viewingDistanceCm === cm ? q : { ...q, viewingDistanceCm: cm }), 'calibration-distance')
       }
       onFlip={flipView}
+      onChooseTestImage={(kind) => {
+        if (kind === 'amsler') void loadTestImage('amsler');
+      }}
       onNote={(text) => applyEdit((q) => (q.note === text ? q : { ...q, note: text }), 'calibration-note')}
       onFinish={() => {
         endEdit();
@@ -87,15 +95,26 @@ export function App() {
     return () => window.removeEventListener('keydown', onShortcut);
   }, []);
 
+  // Reopen the profile used last time, after the first paint so it never delays the UI.
+  useEffect(() => {
+    const t = window.setTimeout(() => void restoreLastProfile(), 0);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const hasImage = image.value !== null;
+  const mode = compareMode.value;
 
   return (
     <div class="app">
       <TopBar />
       <div class="workspace">
         <main class="stage">
-          <Viewport overlay={(info) => <RegionOverlay info={info} />} />
-          {hasImage && viewMode.value === 'original' && (
+          {mode === 'side' ? (
+            <SideBySide />
+          ) : (
+            <Viewport overlay={(info) => <RegionOverlay info={info} />} />
+          )}
+          {hasImage && mode === 'single' && viewMode.value === 'original' && (
             <div class="badge" role="status">
               Original
             </div>
@@ -131,6 +150,9 @@ export function App() {
       </div>
       <footer class="footer">My own approximation — not a clinical measurement.</footer>
       <Calibration />
+      {timelineOpen.value && <TimelineHost />}
+      {presentOpen.value && <PresentMode />}
+      <InstallPrompt />
     </div>
   );
 }
