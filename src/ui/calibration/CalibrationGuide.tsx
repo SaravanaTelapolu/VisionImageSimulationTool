@@ -29,6 +29,8 @@ export interface CalibrationGuideProps {
   onDistanceChange: (cm: number) => void;
   /** Toggle between original and simulated views. */
   onFlip: () => void;
+  /** The user picked the built-in Amsler grid or "a familiar photo" as the test image. */
+  onChooseTestImage?: (kind: 'amsler' | 'photo') => void;
   /** Called with the user's notes about what looks wrong. */
   onNote: (text: string) => void;
   /** User is ready to adjust regions and effects. */
@@ -146,7 +148,10 @@ export function CalibrationGuide(props: CalibrationGuideProps) {
     onNote(text);
   };
 
-  const setImage = (image: TestImage) => dispatch({ type: 'setImage', image });
+  const setImage = (image: TestImage) => {
+    dispatch({ type: 'setImage', image });
+    props.onChooseTestImage?.(image);
+  };
 
   let body;
   switch (id) {
