@@ -25,7 +25,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W3-2 | Profiles + timeline | Sonnet | running | worktree; interrupted 22:57, resumed 01:28 (timeline takes a renderWithProfile prop) |
 | W3-3 | Export panel | Sonnet | todo | |
 | W3-4 | Freehand + brush | Sonnet | running | first attempt lost to usage limit; restarted 01:29 in a new worktree |
-| W4-1 | PWA offline | Sonnet | running | worktree commit f2ea8bd; interrupted 22:57, resumed 01:28 to verify |
+| W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt to be mounted in App after W2-1 |
 | W4-2 | Accessibility pass | Sonnet | todo | |
 | W4-3 | Playwright smoke | Sonnet | todo | |
 | W4-4 | Final review | Opus | todo | |
