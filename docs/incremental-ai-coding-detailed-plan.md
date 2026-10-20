@@ -34,7 +34,7 @@ Runs on: Android Chrome (primary), desktop Chrome/Edge (install as app), iOS Saf
 2. Unit tests for all maths and data code, next to the code as `*.test.ts`.
 3. `npm run typecheck` and `npm test` must pass before you finish; `npm run build` too for UI tasks.
 4. Never ask questions; choose, and list assumptions/questions in your final report (the orchestrator copies them to morning-review.md).
-5. In a worktree: run `npm ci` first, commit your work to your branch with a clear message. In the main checkout: do not commit.
+5. In a worktree: first make sure HEAD contains `develop` (`git merge --ff-only develop` if not), then run `npm ci`, commit your work to your branch with a clear message. In the main checkout: do not commit.
 6. Final report: files changed, what works, what is stubbed, test/build results, assumptions, questions.
 
 ## Model tiers

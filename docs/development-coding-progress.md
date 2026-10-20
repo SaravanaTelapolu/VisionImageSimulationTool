@@ -10,17 +10,17 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | --- | --- | --- | --- | --- |
 | W0-1 | Contracts, docs, CLAUDE.md | Orchestrator | done | develop a88a281 |
 | W0-2 | Scaffold + photo load | Sonnet | done | develop a88a281 |
-| W1-A | Model ops, validation, undo | Sonnet | running | worktree, started 21:50 |
-| W1-B | Effect-map builder | Sonnet | running | worktree, started 21:50 |
-| W1-C | WebGL2 renderer | Opus | running | worktree, started 21:50 |
-| W1-D | Test images | Haiku | running | worktree, started 21:50 |
-| W1-E | Export composer | Sonnet | running | worktree, started 21:50 |
-| W1-F | UI shell | Sonnet | running | worktree, started 21:50 |
-| W1-G | Calibration guide | Sonnet | running | worktree, started 21:50 |
-| W2-1 | Integration, live preview | Opus | todo | |
-| W2-2 | Ellipse editing | Sonnet | todo | |
-| W2-3 | Regions + Effects panels | Sonnet | todo | |
-| W2-4 | Storage | Sonnet | todo | |
+| W1-A | Model ops, validation, undo | Sonnet | done | merged 6496be0 |
+| W1-B | Effect-map builder | Sonnet | done | merged 232dfd5 (~17 ms for 8 ellipses at 512 px on this PC) |
+| W1-C | WebGL2 renderer | Opus | running | worktree, started 21:45 |
+| W1-D | Test images | Haiku | done | merged 605d20a |
+| W1-E | Export composer | Sonnet | done | merged 536ddd9 |
+| W1-F | UI shell | Sonnet | done | merged 4aa6087 (UI not yet seen in a browser) |
+| W1-G | Calibration guide | Sonnet | done | merged b5106f7 (not yet wired into App) |
+| W2-1 | Integration, live preview | Opus | todo | waits for W1-C |
+| W2-2 | Ellipse editing | Sonnet | running | worktree, started 22:20 |
+| W2-3 | Regions + Effects panels | Sonnet | running | worktree, started 22:20 |
+| W2-4 | Storage | Sonnet | running | worktree, started 22:20 |
 | W3-1 | Compare + present | Sonnet | todo | |
 | W3-2 | Profiles + timeline | Sonnet | todo | |
 | W3-3 | Export panel | Sonnet | todo | |
@@ -44,6 +44,8 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | 7 Offline and polish | todo |
 
 ## Log (newest first)
+
+- 2026-10-20 22:20 IST — Merged W1-A, W1-B, W1-D, W1-E, W1-F, W1-G into develop: typecheck + build green, 230 tests pass. Re-ran `npm ci` in the main checkout (two agents' early `npm ci` ran there and damaged node_modules). Launched W2-2, W2-3, W2-4. W1-C (renderer) still running.
 
 - 2026-10-20 21:50 IST — Scaffold verified (typecheck, 7 tests, build) and committed a88a281. Wave 1 launched: W1-A..W1-G, each in its own git worktree (.claude/worktrees). W1-C uses the built-in browser for its harness.
 

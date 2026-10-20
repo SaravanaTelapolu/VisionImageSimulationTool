@@ -1,6 +1,6 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-20T21:47+05:30
+HEARTBEAT: 2026-10-20T21:58+05:30
 BUILD_STATUS: IN_PROGRESS
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
@@ -22,9 +22,9 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 ## Current state
 
 - Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: W0 (scaffold + contracts + docs), commit a88a281.
-- Running: wave 1 (W1-A … W1-G), each in its own worktree under .claude/worktrees with its own branch. Find them with `git worktree list`; each agent commits with a message starting with its task ID.
-- Next: merge each finished wave-1 branch into develop, then wave 2.
+- Done: W0, W1-A, W1-B, W1-D, W1-E, W1-F, W1-G (merged into develop).
+- Running: W1-C renderer, W2-2 ellipse editing, W2-3 panels, W2-4 storage — each in its own worktree; find them with `git worktree list`.
+- Next: when W1-C lands, merge it and start W2-1 integration (Opus). Then wave 3.
 
 ## Known gotchas
 

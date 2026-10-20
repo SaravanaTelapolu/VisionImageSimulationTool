@@ -35,4 +35,15 @@ Tick or answer inline; the next session reads this file.
 
 ## Notes from agents
 
-(Appended as agents report.)
+Choices the agents made, which you may want to change:
+
+- **Model (W1-A):** profiles from future app versions are rejected; out-of-range values are clamped with a warning on import.
+- **Effect maps (W1-B):** painting a mask ignores the feather slider (the brush itself is soft).
+- **Export (W1-E):**
+  - Side-by-side puts the original first. Portrait photos go side by side, landscape photos are stacked.
+  - The caption always ends with "My own approximation — not a clinical measurement."
+- **UI shell (W1-F):**
+  - One finger on the photo is kept for editing; pan and zoom use two fingers (or the mouse on desktop).
+  - Moving the crosshair is not an undo step.
+  - The bottom sheet pushes the photo up rather than covering it.
+- **Calibration (W1-G):** viewing distance is accepted from 10 to 150 cm. The guide has 5 steps; the last one is tips.
