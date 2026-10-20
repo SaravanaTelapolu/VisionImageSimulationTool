@@ -22,7 +22,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W2-3 | Regions + Effects panels | Sonnet | done | merged (placement-mode TODO for W2-2 hook-up) |
 | W2-4 | Storage | Sonnet | done | merged |
 | W3-1 | Compare + present | Sonnet | todo | |
-| W3-2 | Profiles + timeline | Sonnet | running | worktree; interrupted 22:57, resumed 01:28 (timeline takes a renderWithProfile prop) |
+| W3-2 | Profiles + timeline | Sonnet | done | merged; to mount in App (needs renderWithProfile from W2-1) |
 | W3-3 | Export panel | Sonnet | todo | |
 | W3-4 | Freehand + brush | Sonnet | running | first attempt lost to usage limit; restarted 01:29 in a new worktree |
 | W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt to be mounted in App after W2-1 |
