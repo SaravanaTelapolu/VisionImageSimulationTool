@@ -20,7 +20,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W2-1 | Integration, live preview | Opus | todo | waits for W1-C |
 | W2-2 | Ellipse editing | Sonnet | running | worktree, started 22:20 |
 | W2-3 | Regions + Effects panels | Sonnet | running | worktree, started 22:20 |
-| W2-4 | Storage | Sonnet | running | worktree, started 22:20 |
+| W2-4 | Storage | Sonnet | done | merged |
 | W3-1 | Compare + present | Sonnet | todo | |
 | W3-2 | Profiles + timeline | Sonnet | todo | |
 | W3-3 | Export panel | Sonnet | todo | |
