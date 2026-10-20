@@ -1,5 +1,40 @@
-import { loadPhoto } from '../state/store';
+import { testImages } from '../assets/testImages';
+import { loadPhoto, loadTestImage } from '../state/store';
 import { CameraIcon, PhotoIcon } from './icons';
+
+interface TestImagePickerProps {
+  /** 'cta' = large button-like select (empty state); 'menu' = full-width row in the ⋯ menu. */
+  variant: 'cta' | 'menu';
+  /** Called after an image was chosen (for example to close a menu). */
+  onPicked?: () => void;
+}
+
+/** A native select listing the built-in test images (Amsler grid, reading text, ...). */
+export function TestImagePicker({ variant, onPicked }: TestImagePickerProps) {
+  const onChange = (e: Event) => {
+    const select = e.currentTarget as HTMLSelectElement;
+    const id = select.value;
+    select.value = '';
+    if (!id) return;
+    void loadTestImage(id);
+    onPicked?.();
+  };
+  return (
+    <label class={variant === 'cta' ? 'btn btn-cta btn-secondary test-picker' : 'test-picker test-picker-menu'}>
+      <span>Test image</span>
+      <select aria-label="Load a test image" value="" onChange={onChange}>
+        <option value="" disabled>
+          Choose a test image…
+        </option>
+        {testImages.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 interface Props {
   /** 'camera' opens the camera directly on phones. */

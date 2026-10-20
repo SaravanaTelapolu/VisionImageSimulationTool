@@ -12,8 +12,10 @@ import {
   undo,
   viewMode,
 } from '../state/store';
+import { openCalibration } from '../state/ui';
 import { FlipIcon, MoreIcon, RedoIcon, UndoIcon } from './icons';
-import { PhotoPicker } from './PhotoPicker';
+import { PhotoPicker, TestImagePicker } from './PhotoPicker';
+import { PerformanceLine } from './preview/PreviewNotice';
 
 const TEXT_STEP = 0.1;
 
@@ -51,7 +53,7 @@ function MoreMenu() {
         <MoreIcon />
       </button>
       {open && (
-        <div class="menu" role="group" aria-label="Display options">
+        <div class="menu" role="group" aria-label="More options">
           <span class="menu-label" id="text-size-label">
             Text size
           </span>
@@ -78,6 +80,20 @@ function MoreMenu() {
               <span aria-hidden="true">A+</span>
             </button>
           </div>
+          <div class="menu-sep" />
+          <TestImagePicker variant="menu" onPicked={() => setOpen(false)} />
+          <button
+            type="button"
+            class="menu-item"
+            onClick={() => {
+              setOpen(false);
+              openCalibration();
+            }}
+          >
+            Calibration guide
+          </button>
+          <div class="menu-sep" />
+          <PerformanceLine />
         </div>
       )}
     </div>
