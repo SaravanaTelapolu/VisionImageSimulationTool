@@ -197,8 +197,19 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
         grabOffset: 0,
       };
     };
+    // While placing a spot, the fixation crosshair must not swallow the tap: take the press before it does.
+    const onFixationCapture = (e: PointerEvent) => {
+      if (placingShape.peek() !== 'ellipse') return;
+      if (!(e.target instanceof Element) || !e.target.closest('.fixation')) return;
+      e.stopPropagation();
+      onDown(e);
+    };
     root.addEventListener('pointerdown', onDown);
-    return () => root.removeEventListener('pointerdown', onDown);
+    root.addEventListener('pointerdown', onFixationCapture, true);
+    return () => {
+      root.removeEventListener('pointerdown', onDown);
+      root.removeEventListener('pointerdown', onFixationCapture, true);
+    };
   }, [hasFrame]);
 
   // Crosshair cursor while placing.

@@ -82,8 +82,11 @@ export function useStrokeInput(
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       if (id !== null || activePointers.size > 1) return;
       const target = e.target;
-      if (target instanceof Element && target.closest('svg')) return;
-      if (e.pointerType !== 'touch') e.stopPropagation();
+      // Overlay content (handles, banner) keeps its own presses; the fixation crosshair does not:
+      // while a tool is on, a press there belongs to the tool.
+      const onCrosshair = target instanceof Element && target.closest('.fixation') !== null;
+      if (target instanceof Element && !onCrosshair && target.closest('svg')) return;
+      if (e.pointerType !== 'touch' || onCrosshair) e.stopPropagation();
       id = e.pointerId;
       h.current.start(toImage(e));
     };
