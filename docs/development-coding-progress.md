@@ -24,7 +24,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W3-1 | Compare + present + app wiring (Profiles tab, timeline, install prompt) | Sonnet | running | worktree, started 01:45; uses the built-in browser |
 | W3-2 | Profiles + timeline | Sonnet | done | merged; to mount in App (needs renderWithProfile from W2-1) |
 | W3-3 | Export panel | Sonnet | running | worktree, started 01:45 |
-| W3-4 | Freehand + brush | Sonnet | running | first attempt lost to usage limit; restarted 01:29 in a new worktree |
+| W3-4 | Freehand + brush | Sonnet | done | merged 8062c06; touch untested on a real phone |
 | W3-6 | Effect-map Web Worker (phone performance) | Sonnet | running | worktree, started 01:45 |
 | W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt to be mounted in App after W2-1 |
 | W4-2 | Accessibility pass | Sonnet | todo | |
@@ -41,7 +41,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | 3 All effects and undo | done (needs phone check) |
 | 4 Calibrate, compare, present | calibration + test images wired; compare/present running (W3-1) |
 | 5 Profiles and history | storage + profiles UI merged; mounting in W3-1, export panel W3-3 |
-| 6 Freehand and brush | running (W3-4) |
+| 6 Freehand and brush | done (needs phone check) |
 | 7 Offline and polish | PWA merged; a11y/smoke/review pending |
 
 ## Log (newest first)
