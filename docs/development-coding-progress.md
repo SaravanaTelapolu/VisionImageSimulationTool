@@ -19,7 +19,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W1-G | Calibration guide | Sonnet | done | merged b5106f7 (not yet wired into App) |
 | W2-1 | Integration, live preview | Opus | todo | waits for W1-C |
 | W2-2 | Ellipse editing | Sonnet | running | worktree, started 22:20 |
-| W2-3 | Regions + Effects panels | Sonnet | running | worktree, started 22:20 |
+| W2-3 | Regions + Effects panels | Sonnet | done | merged (placement-mode TODO for W2-2 hook-up) |
 | W2-4 | Storage | Sonnet | done | merged |
 | W3-1 | Compare + present | Sonnet | todo | |
 | W3-2 | Profiles + timeline | Sonnet | running | worktree, started 22:35; timeline takes a renderWithProfile prop so it does not wait for W2-1 |
