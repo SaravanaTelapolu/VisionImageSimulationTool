@@ -35,6 +35,8 @@ export const previewStatus = signal<PreviewStatus>('idle');
 export const lastRenderMs = signal<number | null>(null);
 /** Last effect-map build time for the live preview, ms (only updated when maps are rebuilt). */
 export const lastMapMs = signal<number | null>(null);
+/** Increments after every live-preview render; subscribe to copy the simulated canvas (e.g. side-by-side view). */
+export const renderTick = signal(0);
 
 export const WEBGL_UNSUPPORTED_MESSAGE =
   'This browser cannot run the simulation (WebGL2 is not available). Showing the original photo.';
@@ -145,6 +147,7 @@ function renderFrame(): void {
   r.render(buildRenderParams(prof, frame, maps));
   r.finish(); // wait for the GPU so the timing is real (the frame has to finish anyway)
   lastRenderMs.value = performance.now() - t1;
+  renderTick.value++;
 }
 
 function setImageSource(img: PhotoState | null): void {
