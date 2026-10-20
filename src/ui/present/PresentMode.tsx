@@ -6,6 +6,7 @@ import { clampWipe, clipLeft } from '../panels/compare/logic';
 import { useOriginalCopy, useSimulatedCopy } from '../panels/compare/useCopies';
 import { fitView, viewScale, type Size } from '../viewport/transform';
 import { WipeDivider } from '../viewport/WipeDivider';
+import { useDialog } from '../dialogFocus';
 import { releaseWakeLock, requestWakeLock, type WakeLockHandle } from './wakeLock';
 import './present.css';
 
@@ -16,6 +17,9 @@ export function PresentMode() {
   const originalRef = useRef<HTMLCanvasElement>(null);
   const simulatedRef = useRef<HTMLCanvasElement>(null);
   const enteredFullscreen = useRef(false);
+  // Tab stays inside, and focus returns to the control that opened the presentation. (Escape is
+  // handled below, together with the Space key.)
+  useDialog(rootRef);
 
   const [box, setBox] = useState<Size>({ width: window.innerWidth, height: window.innerHeight });
   const [showOriginal, setShowOriginal] = useState(false);

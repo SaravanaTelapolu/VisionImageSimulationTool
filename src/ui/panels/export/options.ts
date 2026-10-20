@@ -178,7 +178,7 @@ export function resultMessage(outcome: ShareOutcome, fileCount: number): string 
   return `Downloaded ${fileCount} ${fileCount === 1 ? 'file' : 'files'}`;
 }
 
-/** Why the Share / Save button is disabled, or '' when it is enabled. */
+/** Why the Prepare images button is disabled, or '' when it is enabled. */
 export function disabledReason(hasImage: boolean, o: ExportOptions): string {
   if (!hasImage) return 'Load a photo or a test image first.';
   if (!hasAnyFile(o)) return 'Choose at least one thing to save.';

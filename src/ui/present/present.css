@@ -41,7 +41,7 @@
 
 .present-warn {
   position: absolute;
-  top: 70px;
+  top: 4.5rem;
   left: 12px;
   right: 12px;
   margin: 0;
@@ -51,8 +51,9 @@
 }
 
 .present-buttons {
+  /* Bottom right, just above the caption, where a thumb reaches. */
   position: absolute;
-  top: max(12px, env(safe-area-inset-top));
+  bottom: calc(5rem + env(safe-area-inset-bottom));
   right: max(12px, env(safe-area-inset-right));
   z-index: 10;
   display: flex;
@@ -66,7 +67,7 @@
   padding: 0 16px;
   border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.8);
   color: #fff;
   font-weight: 700;
   cursor: pointer;
@@ -96,7 +97,7 @@
   justify-content: center;
   padding: 6px max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
     max(12px, env(safe-area-inset-left));
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.8);
   color: #e6e6ee;
   font-size: 0.8rem;
   text-align: center;
@@ -104,13 +105,7 @@
 }
 
 .present-hint {
-  color: #9a9aa8;
-}
-
-/* The wipe labels sit above the caption, clear of the top-corner buttons. */
-.present .wipe-label {
-  top: auto;
-  bottom: 84px;
+  color: #c4c4d0;
 }
 
 .present .wipe {

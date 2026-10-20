@@ -54,6 +54,8 @@ export function Sheet() {
     let n = -1;
     if (e.key === 'ArrowRight') n = (i + 1) % TAB_IDS.length;
     else if (e.key === 'ArrowLeft') n = (i + TAB_IDS.length - 1) % TAB_IDS.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = TAB_IDS.length - 1;
     else return;
     e.preventDefault();
     const t = TAB_IDS[n];

@@ -14,7 +14,10 @@ const LABEL_ROOM = 96;
 
 /**
  * A draggable vertical divider for the before/after wipe. Original is on the left, simulated on the
- * right. Put it inside a positioned container; the hit area is 44 px wide and as tall as the container.
+ * right. Put it inside a positioned container.
+ *
+ * Only two small things catch pointers, so taps anywhere else reach the photo and its regions:
+ * the round 44 px knob (the keyboard-focusable slider) and a narrow strip along the line.
  * Keyboard: arrows move it (Shift = bigger steps), Home / End jump to the ends.
  */
 export function WipeDivider({ pos, width, onChange }: WipeDividerProps) {
@@ -22,6 +25,7 @@ export function WipeDivider({ pos, width, onChange }: WipeDividerProps) {
   const x = pos * width;
 
   const moveTo = (e: PointerEvent) => {
+    // The knob and the line strip are both children of .wipe, whose parent is the measured container.
     const parent = (e.currentTarget as HTMLElement).parentElement?.parentElement;
     if (!parent) return;
     const r = parent.getBoundingClientRect();
@@ -57,12 +61,20 @@ export function WipeDivider({ pos, width, onChange }: WipeDividerProps) {
     onChange(next);
   };
   const stop = (e: Event) => e.stopPropagation();
+  const drag = {
+    onPointerDown: onDown,
+    onPointerMove: onMove,
+    onPointerUp: onUp,
+    onPointerCancel: onUp,
+    onClick: stop,
+  };
 
   const percent = Math.round(pos * 100);
   return (
     <div class="wipe" style={{ left: `${x}px` }}>
       {x > LABEL_ROOM && <span class="wipe-label wipe-label-left">Original</span>}
       {width - x > LABEL_ROOM && <span class="wipe-label wipe-label-right">Simulated</span>}
+      <div class="wipe-line" aria-hidden="true" {...drag} />
       <div
         class="wipe-handle"
         role="slider"
@@ -73,14 +85,9 @@ export function WipeDivider({ pos, width, onChange }: WipeDividerProps) {
         aria-valuemax={100}
         aria-valuenow={percent}
         aria-valuetext={`${percent} percent from the left`}
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        onClick={stop}
         onKeyDown={onKey}
+        {...drag}
       >
-        <span class="wipe-line" />
         <span class="wipe-knob" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 7l-5 5 5 5" />
