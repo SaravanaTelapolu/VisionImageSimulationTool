@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 describe('RegionsPanel', () => {
-  it('shows the empty state and disabled coming-soon buttons', () => {
+  it('shows the empty state; Freehand and Brush need a photo', () => {
     mount();
     expect(root.textContent).toContain('Add a spot where your vision is affected.');
     expect(button('Freehand').disabled).toBe(true);

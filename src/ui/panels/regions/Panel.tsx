@@ -4,6 +4,8 @@ import { addRegion, duplicateRegion, moveRegion, removeRegion, setRegionVisible,
 import type { Region } from '../../../model/types';
 import { startPlacing } from '../../../state/edit';
 import { activeTab, applyEdit, image, profile, selectedRegionId } from '../../../state/store';
+import { addBrushRegion, BrushToolbar } from '../../edit/brush';
+import { PathToolbar } from '../../edit/freehand';
 import { cleanRegionName, nextRegionName, selectionAfterDelete, shapeLabel } from './helpers';
 import { CopyIcon, DownIcon, EyeIcon, EyeOffIcon, PencilIcon, TrashIcon, UpIcon } from './icons';
 import './regions.css';
@@ -178,6 +180,7 @@ function RegionRow({ region, index, count }: { region: Region; index: number; co
 
 export function RegionsPanel() {
   const regions = profile.value.regions;
+  const selectedShape = regions.find((r) => r.id === selectedRegionId.value)?.shape.type;
   return (
     <div class="rg-panel">
       <div class="rg-add" role="group" aria-label="Add a region">
@@ -187,13 +190,28 @@ export function RegionsPanel() {
         <button type="button" class="btn" onClick={addWholeImage}>
           + Whole image
         </button>
-        <button type="button" class="btn rg-soon" disabled>
-          Freehand <span>coming soon</span>
+        <button
+          type="button"
+          class="btn"
+          disabled={!image.value}
+          title={image.value ? undefined : 'Open a photo first'}
+          onClick={() => startPlacing('path')}
+        >
+          Freehand
         </button>
-        <button type="button" class="btn rg-soon" disabled>
-          Brush <span>coming soon</span>
+        <button
+          type="button"
+          class="btn"
+          disabled={!image.value}
+          title={image.value ? undefined : 'Open a photo first'}
+          onClick={() => addBrushRegion()}
+        >
+          Brush
         </button>
       </div>
+
+      {selectedShape === 'path' && selectedRegionId.value && <PathToolbar regionId={selectedRegionId.value} />}
+      {selectedShape === 'mask' && <BrushToolbar />}
 
       {regions.length === 0 ? (
         <p class="rg-empty">

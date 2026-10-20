@@ -62,7 +62,7 @@ function canvasCodec(): MaskCodec {
         const ctx = canvas.getContext('2d');
         if (!ctx) return null;
         const rgba = greyscaleToRgba(data.data);
-        ctx.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, data.width, data.height), 0, 0);
+        ctx.putImageData(new ImageData(rgba, data.width, data.height), 0, 0);
         const url = canvas.toDataURL('image/png');
         return url.startsWith('data:image/') ? url : null;
       } catch {
