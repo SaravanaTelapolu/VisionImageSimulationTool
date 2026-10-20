@@ -106,3 +106,13 @@
 .present-hint {
   color: #9a9aa8;
 }
+
+/* The wipe labels sit above the caption, clear of the top-corner buttons. */
+.present .wipe-label {
+  top: auto;
+  bottom: 84px;
+}
+
+.present .wipe {
+  z-index: 5;
+}
