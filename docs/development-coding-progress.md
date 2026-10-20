@@ -8,15 +8,15 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 
 | ID | Task | Tier | Status | Branch / notes |
 | --- | --- | --- | --- | --- |
-| W0-1 | Contracts, docs, CLAUDE.md | Orchestrator | running | develop |
-| W0-2 | Scaffold + photo load | Sonnet | running | develop (main checkout) |
-| W1-A | Model ops, validation, undo | Sonnet | todo | |
-| W1-B | Effect-map builder | Sonnet | todo | |
-| W1-C | WebGL2 renderer | Opus | todo | |
-| W1-D | Test images | Haiku | todo | |
-| W1-E | Export composer | Sonnet | todo | |
-| W1-F | UI shell | Sonnet | todo | |
-| W1-G | Calibration guide | Sonnet | todo | |
+| W0-1 | Contracts, docs, CLAUDE.md | Orchestrator | done | develop a88a281 |
+| W0-2 | Scaffold + photo load | Sonnet | done | develop a88a281 |
+| W1-A | Model ops, validation, undo | Sonnet | running | worktree, started 21:50 |
+| W1-B | Effect-map builder | Sonnet | running | worktree, started 21:50 |
+| W1-C | WebGL2 renderer | Opus | running | worktree, started 21:50 |
+| W1-D | Test images | Haiku | running | worktree, started 21:50 |
+| W1-E | Export composer | Sonnet | running | worktree, started 21:50 |
+| W1-F | UI shell | Sonnet | running | worktree, started 21:50 |
+| W1-G | Calibration guide | Sonnet | running | worktree, started 21:50 |
 | W2-1 | Integration, live preview | Opus | todo | |
 | W2-2 | Ellipse editing | Sonnet | todo | |
 | W2-3 | Regions + Effects panels | Sonnet | todo | |
@@ -34,7 +34,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 
 | Phase | Status |
 | --- | --- |
-| 0 Scaffold and deploy | in progress (deploy deferred to Saravana) |
+| 0 Scaffold and deploy | done locally; deploy deferred to Saravana |
 | 1 Rendering core | todo |
 | 2 Ellipse regions | todo |
 | 3 All effects and undo | todo |
@@ -44,5 +44,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | 7 Offline and polish | todo |
 
 ## Log (newest first)
+
+- 2026-10-20 21:50 IST — Scaffold verified (typecheck, 7 tests, build) and committed a88a281. Wave 1 launched: W1-A..W1-G, each in its own git worktree (.claude/worktrees). W1-C uses the built-in browser for its harness.
 
 - 2026-10-20 21:40 IST — Branch `develop` created from `main`. Contracts written (`src/model/types.ts`, `coords.ts`, `defaults.ts`, `src/render/types.ts`). Scaffold agent (W0-2) started.
