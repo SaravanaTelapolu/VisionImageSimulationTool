@@ -3,7 +3,12 @@
 Everything the overnight build decided without you. Nothing here blocked the build.
 Tick or answer inline; the next session reads this file.
 
-## Where things stand (2026-10-21 07:07 IST)
+## Where things stand (2026-10-21, v1.0)
+
+- **v1.0 released.** All v0.2 review items are merged (D05 per-region dark-spot shade, Q3 default viewing distance, Q5 full-resolution export, eye choice, blur up to 100), plus a step-by-step **Help page** (`public/help.html`, linked from the ⋯ menu and the start screen) with animated GIFs, and a README with illustrations. `main` is tagged `v1.0` and deploys the live site.
+- The GIFs are recorded from the real app by `npm run help:capture` (needs ffmpeg); re-run it whenever the UI changes.
+
+### Earlier status (2026-10-21 07:07 IST, v0.1)
 
 - **The app is built.** Every feature in the plan (F1–F9) is on the local branch `develop`. Phases 0–7 are done.
 - **Checks:** 592 unit tests, a production build and 8 end-to-end tests (Edge, desktop and phone size) all pass.
@@ -17,7 +22,7 @@ Tick or answer inline; the next session reads this file.
 ## Needs your action
 
 - [x] **Push.** Done 2026-10-21: `develop` merged into `main`, tagged `v0.1` ("Initial Build"), and `main`, `develop` and the tag pushed to GitHub.
-- [ ] **Deploy (needs a decision).** The repository is **private**. GitHub Pages for a private repo needs a paid GitHub plan, so the "Deploy to GitHub Pages" workflow will fail until one of these is done:
+- [x] **Deploy.** Done for v0.1: the repository is public and the site is live at https://saravanatelapolu.github.io/VisionImageSimulationTool/. Earlier note, kept for reference: the repository was **private**. GitHub Pages for a private repo needs a paid GitHub plan, so the "Deploy to GitHub Pages" workflow will fail until one of these is done:
   - make the repo public — the code holds no photos, but the plan docs describe your eye condition; or
   - use a free host that deploys private repos (for example Cloudflare Pages or Netlify), building with `npm run build` and publishing `dist/`; or
   - a GitHub Pro plan.
@@ -38,10 +43,12 @@ Tick or answer inline; the next session reads this file.
 | D01, D07–D27 | OK | Unchanged |
 | Q1 | Android phone; iPhone is an optional roadmap item | Added to docs/roadmap.md |
 | Q2 | All effects is a good start | Unchanged |
-| Q3 | Editable is fine; near vision first, far vision later; want to change the default | Being implemented: a "default viewing distance" setting with Near / Computer / Far presets |
+| Q3 | Editable is fine; near vision first, far vision later; want to change the default | Done (v0.2): Profiles → Settings → "Default viewing distance": Near (reading) 40 cm, Computer 70 cm, Far 300 cm, or a custom value (10–600 cm) |
 | Q4 | Current default is good | Unchanged |
 | Q5 | Make it configurable, current default | Done (v0.2): Export → Export size: "Up to 4096 px (default)" or "Full resolution" (rendered in tiles, no visible seams). If the device cannot hold the full image, a smaller one is saved and the panel says so. |
 | Q6 | Current default is good | Unchanged |
+| Eye | Don't hard-code the right eye | Done (v0.2): Left / Right picker on the start screen, in Profiles, Effects → Profile settings and the export caption; "Default eye for new profiles" in Profiles → Settings. The automatic name ("Left eye") follows the eye unless you renamed the profile. |
+| Blur100 | Blur should go further than 40 | Done (v0.2): Blur goes to 100 (extra blur levels at 70 and 100, so there is no jump). Existing profiles look the same. |
 
 ## Decisions made (change any you disagree with)
 

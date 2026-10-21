@@ -290,6 +290,12 @@ test('the "More options" menu opens, offers text size and closes with Escape', a
   await expect(more).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByRole('button', { name: 'Larger text' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Calibration guide', exact: true })).toBeVisible();
+  // Help opens the static help page in a new tab, so unsaved edits stay in this one.
+  const help = page.getByRole('link', { name: 'Help and how-to' });
+  await expect(help).toHaveAttribute('target', '_blank');
+  const helpPage = await page.request.get(new URL((await help.getAttribute('href'))!, page.url()).toString());
+  expect(helpPage.ok()).toBe(true);
+  expect(await helpPage.text()).toContain('Show your doctor what your eye sees');
   await page.keyboard.press('Escape');
   await expect(more).toHaveAttribute('aria-expanded', 'false');
   expect(errors).toEqual([]);

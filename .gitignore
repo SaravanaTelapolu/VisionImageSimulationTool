@@ -63,3 +63,6 @@ test-results/
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Help-page capture recordings (the GIFs land in public/help/media)
+scripts/help-capture/out/
