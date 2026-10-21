@@ -160,8 +160,9 @@ export function pointInPath(points: [number, number][], p: Vec2, frame: ImageFra
 }
 
 /**
- * Every visible region under `p` (image px), topmost (last in the list) first. `full` regions cover
- * everything, so they are listed last, after every shape that really contains the point.
+ * Every visible region under `p` (image px), topmost (last in the list) first. `full` and `mask`
+ * regions cover (or can cover) most of the image, so they are listed last, after every shape that
+ * really contains the point; a tap on bare image still reaches them.
  * `minRadiusPx` makes tiny ellipses easier to tap.
  */
 export function hitTestAll(regions: readonly Region[], p: Vec2, frame: ImageFrame, minRadiusPx = 0): RegionHit[] {
@@ -183,7 +184,9 @@ export function hitTestAll(regions: readonly Region[], p: Vec2, frame: ImageFram
         const a = toPixel(frame, { x: s.x, y: s.y });
         const w = lengthToPixels(frame, s.width);
         const h = lengthToPixels(frame, s.height);
-        hit = p.x >= a.x && p.x <= a.x + w && p.y >= a.y && p.y <= a.y + h;
+        // A mask is a rectangle of paint, often the whole image by default, so it must not win over
+        // the shapes drawn on it: treat it like a full region (last resort).
+        if (p.x >= a.x && p.x <= a.x + w && p.y >= a.y && p.y <= a.y + h) fulls.push({ id: r.id, type: 'mask' });
         break;
       }
       case 'full':
@@ -200,13 +203,16 @@ export function hitTest(regions: readonly Region[], p: Vec2, frame: ImageFrame, 
   return hitTestAll(regions, p, frame, minRadiusPx)[0]?.id ?? null;
 }
 
+/** Region kinds that sit behind everything else: chosen only when no real shape is under the tap. */
+const isBackdrop = (type: RegionHit['type']): boolean => type === 'full' || type === 'mask';
+
 /**
  * What a tap should select. Taps cycle through overlapping shapes (so a region under another can be
- * reached); a full region is chosen only when nothing else is hit, and tapping it again deselects.
- * Returns null to deselect.
+ * reached); a full or mask region is chosen only when nothing else is hit, and tapping it again
+ * deselects. Returns null to deselect.
  */
 export function pickTapTarget(hits: readonly RegionHit[], selectedId: string | null): string | null {
-  const shapes = hits.filter((h) => h.type !== 'full');
+  const shapes = hits.filter((h) => !isBackdrop(h.type));
   if (shapes.length > 0) {
     const i = shapes.findIndex((h) => h.id === selectedId);
     return (shapes[(i + 1) % shapes.length] as RegionHit).id;

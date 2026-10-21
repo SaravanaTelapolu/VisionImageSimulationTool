@@ -328,9 +328,8 @@ export function ExportPanel() {
           </p>
         )}
         {prepared && flow.phase !== 'idle' && (
-          <p class="export-help">
-            Ready: {prepared.files.length === 1 ? '1 file' : `${prepared.files.length} files`} (
-            {prepared.files.map((f) => f.name).join(', ')}).{' '}
+          <p class="export-help" title={prepared.files.map((f) => f.name).join(', ')}>
+            Ready: {prepared.files.length === 1 ? '1 file' : `${prepared.files.length} files`}.{' '}
             {canShare ? 'Tap Share to send them.' : 'Your browser cannot open a share sheet, so Download saves them.'}
           </p>
         )}

@@ -111,11 +111,15 @@ export function isEffectEnabled(key: EffectKey, shape: ShapeType): boolean {
 
 /** A whole-image region has no edge, so feathering means nothing there. */
 export function isFeatherEnabled(shape: ShapeType): boolean {
-  return shape !== 'full';
+  return shape !== 'full' && shape !== 'mask';
 }
 
 export const SIZE_CHANGE_NOTE = 'Size change works on spots (ellipses) only.';
 export const FEATHER_FULL_NOTE = 'A whole-image region has no edge to soften.';
+export const FEATHER_MASK_NOTE = 'A brush region is softened with the brush softness setting, not here.';
+
+/** Why the feather slider is off for this shape. */
+export const featherNote = (shape: ShapeType): string => (shape === 'mask' ? FEATHER_MASK_NOTE : FEATHER_FULL_NOTE);
 
 export const FEATHER_DEF: SliderDef = {
   label: 'Soft edge (feather)',
