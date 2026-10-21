@@ -28,7 +28,7 @@ Tick or answer inline; the next session reads this file.
   - a GitHub Pro plan.
   Then: GitHub → Settings → Pages → Source: "GitHub Actions".
 - [ ] **Test on your phone** once deployed: each "Done when" line in docs/Vision-Simulator-Plan.md. Check ⋯ → Performance while dragging a slider (target under 50 ms), the Share button to WhatsApp, and Install app → airplane mode.
-- [ ] **Clean up agent worktrees** when you're happy: they live in `.claude/worktrees/` (git-ignored) with branches `worktree-agent-*`. All of their work is merged into `develop`.
+- [ ] **Clean up agent worktrees** when you're happy: they live in `.claude/worktrees/` (git-ignored) with branches `worktree-agent-*`. All of their work is merged into `main` (`develop` was deleted after v1.0).
 - [ ] The backup scheduled task "vision-sim-auto-resume" was disabled. Delete it from the app's Scheduled list if you don't need it.
 
 ## Your review (2026-10-21)

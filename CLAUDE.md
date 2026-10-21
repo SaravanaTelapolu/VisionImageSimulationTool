@@ -28,5 +28,5 @@ TypeScript (strict) · Vite 6 · Preact + @preact/signals · WebGL2 shaders · I
 - Shared contracts (`src/model/types.ts`, `src/render/types.ts`) change only deliberately, with a progress-log entry.
 - Unit tests next to code (`*.test.ts`) for all maths and data-model code.
 - Before finishing any change: `npm run typecheck`, `npm test`, `npm run build`.
-- Never commit photos. Work on `develop`; do not push without Saravana's go-ahead.
+- Never commit photos. Work on `main` (the `develop` branch was merged and deleted after v1.0); use a short-lived branch for bigger changes. Do not push without Saravana's go-ahead; pushing `main` deploys the live site.
 - Touch targets ≥ 44 px, works at 360 px width, high contrast.
