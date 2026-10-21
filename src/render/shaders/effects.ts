@@ -33,6 +33,7 @@ ${samplerDecls}
 uniform sampler2D uFill;   // missing-area fill colour (same orientation as the image)
 uniform sampler2D uMapA;   // blur/40, distortion, contrastLoss, dimming
 uniform sampler2D uMapB;   // darkSpot, fillIn, colourFade, doubleImage
+uniform sampler2D uMapC;   // r: dark-spot shade of the strongest spot (0 = black, 1 = mid grey)
 uniform vec2 uSize;        // output size in px
 uniform bool uFlipY;       // true when drawing to the canvas (bottom-up framebuffer)
 uniform bool uBypass;
@@ -42,7 +43,6 @@ uniform vec2 uWaveDir;     // unit vector of the distortion direction
 uniform float uWaveLen;    // px
 uniform float uDistAmp;    // px at distortion = 1
 uniform vec2 uGhost;       // px
-uniform float uShade;      // 0 = black, 1 = mid grey
 uniform int uLensCount;
 uniform vec4 uLensA[MAX_LENSES]; // cx, cy (px), 1/rx, 1/ry (1/px)
 uniform vec4 uLensB[MAX_LENSES]; // cos(rot), sin(rot), amount, feather
@@ -149,7 +149,10 @@ void main() {
     col = mix(col, vec3(y), B.b);
   }
 
-  if (B.r > 0.0) col = mix(col, vec3(0.5 * uShade), B.r);
+  if (B.r > 0.0) {
+    float shade = textureLod(uMapC, uv0, 0.0).r;
+    col = mix(col, vec3(0.5 * shade), B.r);
+  }
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

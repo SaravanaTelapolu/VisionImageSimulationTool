@@ -159,6 +159,14 @@ describe('duplicateRegion', () => {
     const f = duplicateRegion(p, 'c');
     expect(findRegion(f.profile, f.newId!)?.shape).toEqual({ type: 'full' });
   });
+  it('carries the region’s dark-spot shade to the copy and to duplicated profiles (D05)', () => {
+    const shaded = updateRegion(p, 'a', { darkSpotShade: 0.65 });
+    const { profile, newId } = duplicateRegion(shaded, 'a');
+    expect(findRegion(profile, newId!)?.darkSpotShade).toBe(0.65);
+    const copy = duplicateProfile(shaded, new Date('2026-10-21T00:00:00Z'));
+    expect(copy.regions[0]?.darkSpotShade).toBe(0.65);
+    expect(newRegion({ type: 'full' }).darkSpotShade).toBe(0);
+  });
   it('deep-copies effects and shape', () => {
     const withFx = updateEffects(p, 'a', { blur: 5 });
     const { profile, newId } = duplicateRegion(withFx, 'a');

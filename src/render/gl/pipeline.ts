@@ -32,6 +32,7 @@ import {
 const UNIT_FILL = PYRAMID_LEVEL_COUNT;
 const UNIT_MAP_A = PYRAMID_LEVEL_COUNT + 1;
 const UNIT_MAP_B = PYRAMID_LEVEL_COUNT + 2;
+const UNIT_MAP_C = PYRAMID_LEVEL_COUNT + 3;
 
 export interface SourceInfo {
   /** Size of the uploaded texture (and of the canvas). */
@@ -71,7 +72,8 @@ export class GLPipeline {
 
   private mapA: WebGLTexture;
   private mapB: WebGLTexture;
-  private lastMaps: { a: Uint8Array; b: Uint8Array; w: number; h: number } | null = null;
+  private mapC: WebGLTexture;
+  private lastMaps: { a: Uint8Array; b: Uint8Array; c: Uint8Array; w: number; h: number } | null = null;
   private hasFillIn = false;
   private fill: FillTargets | null = null;
   private fillDirty = true;
@@ -98,8 +100,10 @@ export class GLPipeline {
 
     this.mapA = createTexture(gl);
     this.mapB = createTexture(gl);
+    this.mapC = createTexture(gl);
     this.uploadMap(this.mapA, 1, 1, new Uint8Array(4));
     this.uploadMap(this.mapB, 1, 1, new Uint8Array(4));
+    this.uploadMap(this.mapC, 1, 1, new Uint8Array(4));
   }
 
   get sourceInfo(): SourceInfo | null {
@@ -207,21 +211,32 @@ export class GLPipeline {
   /** Uploads effect maps when the arrays (by identity) or the size changed. */
   private updateMaps(maps: EffectMaps): void {
     const last = this.lastMaps;
-    if (last && last.a === maps.a && last.b === maps.b && last.w === maps.width && last.h === maps.height) return;
+    if (
+      last &&
+      last.a === maps.a &&
+      last.b === maps.b &&
+      last.c === maps.c &&
+      last.w === maps.width &&
+      last.h === maps.height
+    ) {
+      return;
+    }
     const n = maps.width * maps.height * 4;
     const valid =
-      maps.width > 0 && maps.height > 0 && maps.a.length >= n && maps.b.length >= n;
+      maps.width > 0 && maps.height > 0 && maps.a.length >= n && maps.b.length >= n && maps.c?.length >= n;
     if (valid) {
       this.uploadMap(this.mapA, maps.width, maps.height, maps.a.subarray(0, n));
       this.uploadMap(this.mapB, maps.width, maps.height, maps.b.subarray(0, n));
+      this.uploadMap(this.mapC, maps.width, maps.height, maps.c.subarray(0, n));
       this.hasFillIn = channelHasAny(maps.b.subarray(0, n), 1);
     } else {
       console.warn('[renderer] Invalid effect maps; rendering without effects.', maps.width, maps.height);
       this.uploadMap(this.mapA, 1, 1, new Uint8Array(4));
       this.uploadMap(this.mapB, 1, 1, new Uint8Array(4));
+      this.uploadMap(this.mapC, 1, 1, new Uint8Array(4));
       this.hasFillIn = false;
     }
-    this.lastMaps = { a: maps.a, b: maps.b, w: maps.width, h: maps.height };
+    this.lastMaps = { a: maps.a, b: maps.b, c: maps.c, w: maps.width, h: maps.height };
     this.fillDirty = true;
   }
 
@@ -332,6 +347,9 @@ export class GLPipeline {
     p.set1i('uMapB', UNIT_MAP_B);
     gl.activeTexture(gl.TEXTURE0 + UNIT_MAP_B);
     gl.bindTexture(gl.TEXTURE_2D, this.mapB);
+    p.set1i('uMapC', UNIT_MAP_C);
+    gl.activeTexture(gl.TEXTURE0 + UNIT_MAP_C);
+    gl.bindTexture(gl.TEXTURE_2D, this.mapC);
 
     p.set2f('uSize', W, H);
     p.set1i('uFlipY', 1);
@@ -343,7 +361,6 @@ export class GLPipeline {
     p.set1f('uWaveLen', Math.max(finite(g.distortWaveSize, 0.05), 1e-4) * short);
     p.set1f('uDistAmp', Math.max(0, finite(g.distortMaxAmplitude, 0)) * short);
     p.set2f('uGhost', finite(g.ghostOffset[0], 0) * short, finite(g.ghostOffset[1], 0) * short);
-    p.set1f('uShade', Math.min(Math.max(finite(g.darkSpotShade, 0), 0), 1));
 
     let count = 0;
     const sr = Math.sqrt(sx * sy);
@@ -395,6 +412,7 @@ export class GLPipeline {
     this.freeSource();
     gl.deleteTexture(this.mapA);
     gl.deleteTexture(this.mapB);
+    gl.deleteTexture(this.mapC);
     this.blurProg.dispose();
     this.fillWeightProg.dispose();
     this.fillComposeProg.dispose();

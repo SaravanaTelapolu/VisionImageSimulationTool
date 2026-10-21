@@ -263,7 +263,28 @@ function validateShape(ctx: Ctx, raw: unknown, label: string): Shape | undefined
   }
 }
 
-function validateRegion(ctx: Ctx, raw: unknown, index: number, seenIds: Set<string>): Region | undefined {
+/**
+ * A region's dark-spot shade (D05, v0.2). Regions saved before it existed have none: they take the
+ * profile's old profile-wide globals.darkSpotShade, so they look exactly as before (no warning:
+ * this is the normal upgrade path, not damage).
+ */
+function regionShade(ctx: Ctx, raw: Obj, fallback: number, label: string): number {
+  const v = raw['darkSpotShade'];
+  if (v === undefined) return fallback;
+  if (!isNum(v)) {
+    ctx.warnings.push(`${label}.darkSpotShade: not a finite number; using ${round(fallback)}.`);
+    return fallback;
+  }
+  return clamp(ctx, v, 0, 1, `${label}.darkSpotShade`);
+}
+
+function validateRegion(
+  ctx: Ctx,
+  raw: unknown,
+  index: number,
+  seenIds: Set<string>,
+  fallbackShade: number,
+): Region | undefined {
   const label = `regions[${index}]`;
   if (!isObj(raw)) {
     ctx.errors.push(`${label}: must be an object.`);
@@ -292,9 +313,10 @@ function validateRegion(ctx: Ctx, raw: unknown, index: number, seenIds: Set<stri
   const feather = optNum(ctx, raw, 'feather', DEFAULT_FEATHER, 0, 1, `${label}.feather`);
   const shape = validateShape(ctx, raw['shape'], `${label}.shape`);
   const effects = validateEffects(ctx, raw['effects'], `${label}.effects`);
+  const darkSpotShade = regionShade(ctx, raw, fallbackShade, label);
 
   if (id === undefined || shape === undefined) return undefined;
-  return { id, name, visible, shape, feather, effects };
+  return { id, name, visible, shape, feather, effects, darkSpotShade };
 }
 
 function validateGlobals(ctx: Ctx, raw: unknown): ProfileGlobals {
@@ -396,7 +418,7 @@ export function validateProfile(input: unknown): ValidationResult {
   } else {
     const seen = new Set<string>();
     rawRegions.forEach((r, i) => {
-      const region = validateRegion(ctx, r, i, seen);
+      const region = validateRegion(ctx, r, i, seen, globals.darkSpotShade);
       if (region) regions.push(region);
     });
   }
@@ -417,6 +439,22 @@ export function validateProfile(input: unknown): ValidationResult {
       globals,
       regions,
     },
+  };
+}
+
+/**
+ * Fills fields added after a profile was saved (trusted data from this app's own storage, so no
+ * full validation): today only Region.darkSpotShade (D05), taken from the deprecated
+ * globals.darkSpotShade. Returns the same object when nothing is missing.
+ */
+export function upgradeStoredProfile(profile: Profile): Profile {
+  const regions = profile.regions;
+  if (!Array.isArray(regions) || regions.every((r) => isNum(r.darkSpotShade))) return profile;
+  const g = profile.globals?.darkSpotShade;
+  const fallback = isNum(g) ? Math.min(1, Math.max(0, g)) : 0;
+  return {
+    ...profile,
+    regions: regions.map((r) => (isNum(r.darkSpotShade) ? r : { ...r, darkSpotShade: fallback })),
   };
 }
 

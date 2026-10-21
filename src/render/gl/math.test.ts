@@ -187,7 +187,7 @@ describe('fitToMaxSide', () => {
 
 describe('scaleRenderParams', () => {
   it('scales fixation and lenses, leaves maps and globals', () => {
-    const maps = { width: 1, height: 1, a: new Uint8Array(4), b: new Uint8Array(4) };
+    const maps = { width: 1, height: 1, a: new Uint8Array(4), b: new Uint8Array(4), c: new Uint8Array(4) };
     const globals = defaultGlobals();
     const p: RenderParams = {
       maps,

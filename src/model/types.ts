@@ -25,7 +25,7 @@ export interface Vec2 {
 export interface Effects {
   /** 0..MAX_BLUR_PX, in pixels at BLUR_REFERENCE_SHORT_SIDE. */
   blur: number;
-  /** Dark patch opacity 0..1 (shade comes from globals.darkSpotShade). */
+  /** Dark patch opacity 0..1 (its colour comes from the region's darkSpotShade). */
   darkSpot: number;
   /** "Missing area": surrounding texture smeared across, 0..1. */
   fillIn: number;
@@ -83,6 +83,12 @@ export interface Region {
   /** Soft edge, 0..1 as a fraction of the region's size. */
   feather: number;
   effects: Effects;
+  /**
+   * Dark spot colour for this region (v0.2, D05): 0 = black, 1 = mid grey. Not a strength, so it is
+   * not in the max-combined maps: where dark spots overlap, the strongest one's shade wins (map C).
+   * Older profiles without it take globals.darkSpotShade (see model/validate.ts).
+   */
+  darkSpotShade: number;
 }
 
 /** Profile-wide settings that keep the shaders simple; regions only control strength. */
@@ -95,7 +101,11 @@ export interface ProfileGlobals {
   distortMaxAmplitude: number;
   /** Ghost offset in shorter-side units. */
   ghostOffset: [number, number];
-  /** Dark spot colour: 0 = black, 1 = mid grey. */
+  /**
+   * @deprecated since v0.2 (D05): the shade is per region (Region.darkSpotShade). Kept so older app
+   * versions can still read new profiles, and as the fallback for regions saved without a shade.
+   * Not shown in the UI and not used by the renderer.
+   */
   darkSpotShade: number;
 }
 
@@ -126,3 +136,9 @@ export interface ImageFrame {
  */
 export const EFFECT_MAP_A: readonly EffectKey[] = ['blur', 'distortion', 'contrastLoss', 'dimming'];
 export const EFFECT_MAP_B: readonly EffectKey[] = ['darkSpot', 'fillIn', 'colourFade', 'doubleImage'];
+/**
+ * Map C (v0.2) holds values that are not strengths and so must not be max-combined:
+ * C.r = darkSpotShade of the region with the strongest darkSpot at that texel (ties: the darker one).
+ * C.g, C.b, C.a are reserved (zero).
+ */
+export const EFFECT_MAP_C_SHADE_CHANNEL = 0;

@@ -10,7 +10,7 @@ import {
   type Region,
   type Shape,
 } from '../model/types';
-import { buildEffectMaps, mapSizeFor } from './effectMaps';
+import { buildEffectMaps, dilateShade, mapSizeFor } from './effectMaps';
 import type { EffectMaps } from './types';
 
 // 400x300 image, fixation at the centre (200, 150), shorter side 300 px. A 400x300 map is 1:1 with the image.
@@ -322,5 +322,87 @@ describe('buildEffectMaps: performance', () => {
     const ms = (performance.now() - start) / runs;
     console.log(`[timing] buildEffectMaps, 8 ellipses on 512x384: ${ms.toFixed(2)} ms (target < 15 ms)`);
     expect(Number.isFinite(ms)).toBe(true);
+  });
+});
+
+describe('buildEffectMaps: map C (per-region dark-spot shade, D05)', () => {
+  const shadeAt = (m: EffectMaps, i: number, j: number) => m.c[(j * m.width + i) * 4] ?? NaN;
+  const reserved = (m: EffectMaps) => m.c.every((v, k) => k % 4 === 0 || v === 0);
+  // Two overlapping ellipses (radii 60 x 30 px): left one centred at x = 185, right one at x = 215.
+  const left = (darkSpot: number, shade: number) =>
+    region(ellipse({ cx: -0.05 }), { darkSpot }, 0, { darkSpotShade: shade });
+  const right = (darkSpot: number, shade: number) =>
+    region(ellipse({ cx: 0.05 }), { darkSpot }, 0, { darkSpotShade: shade });
+
+  it('stores the shade of a single spot where it has a dark spot, zero elsewhere', () => {
+    const m = buildEffectMaps([region(ellipse(), { darkSpot: 0.8 }, 0, { darkSpotShade: 0.6 })], frame, W, H);
+    expect(m.c.length).toBe(W * H * 4);
+    expect(shadeAt(m, 200, 150)).toBe(Math.round(0.6 * 255));
+    expect(shadeAt(m, 10, 10)).toBe(0);
+    expect(reserved(m)).toBe(true);
+  });
+
+  it('takes the shade of the strongest dark spot where spots overlap, whatever the order', () => {
+    for (const regions of [
+      [left(0.9, 1), right(0.4, 0)],
+      [right(0.4, 0), left(0.9, 1)],
+    ]) {
+      const m = buildEffectMaps(regions, frame, W, H);
+      expect(at(m, 200, 150, 4)).toBe(Math.round(0.9 * 255)); // B.r is still the max
+      expect(shadeAt(m, 200, 150)).toBe(255); // overlap: the stronger (grey) one wins
+      expect(shadeAt(m, 265, 150)).toBe(0); // only the right (black) spot
+      expect(shadeAt(m, 135, 150)).toBe(255); // only the left (grey) spot
+    }
+  });
+
+  it('a weaker spot does not change the shade even when it comes later', () => {
+    const m = buildEffectMaps([left(0.3, 0.2), right(0.8, 0.8)], frame, W, H);
+    expect(shadeAt(m, 200, 150)).toBe(Math.round(0.8 * 255));
+  });
+
+  it('on a tie the darker shade wins, whatever the order', () => {
+    for (const regions of [
+      [left(0.5, 0.9), right(0.5, 0.3)],
+      [right(0.5, 0.3), left(0.5, 0.9)],
+    ]) {
+      const m = buildEffectMaps(regions, frame, W, H);
+      expect(shadeAt(m, 200, 150)).toBe(Math.round(0.3 * 255));
+    }
+  });
+
+  it('ignores the shade of regions without a dark spot, and hidden regions', () => {
+    const blurOnly = region(ellipse(), { blur: 10 }, 0, { darkSpotShade: 1 });
+    const hidden = region(ellipse(), { darkSpot: 1 }, 0, { darkSpotShade: 1, visible: false });
+    const m = buildEffectMaps([blurOnly, hidden], frame, W, H);
+    expect(m.c.every((v) => v === 0)).toBe(true);
+  });
+
+  it('dilates the shade one texel past the spot so filtering does not darken a grey edge', () => {
+    // Ellipse of radius 60 px at the centre: hard edge near x = 140 on the centre row.
+    const m = buildEffectMaps([region(ellipse(), { darkSpot: 1 }, 0, { darkSpotShade: 1 })], frame, W, H);
+    let first = -1;
+    for (let i = 0; i < W; i++) {
+      if (at(m, i, 150, 4) > 0) {
+        first = i;
+        break;
+      }
+    }
+    expect(first).toBeGreaterThan(100);
+    expect(at(m, first - 1, 150, 4)).toBe(0);
+    expect(shadeAt(m, first - 1, 150)).toBe(255); // dilated
+    expect(shadeAt(m, first - 2, 150)).toBe(0); // only one texel
+    expect(reserved(m)).toBe(true);
+  });
+
+  it('dilateShade picks the strongest neighbour, darker on ties', () => {
+    // 3x1 map: [spot 100 shade 200] [empty] [spot 100 shade 50]
+    const b = new Uint8Array([100, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0]);
+    const c = new Uint8Array([200, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0]);
+    dilateShade(b, c, 3, 1);
+    expect(c[4]).toBe(50);
+    b[0] = 150;
+    c[4] = 0;
+    dilateShade(b, c, 3, 1);
+    expect(c[4]).toBe(200);
   });
 });

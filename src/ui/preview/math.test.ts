@@ -99,7 +99,7 @@ describe('buildRenderParams', () => {
 
 describe('createMapMemo', () => {
   const frame: ImageFrame = { width: 100, height: 100, fixation: { x: 50, y: 50 } };
-  const fakeMaps = (): EffectMaps => ({ width: 1, height: 1, a: new Uint8Array(4), b: new Uint8Array(4) });
+  const fakeMaps = (): EffectMaps => ({ width: 1, height: 1, a: new Uint8Array(4), b: new Uint8Array(4), c: new Uint8Array(4) });
 
   it('rebuilds only when regions, masks, fixation or frame size change', () => {
     const build = vi.fn(fakeMaps);

@@ -13,7 +13,7 @@
  *   previous one with separable Gaussian passes (incremental sigma, merged bilinear taps); levels
  *   whose sigma is large are stored at 1/2, 1/4, 1/8 ... resolution (sigma stays >= 4 texels).
  *   Targets are RGBA16F when EXT_color_buffer_float is available, else RGBA8.
- * - Effect maps are uploaded only when `maps.a` / `maps.b` change by identity (treat EffectMaps as
+ * - Effect maps are uploaded only when `maps.a` / `maps.b` / `maps.c` change by identity (treat EffectMaps as
  *   immutable: build new arrays to change them). LINEAR filtering, normalised coords, so the map
  *   resolution is independent of the image size.
  * - Missing area (fillIn): when maps change and any fillIn > 0, a low-res (128 texels on the short
@@ -26,7 +26,7 @@
  *   -> fill-in mix -> double image (same blur, sampled at -ghostOffset, mixed by strength * 0.5)
  *   -> contrast loss (toward the 20 px level as local mean, x(1 - 0.85c), plus a 30% light veil)
  *   -> dimming (x(1 - 0.9d)) -> colour fade (toward Rec.709 luma) -> dark spot last
- *   (toward 0.5 * shade grey, opacity = strength). Effects work on sRGB values directly.
+ *   (toward 0.5 * shade grey, opacity = strength; the shade is per region, read from map C). Effects work on sRGB values directly.
  * - Coordinates: `params.fixation` and `params.lenses` are in pixels of the image the call is
  *   about: the setSource() width/height for render(), the exportFullSize() width/height for
  *   export. If the image had to be downscaled to fit the GPU, they are rescaled internally.

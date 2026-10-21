@@ -5,6 +5,7 @@ import {
   MAX_REGIONS_PER_PROFILE,
   migrateProfile, parseProfileJson,
   serializeProfile,
+  upgradeStoredProfile,
   validateProfile,
 } from './validate';
 import { PROFILE_VERSION, type Profile } from './types';
@@ -45,10 +46,10 @@ function fullProfile(): Profile {
     note: 'hello',
     globals: { ...defaultGlobals(), distortAngle: 45 },
     regions: [
-      { id: 'a', name: 'A', visible: true, feather: 0.2, effects: { ...emptyEffects(), blur: 10 }, shape: { type: 'ellipse', cx: 0, cy: 0, rx: 0.1, ry: 0.1, rotation: 0 } },
-      { id: 'b', name: 'B', visible: false, feather: 0, effects: emptyEffects(), shape: { type: 'path', points: [[0, 0], [1, 0], [0, 1]] } },
-      { id: 'c', name: 'C', visible: true, feather: 1, effects: emptyEffects(), shape: { type: 'mask', dataUrl: 'data:image/png;base64,AAAA', x: -0.1, y: -0.1, width: 0.2, height: 0.2 } },
-      { id: 'd', name: 'D', visible: true, feather: 0.5, effects: emptyEffects(), shape: { type: 'full' } },
+      { id: 'a', name: 'A', darkSpotShade: 0, visible: true, feather: 0.2, effects: { ...emptyEffects(), blur: 10 }, shape: { type: 'ellipse', cx: 0, cy: 0, rx: 0.1, ry: 0.1, rotation: 0 } },
+      { id: 'b', name: 'B', darkSpotShade: 0.4, visible: false, feather: 0, effects: emptyEffects(), shape: { type: 'path', points: [[0, 0], [1, 0], [0, 1]] } },
+      { id: 'c', name: 'C', darkSpotShade: 1, visible: true, feather: 1, effects: emptyEffects(), shape: { type: 'mask', dataUrl: 'data:image/png;base64,AAAA', x: -0.1, y: -0.1, width: 0.2, height: 0.2 } },
+      { id: 'd', name: 'D', darkSpotShade: 0, visible: true, feather: 0.5, effects: emptyEffects(), shape: { type: 'full' } },
     ],
   };
 }
@@ -460,5 +461,56 @@ describe('size bounds (L5)', () => {
     expect(long.profile.name).toHaveLength(200);
     expect(long.profile.note).toHaveLength(10000);
     expect(long.warnings.join(' ')).toMatch(/too long/);
+  });
+});
+
+describe('per-region dark-spot shade (D05)', () => {
+  it('gives regions saved without a shade the old profile-wide shade, without warnings', () => {
+    const input = mutate((p) => {
+      p.globals.darkSpotShade = 0.7;
+      for (const r of p.regions) delete r.darkSpotShade;
+    });
+    const r = ok(input);
+    expect(r.profile.regions.map((x) => x.darkSpotShade)).toEqual([0.7, 0.7, 0.7, 0.7]);
+    expect(r.profile.globals.darkSpotShade).toBe(0.7);
+    expect(r.warnings).toEqual([]);
+  });
+
+  it('uses black for old files with neither field', () => {
+    const r = ok(planSample());
+    expect(r.profile.regions[0]!.darkSpotShade).toBe(0);
+  });
+
+  it('keeps each region its own shade, independent of the global one', () => {
+    const r = ok(mutate((p) => (p.globals.darkSpotShade = 0.9)));
+    expect(r.profile.regions.map((x) => x.darkSpotShade)).toEqual([0, 0.4, 1, 0]);
+  });
+
+  it('clamps out-of-range shades and replaces bad ones with the fallback', () => {
+    const r = ok(
+      mutate((p) => {
+        p.globals.darkSpotShade = 0.25;
+        p.regions[0].darkSpotShade = 3;
+        p.regions[1].darkSpotShade = 'grey';
+      }),
+    );
+    expect(r.profile.regions[0]!.darkSpotShade).toBe(1);
+    expect(r.profile.regions[1]!.darkSpotShade).toBe(0.25);
+    expect(r.warnings.some((w) => w.includes('regions[0].darkSpotShade'))).toBe(true);
+    expect(r.warnings.some((w) => w.includes('regions[1].darkSpotShade'))).toBe(true);
+  });
+
+  it('upgradeStoredProfile fills missing shades from globals and leaves complete profiles alone', () => {
+    const complete = fullProfile();
+    expect(upgradeStoredProfile(complete)).toBe(complete);
+    const old = mutate((p) => {
+      p.globals.darkSpotShade = 0.5;
+      delete p.regions[0].darkSpotShade;
+    }) as Profile;
+    const up = upgradeStoredProfile(old);
+    expect(up).not.toBe(old);
+    expect(up.regions.map((x) => x.darkSpotShade)).toEqual([0.5, 0.4, 1, 0]);
+    expect(up.regions[1]).toBe(old.regions[1]);
+    expect(old.regions[0]!.darkSpotShade).toBeUndefined();
   });
 });

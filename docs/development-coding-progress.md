@@ -52,6 +52,8 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 
 ## Log (newest first)
 
+- 2026-10-21 v0.2 D05 — Contract change: `Region.darkSpotShade` (0 black .. 1 mid grey) added in src/model/types.ts; `ProfileGlobals.darkSpotShade` kept but deprecated (fallback for older profiles, read by v0.1). `EffectMaps.c` added in src/render/types.ts: C.r = shade of the strongest dark spot (ties darker, 1-texel dilation), other channels reserved. No PROFILE_VERSION bump (additive field with a fallback).
+
 - 2026-10-21 07:07 IST — Merged W5-4. Final checks on develop: typecheck, 592 unit tests, build, Playwright 8/8 (Edge, desktop + mobile). README.md written, CLAUDE.md refreshed. BUILD_STATUS set to COMPLETE; auto-resume cron and scheduled task switched off.
 
 - 2026-10-21 06:56 IST — Merged W5-1 (freehand ~40× faster) and W5-2 (render fixes). 587 tests, build green. Only W5-4 (e2e update) remains.
