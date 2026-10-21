@@ -1,6 +1,6 @@
 import { useSignalEffect, type ReadonlySignal } from '@preact/signals';
 import type { RefObject } from 'preact';
-import { renderTick } from '../../../state/render';
+import { previewSource, renderTick } from '../../../state/render';
 import { image, previewCanvas } from '../../../state/store';
 
 /** Displayed size in CSS pixels. Copies are drawn no bigger than this (times the pixel ratio), which keeps thin lines clean. */
@@ -38,9 +38,11 @@ function draw(
 export function useOriginalCopy(ref: RefObject<HTMLCanvasElement>, target?: ReadonlySignal<DisplaySize | null>): void {
   useSignalEffect(() => {
     const img = image.value;
+    const src = previewSource.value; // same pixels the simulation starts from (H3)
     const canvas = ref.current;
     if (!img || !canvas) return;
-    draw(canvas, img.working, img.width, img.height, target?.value);
+    if (src && src.width > 0 && src.height > 0) draw(canvas, src, src.width, src.height, target?.value);
+    else draw(canvas, img.working, img.width, img.height, target?.value);
   });
 }
 

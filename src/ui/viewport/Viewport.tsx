@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { previewSource, setPreviewDisplaySize } from '../../state/render';
 import { image, previewCanvas, viewMode } from '../../state/store';
 import { compareMode, wipePos } from '../../state/ui';
 import { clampWipe, clipLeft } from '../panels/compare/logic';
@@ -85,17 +86,22 @@ export function Viewport({ overlay }: ViewportProps) {
     return () => ro.disconnect();
   }, []);
 
-  // New image: reset the view and draw the plain 2D content.
+  // New image: reset the view.
   useLayoutEffect(() => {
-    if (!img) return;
-    setView(fitView(sizeRef.current, boxRef.current));
+    if (img) setView(fitView(sizeRef.current, boxRef.current));
+  }, [img]);
+
+  // Draw the original from the preview's own source when there is one, so original and simulated
+  // have the same resolution (H3).
+  const origSrc = previewSource.value;
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img.working, 0, 0, img.width, img.height);
-  }, [img]);
+    if (!img || !canvas || !ctx) return;
+    canvas.width = origSrc ? origSrc.width : img.width;
+    canvas.height = origSrc ? origSrc.height : img.height;
+    ctx.drawImage(origSrc ?? img.working, 0, 0, canvas.width, canvas.height);
+  }, [img, origSrc]);
 
   // Mount the renderer's canvas (when supplied) into its host element.
   useLayoutEffect(() => {
@@ -221,6 +227,10 @@ export function Viewport({ overlay }: ViewportProps) {
   }, [img, box, view]);
 
   const scale = info?.scale ?? 1;
+  // Tell the renderer how large the image is shown, in device pixels (H3).
+  const shownLong = img && info ? Math.max(img.width, img.height) * scale * (window.devicePixelRatio || 1) : null;
+  useEffect(() => setPreviewDisplaySize('viewport', shownLong), [shownLong]);
+  useEffect(() => () => setPreviewDisplaySize('viewport', null), []);
   const pos = clampWipe(wipePos.value);
   const previewClip =
     wipe && img ? `inset(0 0 0 ${clipLeft(pos, box.width, view.tx, scale, img.width)}px)` : undefined;

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { APPROXIMATION_LINE, buildCaptionLines } from '../../export/caption';
+import { setPreviewDisplaySize } from '../../state/render';
 import { image, previewCanvas, profile } from '../../state/store';
 import { closePresent, compareMode, wipePos } from '../../state/ui';
 import { clampWipe, clipLeft } from '../panels/compare/logic';
@@ -113,6 +114,11 @@ export function PresentMode() {
     const scale = viewScale(v, size, box);
     return { left: v.tx, top: v.ty, width: img.width * scale, height: img.height * scale, scale };
   }, [img, box]);
+
+  // Tell the renderer how large the picture is shown, in device pixels (H3).
+  const shownLong = Math.max(rect.width, rect.height) * (window.devicePixelRatio || 1);
+  useEffect(() => setPreviewDisplaySize('present', shownLong), [shownLong]);
+  useEffect(() => () => setPreviewDisplaySize('present', null), []);
 
   const live = previewCanvas.value !== null;
   const pos = clampWipe(wipePos.value);

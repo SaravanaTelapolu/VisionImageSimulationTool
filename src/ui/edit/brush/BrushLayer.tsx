@@ -5,7 +5,7 @@ import type { MaskShape, Region, Vec2 } from '../../../model/types';
 import { maskRectPx } from '../../../render/maskRaster';
 import type { MaskData } from '../../../render/shapeCoverage';
 import { brushMode, brushSize, brushSoftness, cancelPlacing, placingShape } from '../../../state/edit';
-import { encodeMaskPng, maskData, primeMaskCache, setLiveMask } from '../../../state/masks';
+import { encodeMaskPng, isMaskPending, maskData, primeMaskCache, setLiveMask } from '../../../state/masks';
 import { applyEdit, endEdit, imageFrame, profile, selectedRegionId } from '../../../state/store';
 import type { ViewportInfo } from '../../viewport/context';
 import { ToolBanner } from '../freehand/ToolBanner';
@@ -76,7 +76,7 @@ export function BrushLayer({ info }: { info: ViewportInfo }) {
     start(p) {
       const f = imageFrame.peek();
       const region = selectedMask(profile.peek().regions, selectedRegionId.peek());
-      const current = region ? maskData.peek().get(region.id) : undefined;
+      const current = region && !isMaskPending(region.shape.dataUrl) ? maskData.peek().get(region.id) : undefined;
       if (!f || !region || !current) return; // still decoding, or nothing selected: ignore this stroke
       const buffer: MaskData = { width: current.width, height: current.height, data: current.data.slice() };
       const diameter = brushSize.peek() * Math.min(f.width, f.height);

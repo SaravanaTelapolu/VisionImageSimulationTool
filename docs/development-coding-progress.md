@@ -27,13 +27,13 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W3-4 | Freehand + brush | Sonnet | done | merged 8062c06; touch untested on a real phone |
 | W3-6 | Effect-map Web Worker (phone performance) | Sonnet | done | merged; worker path not yet run in a browser |
 | W4-1 | PWA offline | Sonnet | done | merged; InstallPrompt mounted by W3-1 |
-| W4-2 | Accessibility + UX pass (incl. two-step share, wipe knob, compare auto-switch) | Sonnet | running | worktree, started 02:01; uses the built-in browser |
+| W4-2 | Accessibility + UX pass (incl. two-step share, wipe knob, compare auto-switch; review M1, L2, L7) | Sonnet | done | merged 3df1563; checked in browser at 375 px and desktop, 100 % and 150 % text |
 | W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | done | merged 07198be; 3/3 pass on desktop + mobile projects (swiftshader WebGL) |
 | W4-4 | Opus code review → docs/code-review-findings.md | Opus | done | merged ec94301: 0 critical, 3 high, 5 medium, 11 low |
-| W5-1 | Review H2: fast freehand coverage | Sonnet | running | worktree, started 02:23 |
-| W5-2 | Review H1, H3, M5, L4, L8–L11: render fixes | Opus | running | worktree, started 02:23 |
-| W5-3 | Review M2–M4, L1, L3, L5, L6: state/storage/export fixes | Sonnet | running | worktree, started 02:23 |
-| W5-4 | Rerun e2e after all merges; update tests for two-step share | Orchestrator/Sonnet | todo | |
+| W5-1 | Review H2: fast freehand coverage | Sonnet | done | merged; 200-pt outline ~1 s → 24–28 ms (feather 0.3), 6–9 ms (no feather) |
+| W5-2 | Review H1, H3, M5, L4, L8–L11: render fixes | Opus | done | merged fc14d17; verified in browser; preview sized to screen (cap 2048), 0.6–2.2 ms/frame on desktop GPU |
+| W5-3 | Review M2–M4, L1, L3, L5, L6: state/storage/export fixes | Sonnet | done | merged d7a78ca; L3 simulated-only wiring moved to W5-4 |
+| W5-4 | Update e2e for new UI; L3 wiring in export run; storage-persistence hint | Sonnet | running | worktree, started 06:40 |
 
 ## Original-plan phases
 
@@ -46,9 +46,13 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | 4 Calibrate, compare, present | done (needs phone check) |
 | 5 Profiles and history | done (needs phone check) |
 | 6 Freehand and brush | done (needs phone check) |
-| 7 Offline and polish | PWA done; a11y, e2e, review running |
+| 7 Offline and polish | PWA + accessibility done; e2e update and render fixes running |
 
 ## Log (newest first)
+
+- 2026-10-21 06:56 IST — Merged W5-1 (freehand ~40× faster) and W5-2 (render fixes). 587 tests, build green. Only W5-4 (e2e update) remains.
+
+- 2026-10-21 06:40 IST — Merged W4-2 (a11y/UX) and W5-3 (state/storage fixes). 565 tests, build green. Launched W5-4 (e2e update for the two-step share + small wiring). W5-1 and W5-2 still running.
 
 - 2026-10-21 06:28 IST — Second usage limit ~02:30 to 06:20 stopped W4-2, W5-1, W5-2, W5-3; all resumed at 06:28. Playwright e2e on develop (07198be, with InstallPrompt mounted): 6/6 pass in 2.8 min.
 
