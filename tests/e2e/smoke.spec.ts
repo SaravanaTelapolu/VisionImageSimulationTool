@@ -73,11 +73,13 @@ async function pixelDiff(page: Page, a: string, b: string): Promise<number> {
   );
 }
 
-function tab(page: Page, name: 'Regions' | 'Effects' | 'Compare' | 'Export'): Locator {
+type TabName = 'Regions' | 'Effects' | 'Compare' | 'Export' | 'Profiles';
+
+function tab(page: Page, name: TabName): Locator {
   return page.getByRole('tab', { name, exact: true });
 }
 
-async function openTab(page: Page, name: 'Regions' | 'Effects' | 'Compare' | 'Export'): Promise<void> {
+async function openTab(page: Page, name: TabName): Promise<void> {
   await tab(page, name).click();
   await expect(tab(page, name)).toHaveAttribute('aria-selected', 'true');
 }
@@ -290,5 +292,26 @@ test('the "More options" menu opens, offers text size and closes with Escape', a
   await expect(page.getByRole('button', { name: 'Calibration guide', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(more).toHaveAttribute('aria-expanded', 'false');
+  expect(errors).toEqual([]);
+});
+
+test('the affected eye is asked on first run and used by the profile and the export caption', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/');
+  const start = page.getByRole('group', { name: 'Which eye do you want to simulate?' });
+  await expect(start).toBeVisible();
+  await expect(start.getByRole('radio', { name: 'Left' })).not.toBeChecked();
+  await expect(start.getByRole('radio', { name: 'Right' })).not.toBeChecked();
+  await start.getByText('Left', { exact: true }).click(); // the whole label row is the tap target
+  await expect(start.getByRole('radio', { name: 'Left' })).toBeChecked();
+
+  await loadAmsler(page);
+  await openTab(page, 'Profiles');
+  await expect(page.locator('#pf-name')).toHaveValue('Left eye');
+  await expect(page.getByRole('group', { name: 'Affected eye' }).getByRole('radio', { name: 'Left' })).toBeChecked();
+  await expect(page.getByRole('group', { name: 'Default eye for new profiles' }).getByRole('radio', { name: 'Left' })).toBeChecked();
+
+  await openTab(page, 'Export');
+  await expect(page.getByRole('group', { name: 'Eye', exact: true }).getByRole('radio', { name: 'Left' })).toBeChecked();
   expect(errors).toEqual([]);
 });

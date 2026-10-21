@@ -1,3 +1,4 @@
+import { eyeLabel } from '../model/eye';
 import type { Eye } from '../model/types';
 
 export interface CaptionInfo {
@@ -22,7 +23,7 @@ export function formatCaptionDate(date: Date): string {
  * (one line per non-empty note line), and always the approximation disclaimer last.
  */
 export function buildCaptionLines(info: CaptionInfo): string[] {
-  const eye = info.eye === 'left' ? 'Left eye' : 'Right eye';
+  const eye = eyeLabel(info.eye);
   const dist = Number.isFinite(info.viewingDistanceCm) ? Math.round(info.viewingDistanceCm * 10) / 10 : 0;
   const lines = [`${formatCaptionDate(info.date)} · ${eye} · viewed at ${dist} cm`];
   const name = info.profileName?.trim();

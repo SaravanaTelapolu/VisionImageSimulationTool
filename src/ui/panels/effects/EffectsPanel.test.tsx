@@ -110,9 +110,11 @@ describe('EffectsPanel', () => {
     expect(profile.value.globals.distortAngle).toBe(90);
     drag(sliderByLabel('Viewing distance'), [60]);
     expect(profile.value.viewingDistanceCm).toBe(60);
-    const left = Array.from(root.querySelectorAll<HTMLButtonElement>('[role=radio]')).find((b) => b.textContent === 'Left eye');
+    const left = root.querySelector<HTMLInputElement>('input[type=radio][name=eye-effects][value=left]');
+    expect(left?.checked).toBe(false);
     act(() => left?.click());
     expect(profile.value.eye).toBe('left');
+    expect(root.querySelector<HTMLInputElement>('input[name=eye-effects][value=left]')?.checked).toBe(true);
   });
 
   it('reset button sets an effect back to 0', () => {

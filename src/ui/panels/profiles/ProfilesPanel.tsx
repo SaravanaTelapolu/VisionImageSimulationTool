@@ -12,6 +12,7 @@ import {
   exportProfileById,
   importJsonFile,
   loadDefaultDistance,
+  loadDefaultEye,
   newProfile,
   notice,
   openProfile,
@@ -21,11 +22,15 @@ import {
   renameCurrent,
   saveCurrent,
   savePhotoWithCurrent,
+  setCurrentEye,
   storageError,
 } from '../../../state/profiles';
 import { image, profile } from '../../../state/store';
 import { distanceLabel } from '../../../model/distance';
+import { eyeLabel } from '../../../model/eye';
+import { EyeRadioGroup } from '../../controls/EyeRadioGroup';
 import { DefaultDistanceSetting } from './DefaultDistance';
+import { DefaultEyeSetting } from './DefaultEye';
 import { formatProfileDate, notePreview, regionCountLabel } from './helpers';
 import './profiles.css';
 
@@ -37,8 +42,6 @@ export interface ProfilesPanelProps {
 type Pending = { kind: 'delete' | 'open' | 'new'; id: string } | null;
 
 const CONFIRM_MS = 5000;
-
-const eyeLabel = (eye: string): string => (eye === 'left' ? 'Left eye' : 'Right eye');
 
 /** One-line note on how safe the saved profiles are, from the browser's persistent-storage answer. */
 export function storageHintText(persistent: boolean | null): string {
@@ -57,6 +60,7 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
   useEffect(() => {
     void refreshList();
     void loadDefaultDistance();
+    void loadDefaultEye();
     return () => window.clearTimeout(timer.current);
   }, []);
 
@@ -150,6 +154,7 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
             if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
           }}
         />
+        <EyeRadioGroup name="eye-profile" value={cur.eye} onChange={setCurrentEye} />
         <p class="pf-meta">
           {eyeLabel(cur.eye)} · {distanceLabel(cur.viewingDistanceCm)} · created {formatProfileDate(cur.createdAt)} ·{' '}
           {regionCountLabel(cur.regions.length)}
@@ -247,7 +252,11 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
         )}
       </section>
 
-      <DefaultDistanceSetting />
+      <section class="pf-card" aria-label="Settings">
+        <h2 class="pf-h">Settings</h2>
+        <DefaultEyeSetting />
+        <DefaultDistanceSetting />
+      </section>
 
       <section class="pf-row pf-transfer" aria-label="Import and export">
         <label class="pf-btn pf-file">

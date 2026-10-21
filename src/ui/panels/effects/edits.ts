@@ -1,6 +1,7 @@
 // Pure profile edits used by the Effects panel. Each returns the same Profile object when the
 // edit would change nothing, so applyEdit() records no undo step for a no-op.
 
+import { withEye } from '../../../model/eye';
 import { updateEffects, updateGlobals, updateRegion, findRegion } from '../../../model/ops';
 import type { EffectKey, Eye, Profile } from '../../../model/types';
 import { clamp } from '../../controls/format';
@@ -45,5 +46,5 @@ export function setViewingDistance(profile: Profile, cm: number): Profile {
 }
 
 export function setEye(profile: Profile, eye: Eye): Profile {
-  return profile.eye === eye ? profile : { ...profile, eye };
+  return withEye(profile, eye); // an automatic name ("Left eye") follows the eye
 }

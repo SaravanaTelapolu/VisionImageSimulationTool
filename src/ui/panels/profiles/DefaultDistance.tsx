@@ -17,7 +17,7 @@ export function parseDefaultDistance(text: string): number | null {
   return Math.round(v * 10) / 10;
 }
 
-/** "Settings" section of the Profiles tab: the viewing distance new profiles start with. */
+/** Part of the Profiles tab's "Settings" card: the viewing distance new profiles start with. */
 export function DefaultDistanceSetting() {
   const current = defaultDistanceCm.value;
   const [draft, setDraft] = useState(String(current));
@@ -37,8 +37,7 @@ export function DefaultDistanceSetting() {
   };
 
   return (
-    <section class="pf-card" aria-label="Settings">
-      <h2 class="pf-h">Settings</h2>
+    <div class="pf-setting">
       <p class="pf-label" id="pf-dd-label">
         Default viewing distance for new profiles
       </p>
@@ -80,6 +79,6 @@ export function DefaultDistanceSetting() {
         New profiles start at {formatDistance(current)} ({distanceBand(current)}). Saved profiles keep the distance they were
         made at.
       </p>
-    </section>
+    </div>
   );
 }
