@@ -43,6 +43,7 @@
 import type { RenderParams, Renderer } from './types';
 import { GLPipeline, type SourceInfo } from './gl/pipeline';
 import { EXPORT_MAX_SIDE } from './gl/math';
+import { createGpuTimer, type GpuTimer } from './gl/timer';
 
 export { scaleRenderParams } from './gl/math';
 
@@ -69,15 +70,32 @@ export interface ExportInfo {
   encodeMs: number;
 }
 
+export interface RenderOptions {
+  /** Time this render on the GPU (EXT_disjoint_timer_query_webgl2) when supported; see pollGpuTimeMs(). */
+  timed?: boolean;
+}
+
 /** The contract plus a few extras useful to the app and the dev harness. */
 export interface WebGLRenderer extends Renderer {
+  render(params: RenderParams, opts?: RenderOptions): void;
   /** True while the WebGL context is lost (render() does nothing). */
   readonly contextLost: boolean;
   /** Size actually uploaded for the current source (may be smaller than declared). */
   readonly sourceInfo: SourceInfo | null;
+  /** Largest image side this context can upload and draw (texture, renderbuffer and viewport limits). */
+  readonly maxSide: number;
   /** Details of the last exportFullSize() call. */
   readonly lastExport: ExportInfo | null;
-  /** Blocks until the GPU has finished (for timing in the dev harness only). */
+  /** True when timed renders can be measured on the GPU without blocking. */
+  readonly gpuTimerSupported: boolean;
+  /** GPU time (ms) of the newest finished timed render, or null if none finished yet. Never blocks. */
+  pollGpuTimeMs(): number | null;
+  /** True while timed renders are waiting for their GPU results. */
+  readonly gpuTimePending: boolean;
+  /**
+   * Blocks until the GPU has finished (a 1-pixel readback). Expensive: a CPU/GPU sync. Use only
+   * for timing in the dev harness or when the performance readout is open and no GPU timer exists.
+   */
   finish(): void;
 }
 
@@ -122,7 +140,9 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
   const ownsCanvas = !target;
   const canvas = target ?? document.createElement('canvas');
   let pipeline: GLPipeline | null = new GLPipeline(getContext(canvas));
+  let timer: GpuTimer | null = createGpuTimer(pipeline.gl);
   const maxTextureSize = pipeline.maxTextureSize;
+  const maxSide = pipeline.maxSide;
   let lost = false;
   let disposed = false;
   let lastSource: { image: TexImageSource; width: number; height: number } | null = null;
@@ -133,12 +153,14 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
     e.preventDefault(); // allow restoration
     lost = true;
     pipeline = null; // its GL objects are gone with the context
+    timer = null;
     console.warn('[renderer] WebGL context lost; rendering paused until it is restored.');
   };
   const onRestored = () => {
     if (disposed) return;
     try {
       pipeline = new GLPipeline(getContext(canvas));
+      timer = createGpuTimer(pipeline.gl);
       lost = false;
       if (lastSource) pipeline.setSource(lastSource.image, lastSource.width, lastSource.height);
       console.warn('[renderer] WebGL context restored.');
@@ -158,8 +180,18 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
     get sourceInfo() {
       return pipeline?.sourceInfo ?? null;
     },
+    maxSide,
     get lastExport() {
       return lastExport;
+    },
+    get gpuTimerSupported() {
+      return !!timer?.supported;
+    },
+    get gpuTimePending() {
+      return !!timer?.pending;
+    },
+    pollGpuTimeMs() {
+      return timer && !lost ? timer.poll() : null;
     },
 
     setSource(image, width, height) {
@@ -172,9 +204,12 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
       }
     },
 
-    render(params: RenderParams) {
+    render(params: RenderParams, opts?: RenderOptions) {
       if (disposed || lost || !pipeline) return;
-      if (!pipeline.render(params) && !warnedNoSource) {
+      const timing = !!opts?.timed && !!timer?.begin();
+      const drawn = pipeline.render(params);
+      if (timing) timer?.end();
+      if (!drawn && !warnedNoSource) {
         warnedNoSource = true;
         console.warn('[renderer] render() called before setSource(); nothing drawn.');
       }
@@ -234,10 +269,17 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
       canvas.removeEventListener('webglcontextlost', onLost, false);
       canvas.removeEventListener('webglcontextrestored', onRestored, false);
       if (pipeline && !lost) {
+        timer?.dispose();
         pipeline.dispose();
         // Only lose a context we own: a caller's canvas may get a new renderer later.
         if (ownsCanvas) releaseContext(pipeline.gl);
       }
+      if (ownsCanvas) {
+        // Free the drawing buffer now rather than when the canvas is garbage-collected.
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+      timer = null;
       pipeline = null;
       lastSource = null;
     },
