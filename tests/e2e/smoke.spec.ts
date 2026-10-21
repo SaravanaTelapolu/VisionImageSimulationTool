@@ -21,11 +21,12 @@ function watchErrors(page: Page): string[] {
 
 /** The pixels the user sees in the image area (preview canvas + region outlines), as base64 PNG. */
 async function shot(page: Page): Promise<string> {
-  // The quick-actions toolbar and the toast float over the image and change with undo/flip state, so
-  // they are hidden: only the image itself is compared.
+  // The quick-actions toolbar and the toasts (including the one-off "Ready to work offline") float
+  // over the image and change with undo/flip state or time, so they are hidden: only the image
+  // itself is compared.
   const png = await page
     .locator('.viewport')
-    .screenshot({ animations: 'disabled', style: '.quickbar, .toast { visibility: hidden !important; }' });
+    .screenshot({ animations: 'disabled', style: '.quickbar, .toast, .pwa-toast { visibility: hidden !important; }' });
   return png.toString('base64');
 }
 
@@ -173,7 +174,6 @@ test('amsler grid: add a spot, blur it, flip, undo and export PNGs', async ({ pa
   const undo = quick.getByRole('button', { name: 'Undo', exact: true });
   await undo.click();
   await expect(blur).not.toHaveValue(max!);
-  { const fs = await import('node:fs'); await page.waitForTimeout(1500); fs.writeFileSync('C:/Users/STELAP~1/AppData/Local/Temp/claude/dbg-after.png', Buffer.from(await settledShot(page), 'base64')); fs.writeFileSync('C:/Users/STELAP~1/AppData/Local/Temp/claude/dbg-spot.png', Buffer.from(withSpot, 'base64')); }
   await expect
     .poll(async () => pixelDiff(page, withSpot, await settledShot(page)))
     .toBeLessThan(SAME_PIXELS);

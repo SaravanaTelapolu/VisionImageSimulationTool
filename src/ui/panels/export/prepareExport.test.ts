@@ -14,7 +14,7 @@ vi.mock('../../../export', async (importOriginal) => {
   };
 });
 vi.mock('../../../state/render', () => ({
-  renderFullSize: renderSpy,
+  renderFullSizeCanvas: renderSpy,
   getOriginalCanvas: originalSpy,
 }));
 
@@ -30,11 +30,8 @@ beforeEach(() => {
   composeSpy.mockReset().mockImplementation(canvas);
   renderSpy
     .mockReset()
-    .mockResolvedValue({ blob: new Blob(['sim'], { type: 'image/png' }), width: 4, height: 4, downscaled: false });
+    .mockImplementation(async () => ({ canvas: canvas(), width: 4, height: 4, downscaled: false }));
   originalSpy.mockReset().mockImplementation(async () => canvas());
-  // jsdom has no image decoding: a stub bitmap is enough because composeExport is mocked.
-  vi.stubGlobal('createImageBitmap', async () => ({ width: 4, height: 4, close: () => undefined }));
-  HTMLCanvasElement.prototype.getContext = (() => ({ drawImage: () => undefined })) as never;
 });
 
 describe('prepareExport approximation note', () => {
@@ -58,6 +55,7 @@ describe('prepareExport approximation note', () => {
     const out = await prepareExport(opts({ simulated: false, original: true, sideBySide: false }), fields);
     expect(out.files).toHaveLength(1);
     expect(composeSpy).not.toHaveBeenCalled();
+    expect(renderSpy).not.toHaveBeenCalled(); // nothing simulated is needed
   });
 
   it('composes the side-by-side image without a caption too (the strip comes from composeExport)', async () => {
