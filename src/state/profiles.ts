@@ -4,7 +4,8 @@
 import { computed, signal } from '@preact/signals';
 import { newProfile as makeNewProfile } from '../model/defaults';
 import { DEFAULT_VIEWING_DISTANCE_CM, sanitizeDefaultDistance } from '../model/distance';
-import type { Profile } from '../model/types';
+import { FALLBACK_EYE, isEye, renameAutoForEye, withEye } from '../model/eye';
+import type { Eye, Profile } from '../model/types';
 import { shareOrDownload } from '../export/share';
 import {
   ProfileNotFoundError,
@@ -28,6 +29,7 @@ import { activityCount, applyEdit, endEdit, image, loadPhoto, profile, resetProf
 
 export const LAST_PROFILE_KEY = 'lastProfileId';
 export const DEFAULT_DISTANCE_KEY = 'defaultViewingDistanceCm';
+export const DEFAULT_EYE_KEY = 'defaultEye';
 
 // --- Signals ------------------------------------------------------------------------------
 
@@ -55,6 +57,17 @@ let persistAsked = false;
  * with setDefaultDistance(); loaded from storage by loadDefaultDistance() (restoreLastProfile does it).
  */
 export const defaultDistanceCm = signal<number>(DEFAULT_VIEWING_DISTANCE_CM);
+
+/**
+ * The affected eye given to new profiles. Changed with setDefaultEye() (and by setCurrentEye(), so
+ * the next new profile matches); loaded from storage by loadDefaultEye() (restoreLastProfile does it).
+ */
+export const defaultEye = signal<Eye>(FALLBACK_EYE);
+/**
+ * Whether the user has chosen an eye (a saved setting, a restored profile, or a choice made this
+ * session). While false the empty state asks "Which eye do you want to simulate?".
+ */
+export const eyeChosen = signal(false);
 
 /**
  * Fingerprint of the current profile as last saved/opened/created (updatedAt ignored), or null when
@@ -217,9 +230,44 @@ export async function setDefaultDistance(cm: number): Promise<number> {
   return v;
 }
 
-/** Starts an empty profile at the default viewing distance (the current photo stays). Unsaved changes are discarded. */
-export function newProfile(name = 'Right eye'): Profile {
-  const p = makeNewProfile(name, new Date(), defaultDistanceCm.peek());
+/** Reads the default eye setting into defaultEye / eyeChosen. Returns the saved eye, or null when none was saved. */
+export async function loadDefaultEye(): Promise<Eye | null> {
+  const v = await getSetting<unknown>(DEFAULT_EYE_KEY, null);
+  if (!isEye(v)) return null;
+  if (eyeChosen.peek()) return defaultEye.peek(); // the user chose meanwhile; their choice wins
+  defaultEye.value = v;
+  eyeChosen.value = true;
+  return v;
+}
+
+/** Sets and stores the eye new profiles start with. Does not touch the current profile. */
+export async function setDefaultEye(eye: Eye): Promise<void> {
+  defaultEye.value = eye;
+  eyeChosen.value = true;
+  try {
+    await setSetting(DEFAULT_EYE_KEY, eye);
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/**
+ * Sets the affected eye of the current profile (one undo step). An automatic name ("Right eye")
+ * follows the eye; a name the user typed is kept. Also becomes the default for new profiles.
+ */
+export function setCurrentEye(eye: Eye): void {
+  const untouchedBlank = !dirty.peek() && !currentIsSaved.peek();
+  endEdit();
+  applyEdit((p) => withEye(p, eye));
+  endEdit();
+  // A blank, never-saved profile is not "unsaved work": choosing the eye should not make it so.
+  if (untouchedBlank) baseline.value = profileFingerprint(profile.peek());
+  void setDefaultEye(eye);
+}
+
+/** Starts an empty profile at the default viewing distance and eye (the current photo stays). Unsaved changes are discarded. */
+export function newProfile(name?: string): Profile {
+  const p = makeNewProfile(name, new Date(), defaultDistanceCm.peek(), defaultEye.peek());
   resetProfile(p);
   baseline.value = profileFingerprint(p);
   currentPhotoSaved.value = false;
@@ -385,20 +433,30 @@ export async function restoreLastProfile(): Promise<boolean> {
   // the restore is dropped rather than overwriting their work.
   const since = activityCount();
   const cm = await loadDefaultDistance(); // also keeps new profiles on the setting when one is restored
+  const eye = await loadDefaultEye();
   const restored = await restoreSaved(since);
-  if (!restored) applyDefaultDistanceIfPristine(cm, since);
+  if (restored) {
+    // Someone with a saved profile has already chosen an eye; new profiles follow the last one used.
+    if (eye === null && !eyeChosen.peek()) {
+      defaultEye.value = profile.peek().eye;
+      eyeChosen.value = true;
+    }
+  } else {
+    applyDefaultsIfPristine(cm, eye, since);
+  }
   return restored;
 }
 
 /**
  * When nothing was restored and the user has not touched anything since the restore began (activityCount() === since), the blank starting
- * profile takes the default viewing distance setting (which has only just loaded).
+ * profile takes the default viewing distance and eye settings (which have only just loaded).
  */
-function applyDefaultDistanceIfPristine(cm: number, since: number): void {
+function applyDefaultsIfPristine(cm: number, eye: Eye | null, since: number): void {
   if (activityCount() !== since) return;
   const cur = profile.peek();
-  if (cur.viewingDistanceCm === cm) return;
-  const p = { ...cur, viewingDistanceCm: cm };
+  const nextEye = eye ?? cur.eye;
+  if (cur.viewingDistanceCm === cm && cur.eye === nextEye) return;
+  const p = { ...withEye(cur, nextEye), viewingDistanceCm: cm };
   resetProfile(p);
   baseline.value = profileFingerprint(p);
 }
@@ -423,4 +481,6 @@ export function _resetProfilesStateForTests(): void {
   persistentStorage.value = null;
   persistAsked = false;
   defaultDistanceCm.value = DEFAULT_VIEWING_DISTANCE_CM;
+  defaultEye.value = FALLBACK_EYE;
+  eyeChosen.value = false;
 }
