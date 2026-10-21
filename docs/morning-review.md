@@ -16,10 +16,32 @@ Tick or answer inline; the next session reads this file.
 
 ## Needs your action
 
-- [ ] **Push and deploy.** Work is committed locally on branch `develop` only (not pushed). To publish: push `develop`, merge to `main`, then GitHub → Settings → Pages → Source: "GitHub Actions". The repo must be public for free Pages hosting (photos never go in the repo).
+- [x] **Push.** Done 2026-10-21: `develop` merged into `main`, tagged `v0.1` ("Initial Build"), and `main`, `develop` and the tag pushed to GitHub.
+- [ ] **Deploy (needs a decision).** The repository is **private**. GitHub Pages for a private repo needs a paid GitHub plan, so the "Deploy to GitHub Pages" workflow will fail until one of these is done:
+  - make the repo public — the code holds no photos, but the plan docs describe your eye condition; or
+  - use a free host that deploys private repos (for example Cloudflare Pages or Netlify), building with `npm run build` and publishing `dist/`; or
+  - a GitHub Pro plan.
+  Then: GitHub → Settings → Pages → Source: "GitHub Actions".
 - [ ] **Test on your phone** once deployed: each "Done when" line in docs/Vision-Simulator-Plan.md. Check ⋯ → Performance while dragging a slider (target under 50 ms), the Share button to WhatsApp, and Install app → airplane mode.
 - [ ] **Clean up agent worktrees** when you're happy: they live in `.claude/worktrees/` (git-ignored) with branches `worktree-agent-*`. All of their work is merged into `develop`.
 - [ ] The backup scheduled task "vision-sim-auto-resume" was disabled. Delete it from the app's Scheduled list if you don't need it.
+
+## Your review (2026-10-21)
+
+| Item | Your answer | Action |
+| --- | --- | --- |
+| D02 | Vite 6 is fine for now | Unchanged |
+| D03 | Push now for safety; more pushes are fine | Done (v0.1) |
+| D04 | "You are a better judge" | Kept: blur is defined at a 768 px shorter side and scaled, so preview and export match |
+| D05 | Per-region dark-spot shade preferred | Being implemented (each region gets its own grey ↔ black setting) |
+| D06 | Parked until you test | Unchanged |
+| D01, D07–D27 | OK | Unchanged |
+| Q1 | Android phone; iPhone is an optional roadmap item | Added to docs/roadmap.md |
+| Q2 | All effects is a good start | Unchanged |
+| Q3 | Editable is fine; near vision first, far vision later; want to change the default | Being implemented: a "default viewing distance" setting with Near / Computer / Far presets |
+| Q4 | Current default is good | Unchanged |
+| Q5 | Make it configurable, current default | Being implemented: export size setting — "Up to 4096 px" (default) or "Full resolution" |
+| Q6 | Current default is good | Unchanged |
 
 ## Decisions made (change any you disagree with)
 
