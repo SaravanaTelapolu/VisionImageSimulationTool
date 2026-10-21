@@ -1,7 +1,7 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-21T07:07+05:30
-BUILD_STATUS: COMPLETE
+HEARTBEAT: 2026-10-21T08:12+05:30
+BUILD_STATUS: IN_PROGRESS (v0.2)
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
 
@@ -19,12 +19,15 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 6. Never stop to ask Saravana: make an assumption and add it to `docs/morning-review.md`.
 7. Commit after each merge to `develop` (never push), then update the progress log, this file's HEARTBEAT, and "Current state" below.
 
-## Current state
+## Current state (v0.2 in progress, 2026-10-21 08:12)
 
-- Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: every task in the plan (W0–W5). App complete on `develop`; checks green (typecheck, 592 unit, build, 8 e2e).
-- Running: nothing.
-- Next (Saravana): push `develop`, merge to `main`, enable GitHub Pages; test on the phone; answer docs/morning-review.md. Future Claude sessions: take follow-ups from morning-review.md and docs/code-review-findings.md (Low items left), one task per session.
+- v0.1 released: `main` = tag `v0.1`, live at https://saravanatelapolu.github.io/VisionImageSimulationTool/ (deploys on push to main). Repo is public. CI passes on `develop`.
+- `develop` (pushed) also has v0.2 Q3 (default viewing distance setting) and the CI ubuntu-24.04 fix.
+- v0.2 work still in agent worktrees (NOT merged yet):
+  1. `.claude/worktrees/agent-ae46b63a2a488e3fb` (branch worktree-agent-ae46b63a2a488e3fb, Opus): committed D05 per-region dark-spot shade (123c138) and Q5 configurable full-resolution tiled export (4eb0f31); was then doing **Blur100**: MAX_BLUR_PX 40 → 100, extra pyramid levels (no 20→100 gap), fill-in look kept, tiling margin covers 100 px, slider/validate/comments/tests. Has uncommitted changes.
+  2. `.claude/worktrees/agent-a851004b147660534` (branch worktree-agent-a851004b147660534, Sonnet): **Eye choice** — remove hard-coded "Right eye"; RadioGroup (fieldset + radio inputs, ≥ 44 px) for Left/Right in Profiles tab, export caption, Effects profile settings (replace or remove), first-run empty state; `defaultEye` setting (like defaultViewingDistanceCm); automatic name "<Left|Right> eye" follows the eye unless user renamed; README generic; tests + e2e. Little or no commits yet.
+- To resume: for each worktree, commit any finished work there, finish the remaining items listed above, then in the main checkout `git merge --no-ff <branch>` into develop; run `npm run typecheck && npm test && npm run build && npm run e2e`; push develop. Then ask Saravana before merging to main / tagging v0.2 (main deploys the live site).
+- Docs to update after merge: development-coding-progress.md (log), morning-review.md ("Your review" table: D05, Q5 done; new items Eye + Blur100).
 
 ## Known gotchas
 
