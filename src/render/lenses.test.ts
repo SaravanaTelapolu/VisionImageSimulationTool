@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { centredFrame } from '../model/coords';
 import { emptyEffects, newRegion } from '../model/defaults';
 import { MAX_SIZE_CHANGE, MAX_SIZE_CHANGE_LENSES, type Effects, type Region, type Shape } from '../model/types';
-import { collectLenses } from './lenses';
+import { collectLenses, lensWeight, warpByLenses } from './lenses';
+import type { SizeChangeLens } from './types';
 
 const frame = { width: 800, height: 600, fixation: { x: 300, y: 250 } }; // shorter side 600
 
@@ -69,5 +70,64 @@ describe('collectLenses', () => {
 
   it('returns an empty list for no regions', () => {
     expect(collectLenses([], frame)).toEqual([]);
+  });
+});
+
+describe('warpByLenses (overlap rule, L8)', () => {
+  const lens = (over: Partial<SizeChangeLens> = {}): SizeChangeLens => ({
+    cx: 500,
+    cy: 500,
+    rx: 200,
+    ry: 200,
+    rotation: 0,
+    amount: 0.3,
+    feather: 0,
+    ...over,
+  });
+  /** Apparent magnification at a point offset `d` px to the right of (500, 500). */
+  const magnification = (lenses: SizeChangeLens[], d = 20): number => d / (warpByLenses({ x: 500 + d, y: 500 }, lenses).x - 500);
+
+  it('a single lens magnifies by 1 + amount inside and leaves the outside alone', () => {
+    expect(magnification([lens()])).toBeCloseTo(1.3, 6);
+    expect(magnification([lens({ amount: -0.2 })])).toBeCloseTo(0.8, 6);
+    expect(warpByLenses({ x: 900, y: 500 }, [lens()])).toEqual({ x: 900, y: 500 });
+  });
+
+  it('two identical overlapping lenses look like one (no 1.69x compounding)', () => {
+    expect(magnification([lens(), lens()])).toBeCloseTo(1.3, 6);
+  });
+
+  it('the stronger lens dominates where two lenses overlap, never exceeding the +-30% range', () => {
+    const m = magnification([lens({ amount: 0.1 }), lens({ amount: 0.3 })]);
+    expect(m).toBeGreaterThan(1.28);
+    expect(m).toBeLessThanOrEqual(1.3 + 1e-9);
+    const shrink = magnification([lens({ amount: -0.3 }), lens({ amount: -0.3, rx: 300, ry: 300 })]);
+    expect(shrink).toBeCloseTo(0.7, 6);
+  });
+
+  it('a lens has no influence outside its own ellipse', () => {
+    const a = lens();
+    const far = lens({ cx: 1500 });
+    const p = { x: 560, y: 470 };
+    expect(warpByLenses(p, [a, far])).toEqual(warpByLenses(p, [a]));
+  });
+
+  it('is continuous across the seam between two offset, overlapping lenses', () => {
+    const lenses = [lens({ feather: 0.3 }), lens({ cx: 750, amount: 0.15, feather: 0.3 })];
+    let prev = warpByLenses({ x: 250, y: 520 }, lenses);
+    let worst = 0;
+    for (let x = 251; x <= 1000; x++) {
+      const q = warpByLenses({ x, y: 520 }, lenses);
+      worst = Math.max(worst, Math.hypot(q.x - prev.x, q.y - prev.y));
+      prev = q;
+    }
+    expect(worst).toBeLessThan(3); // one output pixel step never jumps more than a few source pixels
+  });
+
+  it('agrees with lensWeight at the feather edge', () => {
+    expect(lensWeight(1, 0.5)).toBe(0);
+    expect(lensWeight(0.5, 0.5)).toBe(1);
+    expect(lensWeight(0.75, 0.5)).toBeCloseTo(0.5, 6);
+    expect(lensWeight(0.2, 0)).toBe(1);
   });
 });

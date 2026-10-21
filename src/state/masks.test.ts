@@ -3,7 +3,19 @@ import { newProfile, newRegion } from '../model/defaults';
 import { addRegion, removeRegion, setRegionVisible, updateShape } from '../model/ops';
 import type { MaskShape } from '../model/types';
 import type { MaskData } from '../render/shapeCoverage';
-import { maskCacheSize, maskData, primeMaskCache, resetMaskCache, setLiveMask, setMaskCodec, type MaskCodec } from './masks';
+import type { Profile } from '../model/types';
+import {
+  decodeMasksFor,
+  isMaskPending,
+  maskCacheSize,
+  maskData,
+  masksReady,
+  primeMaskCache,
+  resetMaskCache,
+  setLiveMask,
+  setMaskCodec,
+  type MaskCodec,
+} from './masks';
 import { applyEdit, resetProfile } from './store';
 
 function data(v: number): MaskData {
@@ -126,5 +138,73 @@ describe('mask cache sync', () => {
     const d = data(9);
     setLiveMask('abc', d);
     expect(maskData.value.get('abc')).toBe(d);
+  });
+});
+
+function profileOf(...regions: ReturnType<typeof newRegion>[]): Profile {
+  return { ...newProfile(), regions };
+}
+
+describe('decodeMasksFor (H1, L9)', () => {
+  it("decodes another profile's masks from its own dataUrls, keyed by its region ids", async () => {
+    const live = newRegion(maskShape('data:image/png;base64,LIVE'));
+    applyEdit((p) => addRegion(p, live));
+    await flush();
+    const saved = newRegion(maskShape('data:image/png;base64,SAVED1'));
+    const promise = decodeMasksFor(profileOf(saved));
+    await flush();
+    const out = await promise;
+    expect([...out.keys()]).toEqual([saved.id]);
+    expect(out.get(saved.id)?.data[0]).toBe('data:image/png;base64,SAVED1'.length % 256);
+    // The live profile's published data is untouched.
+    expect(maskData.value.get(live.id)?.data[0]).toBe('data:image/png;base64,LIVE'.length % 256);
+  });
+
+  it('uses the saved data even when region ids match the live profile', async () => {
+    const r = newRegion(maskShape('data:image/png;base64,NEW_UNSAVED'));
+    applyEdit((p) => addRegion(p, r));
+    await flush();
+    const promise = decodeMasksFor(profileOf({ ...r, shape: maskShape('data:image/png;base64,OLD') }));
+    await flush();
+    expect((await promise).get(r.id)?.data[0]).toBe('data:image/png;base64,OLD'.length % 256);
+  });
+
+  it('joins a decode in flight instead of starting another, and waits for it', async () => {
+    const url = 'data:image/png;base64,SHARED';
+    const r = newRegion(maskShape(url));
+    applyEdit((p) => addRegion(p, r));
+    expect(isMaskPending(url)).toBe(true);
+    let done = false;
+    const promise = decodeMasksFor(profileOf(r)).then((m) => {
+      done = true;
+      return m;
+    });
+    await Promise.resolve();
+    expect(done).toBe(false); // not answered with missing data while decoding
+    await flush();
+    const out = await promise;
+    expect(decodeCalls).toEqual([url]);
+    expect(out.get(r.id)).toBe(maskData.value.get(r.id));
+    expect(isMaskPending(url)).toBe(false);
+  });
+
+  it('skips hidden and undecodable regions', async () => {
+    const bad = newRegion(maskShape('data:image/png;base64,bad'));
+    const hidden = { ...newRegion(maskShape('data:image/png;base64,OK')), visible: false };
+    const promise = decodeMasksFor(profileOf(bad, hidden));
+    await flush();
+    expect((await promise).size).toBe(0);
+    expect(decodeCalls).toEqual(['data:image/png;base64,bad']);
+  });
+
+  it('masksReady resolves after pending decodes finish', async () => {
+    applyEdit((p) => addRegion(p, newRegion(maskShape('data:image/png;base64,WAIT'))));
+    let ready = false;
+    const promise = masksReady().then(() => (ready = true));
+    await Promise.resolve();
+    expect(ready).toBe(false);
+    await flush();
+    await promise;
+    expect(ready).toBe(true);
   });
 });

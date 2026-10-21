@@ -1,5 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { setPreviewDisplaySize } from '../../../state/render';
 import { image, previewCanvas } from '../../../state/store';
 import { fitScale, type Size } from '../../viewport/transform';
 import { chooseSideBySideLayout } from './logic';
@@ -44,7 +45,9 @@ export function SideBySide() {
   const frameH = img ? Math.floor(img.height * k) : 0;
   useLayoutEffect(() => {
     target.value = frameW > 0 ? { width: frameW, height: frameH } : null;
+    setPreviewDisplaySize('side-by-side', frameW > 0 ? Math.max(frameW, frameH) * (window.devicePixelRatio || 1) : null);
   }, [frameW, frameH]);
+  useLayoutEffect(() => () => setPreviewDisplaySize('side-by-side', null), []);
   const frame = img ? { width: `${frameW}px`, height: `${frameH}px` } : undefined;
   const live = previewCanvas.value !== null;
 
