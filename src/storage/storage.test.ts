@@ -12,6 +12,8 @@ import {
   getProfile,
   getSetting,
   importProfilesFromFile,
+  MAX_IMPORT_BYTES,
+  MAX_PROFILES_PER_BUNDLE,
   importProfilesFromText,
   listProfiles,
   profilesToBundleBlob,
@@ -285,6 +287,29 @@ describe('import', () => {
     const broken = { text: () => Promise.reject(new Error('boom')) } as unknown as Blob;
     const res = await importProfilesFromFile(broken);
     expect(res.errors).toEqual(['Could not read that file.']);
+  });
+});
+
+describe('import size bounds (L5)', () => {
+  it('rejects a file over 5 MB without reading it', async () => {
+    const text = vi.fn(() => Promise.resolve('{}'));
+    const huge = { size: MAX_IMPORT_BYTES + 1, text } as unknown as Blob;
+    const res = await importProfilesFromFile(huge);
+    expect(res.errors.join()).toMatch(/more than the limit of 5 MB/);
+    expect(text).not.toHaveBeenCalled();
+  });
+
+  it('rejects over-long text passed straight to the parser', () => {
+    const res = importProfilesFromText(' '.repeat(MAX_IMPORT_BYTES + 1), new Set());
+    expect(res.errors.join()).toMatch(/limit of 5 MB/);
+    expect(res.imported).toEqual([]);
+  });
+
+  it('rejects a bundle with more than 500 profiles', () => {
+    const profiles = Array.from({ length: MAX_PROFILES_PER_BUNDLE + 1 }, () => ({}));
+    const res = importProfilesFromText(JSON.stringify({ kind: 'vision-simulator-profiles', version: 1, exportedAt: 'x', profiles }), new Set());
+    expect(res.errors.join()).toMatch(/limit of 500/);
+    expect(res.imported).toEqual([]);
   });
 });
 

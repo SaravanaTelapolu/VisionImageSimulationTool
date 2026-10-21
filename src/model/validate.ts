@@ -25,6 +25,15 @@ export type ValidationResult =
 /** Smallest accepted ellipse radius / mask size, in shorter-side units. */
 export const MIN_SHAPE_SIZE = 0.001;
 export const MIN_PATH_POINTS = 3;
+/** Import size bounds: a corrupted or hostile file must not be able to freeze the app. */
+export const MAX_REGIONS_PER_PROFILE = 200;
+export const MAX_PATH_POINTS = 5000;
+/** Maximum length, in characters, of a brush-mask data URL (about 2 MB). */
+export const MAX_MASK_DATA_URL_LENGTH = 2 * 1024 * 1024;
+export const MIN_VIEWING_DISTANCE_CM = 10;
+export const MAX_VIEWING_DISTANCE_CM = 150;
+export const MAX_NAME_LENGTH = 200;
+export const MAX_NOTE_LENGTH = 10000;
 const DEFAULT_NAME = 'Untitled profile';
 const DEFAULT_REGION_NAME = 'Region';
 const DEFAULT_FEATHER = 0.3;
@@ -70,6 +79,13 @@ function clamp(ctx: Ctx, v: number, lo: number, hi: number, label: string): numb
     return c;
   }
   return v;
+}
+
+/** Truncates over-long text, warning when it had to. */
+function cap(ctx: Ctx, v: string, max: number, label: string): string {
+  if (v.length <= max) return v;
+  ctx.warnings.push(`${label}: ${v.length} characters is too long; cut to ${max}.`);
+  return v.slice(0, max);
 }
 
 /** Optional number with a default; wrong type falls back to the default with a warning. */
@@ -197,6 +213,12 @@ function validateShape(ctx: Ctx, raw: unknown, label: string): Shape | undefined
         ctx.errors.push(`${label}.points: must be an array of [x, y] pairs.`);
         return undefined;
       }
+      if (pts.length > MAX_PATH_POINTS) {
+        ctx.errors.push(
+          `${label}.points: this outline has ${pts.length} points, more than the limit of ${MAX_PATH_POINTS}. The file may be damaged.`,
+        );
+        return undefined;
+      }
       const points: [number, number][] = [];
       let bad = false;
       pts.forEach((p, i) => {
@@ -219,6 +241,11 @@ function validateShape(ctx: Ctx, raw: unknown, label: string): Shape | undefined
       let ok = true;
       if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
         ctx.errors.push(`${label}.dataUrl: must be an image data URL ("data:image/...").`);
+        ok = false;
+      } else if (dataUrl.length > MAX_MASK_DATA_URL_LENGTH) {
+        ctx.errors.push(
+          `${label}.dataUrl: this brush mask is ${(dataUrl.length / 1048576).toFixed(1)} MB, more than the limit of ${MAX_MASK_DATA_URL_LENGTH / 1048576} MB. The file may be damaged.`,
+        );
         ok = false;
       }
       const x = reqNum(ctx, raw, 'x', `${label}.x`);
@@ -255,7 +282,7 @@ function validateRegion(ctx: Ctx, raw: unknown, index: number, seenIds: Set<stri
   if (id !== undefined) seenIds.add(id);
 
   let name = DEFAULT_REGION_NAME;
-  if (typeof raw['name'] === 'string') name = raw['name'];
+  if (typeof raw['name'] === 'string') name = cap(ctx, raw['name'], MAX_NAME_LENGTH, `${label}.name`);
   else ctx.warnings.push(`${label}.name: missing; using "${DEFAULT_REGION_NAME}".`);
 
   let visible = true;
@@ -322,7 +349,7 @@ export function validateProfile(input: unknown): ValidationResult {
   if (typeof id !== 'string' || id === '') ctx.errors.push('id: missing or not a non-empty string.');
 
   let name = DEFAULT_NAME;
-  if (typeof raw['name'] === 'string') name = raw['name'];
+  if (typeof raw['name'] === 'string') name = cap(ctx, raw['name'], MAX_NAME_LENGTH, 'name');
   else ctx.warnings.push(`name: missing; using "${DEFAULT_NAME}".`);
 
   let eye: Eye = 'right';
@@ -347,13 +374,13 @@ export function validateProfile(input: unknown): ValidationResult {
   let viewingDistanceCm = DEFAULT_VIEWING_DISTANCE_CM;
   const vd = raw['viewingDistanceCm'];
   if (isNum(vd) && vd > 0) {
-    viewingDistanceCm = vd;
+    viewingDistanceCm = clamp(ctx, vd, MIN_VIEWING_DISTANCE_CM, MAX_VIEWING_DISTANCE_CM, 'viewingDistanceCm');
   } else {
     ctx.warnings.push(`viewingDistanceCm: missing or not a positive number; using ${DEFAULT_VIEWING_DISTANCE_CM}.`);
   }
 
   let note = '';
-  if (typeof raw['note'] === 'string') note = raw['note'];
+  if (typeof raw['note'] === 'string') note = cap(ctx, raw['note'], MAX_NOTE_LENGTH, 'note');
   else ctx.warnings.push('note: missing; using empty note.');
 
   const globals = validateGlobals(ctx, raw['globals']);
@@ -362,6 +389,10 @@ export function validateProfile(input: unknown): ValidationResult {
   const rawRegions = raw['regions'];
   if (!Array.isArray(rawRegions)) {
     ctx.errors.push('regions: missing or not an array.');
+  } else if (rawRegions.length > MAX_REGIONS_PER_PROFILE) {
+    ctx.errors.push(
+      `regions: this profile has ${rawRegions.length} regions, more than the limit of ${MAX_REGIONS_PER_PROFILE}. The file may be damaged.`,
+    );
   } else {
     const seen = new Set<string>();
     rawRegions.forEach((r, i) => {

@@ -8,6 +8,9 @@ import { formatLocalDate, slugify } from './names';
 export const BUNDLE_KIND = 'vision-simulator-profiles';
 export const BUNDLE_VERSION = 1;
 const JSON_MIME = 'application/json';
+/** Largest import file accepted (a bundle with several brush masks is well under this). */
+export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+export const MAX_PROFILES_PER_BUNDLE = 500;
 
 export interface ProfileBundle {
   kind: typeof BUNDLE_KIND;
@@ -48,6 +51,10 @@ export function profilesToBundleBlob(profiles: Profile[], now: Date = new Date()
   };
 }
 
+function tooBigMessage(bytes: number): string {
+  return `This file is ${(bytes / 1048576).toFixed(1)} MB, more than the limit of ${MAX_IMPORT_BYTES / 1048576} MB, so it is probably not a profile file.`;
+}
+
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
@@ -69,6 +76,11 @@ function newUnusedId(taken: Set<string>): string {
  */
 export function importProfilesFromText(text: string, existingIds: Set<string>): ImportResult {
   const result: ImportResult = { imported: [], warnings: [], errors: [] };
+
+  if (text.length > MAX_IMPORT_BYTES) {
+    result.errors.push(tooBigMessage(text.length));
+    return result;
+  }
 
   let data: unknown;
   try {
@@ -104,6 +116,12 @@ export function importProfilesFromText(text: string, existingIds: Set<string>): 
       result.errors.push('The bundle contains no profiles.');
       return result;
     }
+    if (list.length > MAX_PROFILES_PER_BUNDLE) {
+      result.errors.push(
+        `The bundle has ${list.length} profiles, more than the limit of ${MAX_PROFILES_PER_BUNDLE}. The file may be damaged.`,
+      );
+      return result;
+    }
     items = list;
   } else {
     items = [data];
@@ -134,6 +152,9 @@ export function importProfilesFromText(text: string, existingIds: Set<string>): 
 
 /** Reads a chosen file as text and imports it. A file that cannot be read becomes an error entry. */
 export async function importProfilesFromFile(file: Blob, existingIds: Set<string> = new Set()): Promise<ImportResult> {
+  if (file.size > MAX_IMPORT_BYTES) {
+    return { imported: [], warnings: [], errors: [tooBigMessage(file.size)] };
+  }
   let text: string;
   try {
     text = await file.text();
