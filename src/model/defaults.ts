@@ -32,7 +32,7 @@ export function defaultGlobals(): ProfileGlobals {
 }
 
 export function newRegion(shape: Shape, name = 'Region'): Region {
-  return { id: newId('r'), name, visible: true, shape, feather: 0.3, effects: emptyEffects() };
+  return { id: newId('r'), name, visible: true, shape, feather: 0.3, effects: emptyEffects(), darkSpotShade: 0 };
 }
 
 export function defaultEllipse(): Shape {

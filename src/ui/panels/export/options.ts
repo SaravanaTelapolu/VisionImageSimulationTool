@@ -6,6 +6,8 @@ import type { Eye, Profile } from '../../../model/types';
 
 export type ExportFormat = 'png' | 'jpeg';
 export type ExportOrientation = 'auto' | 'horizontal' | 'vertical';
+/** "limited": up to 4096 px on the long side (or the GPU limit). "full": keep the photo's size (tiled render). */
+export type ExportSize = 'limited' | 'full';
 
 export interface ExportOptions {
   /** Which files to produce. */
@@ -20,6 +22,8 @@ export interface ExportOptions {
   labels: boolean;
   /** Burn the caption into the simulated and side-by-side images. */
   caption: boolean;
+  /** Export size (Q5): up to 4096 px (default) or full resolution. */
+  size: ExportSize;
 }
 
 export const DEFAULT_EXPORT_OPTIONS: Readonly<ExportOptions> = {
@@ -31,6 +35,7 @@ export const DEFAULT_EXPORT_OPTIONS: Readonly<ExportOptions> = {
   orientation: 'auto',
   labels: true,
   caption: true,
+  size: 'limited',
 };
 
 export const JPEG_QUALITY_MIN = 0.5;
@@ -59,6 +64,7 @@ export function sanitizeExportOptions(raw: unknown): ExportOptions {
         : d.orientation,
     labels: bool('labels', d.labels),
     caption: bool('caption', d.caption),
+    size: o.size === 'limited' || o.size === 'full' ? o.size : d.size,
   };
 }
 
@@ -176,6 +182,31 @@ export function resultMessage(outcome: ShareOutcome, fileCount: number): string 
   if (outcome === 'shared') return 'Shared';
   if (outcome === 'cancelled') return 'Cancelled';
   return `Downloaded ${fileCount} ${fileCount === 1 ? 'file' : 'files'}`;
+}
+
+/** Size facts of a prepared export, for the "reduced" notice. */
+export interface ExportSizeFacts {
+  width: number;
+  height: number;
+  downscaled: boolean;
+  originalWidth: number;
+  originalHeight: number;
+  /** Why "Full resolution" could not be honoured, when it could not. */
+  fallback?: string;
+}
+
+/**
+ * The notice shown when the simulated image is smaller than the photo, or '' when it is not:
+ * "Exported at W × H px — reduced from W0 × H0 px." plus why.
+ */
+export function reducedNotice(f: ExportSizeFacts, size: ExportSize): string {
+  if (!f.downscaled) return '';
+  const from =
+    f.originalWidth > f.width || f.originalHeight > f.height ? ` — reduced from ${f.originalWidth} × ${f.originalHeight} px` : '';
+  const head = `Exported at ${f.width} × ${f.height} px${from}.`;
+  if (size === 'full') return `${head} ${f.fallback ?? "This device's graphics chip could not render the full photo size."}`;
+  if (Math.max(f.originalWidth, f.originalHeight) > 4096) return `${head} Choose Export size: Full resolution to keep every pixel.`;
+  return `${head} This device's graphics chip could not render the full photo size.`;
 }
 
 /** Why the Prepare images button is disabled, or '' when it is enabled. */

@@ -152,6 +152,9 @@ function buildMaps(W: number, H: number): EffectMaps {
   const mh = Math.max(1, Math.round((512 * H) / long));
   const a = new Uint8Array(mw * mh * 4);
   const b = new Uint8Array(mw * mh * 4);
+  const c = new Uint8Array(mw * mh * 4).fill(0);
+  const shade = Math.round(255 * Math.min(Math.max(state.globals.darkSpotShade, 0), 1));
+  for (let i = 0; i < c.length; i += 4) c[i] = shade; // one region: its shade everywhere
   const ch = (v: number, w: number) => Math.round(255 * Math.min(Math.max(v * w, 0), 1));
   for (let j = 0; j < mh; j++) {
     for (let i = 0; i < mw; i++) {
@@ -168,7 +171,7 @@ function buildMaps(W: number, H: number): EffectMaps {
       b[o + 3] = ch(state.doubleImage, w);
     }
   }
-  return { width: mw, height: mh, a, b };
+  return { width: mw, height: mh, a, b, c };
 }
 
 function buildLenses(W: number, H: number): SizeChangeLens[] {
@@ -400,7 +403,8 @@ slider('wave angle °', 0, 180, 1, () => gl.distortAngle, (v) => (gl.distortAngl
 slider('max amplitude', 0, 0.06, 0.001, () => gl.distortMaxAmplitude, (v) => (gl.distortMaxAmplitude = v), false);
 slider('ghost x', -0.05, 0.05, 0.001, () => gl.ghostOffset[0], (v) => (gl.ghostOffset = [v, gl.ghostOffset[1]]), false);
 slider('ghost y', -0.05, 0.05, 0.001, () => gl.ghostOffset[1], (v) => (gl.ghostOffset = [gl.ghostOffset[0], v]), false);
-slider('dark shade', 0, 1, 0.01, () => gl.darkSpotShade, (v) => (gl.darkSpotShade = v), false);
+// Per-region shade (map C) since v0.2; the harness has one region, so the old global field holds it.
+slider('dark shade', 0, 1, 0.01, () => gl.darkSpotShade, (v) => (gl.darkSpotShade = v), true);
 
 // Click / tap on the image moves the fixation point.
 renderer.canvas.addEventListener('pointerdown', (e) => {

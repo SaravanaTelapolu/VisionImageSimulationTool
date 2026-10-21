@@ -1,3 +1,4 @@
+import { Fragment } from 'preact';
 import { findRegion, updateRegion } from '../../../model/ops';
 import { activeTab, applyEdit, endEdit, profile, selectedRegionId } from '../../../state/store';
 import { setCurrentEye } from '../../../state/profiles';
@@ -5,6 +6,8 @@ import { EyeRadioGroup } from '../../controls/EyeRadioGroup';
 import { Slider } from '../../controls/Slider';
 import './effects.css';
 import {
+  DARK_SPOT_SHADE_DEF,
+  DARK_SPOT_SHADE_OFF_NOTE,
   EFFECT_DEFS,
   EFFECT_GROUPS,
   FEATHER_DEF,
@@ -17,7 +20,7 @@ import {
   isFeatherEnabled,
   type NumericGlobalKey,
 } from './effectDefs';
-import { setEffect, setFeather, setGhostOffset, setGlobal, setViewingDistance } from './edits';
+import { setDarkSpotShade, setEffect, setFeather, setGhostOffset, setGlobal, setViewingDistance } from './edits';
 
 function GlobalSlider({ k }: { k: NumericGlobalKey }) {
   const def = GLOBAL_DEFS[k];
@@ -59,7 +62,6 @@ function ProfileSettings() {
           onInput={(v) => applyEdit((q) => setGhostOffset(q, 1, v), 'globals:ghostOffsetY')}
           onCommit={endEdit}
         />
-        <GlobalSlider k="darkSpotShade" />
         <Slider
           {...VIEWING_DISTANCE_DEF}
           value={p.viewingDistanceCm}
@@ -131,7 +133,7 @@ export function EffectsPanel() {
           {group.keys.map((key) => {
             const def = EFFECT_DEFS[key];
             const enabled = isEffectEnabled(key, shape);
-            return (
+            const slider = (
               <Slider
                 {...def}
                 key={`${rid}:${key}`}
@@ -141,6 +143,23 @@ export function EffectsPanel() {
                 onInput={(v) => applyEdit((q) => setEffect(q, rid, key, v), `effect:${rid}:${key}`)}
                 onCommit={endEdit}
               />
+            );
+            if (key !== 'darkSpot') return slider;
+            // The shade belongs to the dark spot: always shown (stable layout), off while it is 0.
+            const shadeOn = region.effects.darkSpot > 0;
+            return (
+              <Fragment key={`${rid}:${key}`}>
+                {slider}
+                <Slider
+                  {...DARK_SPOT_SHADE_DEF}
+                  key={`${rid}:darkSpotShade`}
+                  value={region.darkSpotShade}
+                  disabled={!shadeOn}
+                  help={shadeOn ? DARK_SPOT_SHADE_DEF.help : DARK_SPOT_SHADE_OFF_NOTE}
+                  onInput={(v) => applyEdit((q) => setDarkSpotShade(q, rid, v), `effect:${rid}:darkSpotShade`)}
+                  onCommit={endEdit}
+                />
+              </Fragment>
             );
           })}
         </section>

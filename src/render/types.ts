@@ -1,12 +1,18 @@
 // Rendering contract shared by the effect-map builder, the WebGL renderer, the UI and export.
 import type { ProfileGlobals } from '../model/types';
 
-/** Two RGBA8 maps, row-major, top row first. Channel layout: EFFECT_MAP_A / EFFECT_MAP_B in model/types. */
+/**
+ * Three RGBA8 maps of the same size, row-major, top row first. A and B hold effect strengths
+ * (layout: EFFECT_MAP_A / EFFECT_MAP_B in model/types; overlaps combine with max). C holds values
+ * that are not strengths (v0.2): C.r = dark-spot shade of the strongest dark spot (0 black ..
+ * 255 mid grey); C.g, C.b, C.a are reserved and zero.
+ */
 export interface EffectMaps {
   width: number;
   height: number;
   a: Uint8Array;
   b: Uint8Array;
+  c: Uint8Array;
 }
 
 /** A size-change lens derived from an ellipse region, in output-image pixels. */

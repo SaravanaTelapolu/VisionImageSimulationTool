@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGlobals } from '../../model/defaults';
+import { MAX_BLUR_PX } from '../../model/types';
 import type { RenderParams, SizeChangeLens } from '../types';
 import {
   BLUR_LEVELS_REF,
+  CONTRAST_MEAN_LEVEL,
+  FILL_BASE_LEVEL,
+  FILL_TOP_LEVEL,
   MAX_KERNEL_PAIRS,
   channelHasAny,
   directionVector,
@@ -86,6 +90,22 @@ describe('incrementalSigma', () => {
   });
 });
 
+describe('blur pyramid levels', () => {
+  it('run from the source to MAX_BLUR_PX, neighbours at most 2x apart (no 20 -> 100 gap)', () => {
+    expect(BLUR_LEVELS_REF[0]).toBe(0);
+    expect(BLUR_LEVELS_REF[BLUR_LEVELS_REF.length - 1]).toBe(MAX_BLUR_PX);
+    for (let i = 2; i < BLUR_LEVELS_REF.length; i++) {
+      expect(BLUR_LEVELS_REF[i]!).toBeGreaterThan(BLUR_LEVELS_REF[i - 1]!);
+      expect(BLUR_LEVELS_REF[i]! / BLUR_LEVELS_REF[i - 1]!).toBeLessThanOrEqual(2);
+    }
+  });
+  it('keeps the fill and contrast levels where they were before v0.2', () => {
+    expect(BLUR_LEVELS_REF[FILL_TOP_LEVEL]).toBe(40);
+    expect(BLUR_LEVELS_REF[FILL_BASE_LEVEL]).toBe(10);
+    expect(BLUR_LEVELS_REF[CONTRAST_MEAN_LEVEL]).toBe(20);
+  });
+});
+
 describe('levelWeights', () => {
   it('hits exact levels with a single weight', () => {
     BLUR_LEVELS_REF.forEach((b, i) => {
@@ -96,14 +116,14 @@ describe('levelWeights', () => {
   });
   it('splits between the two nearest levels', () => {
     const w = levelWeights(7.5); // halfway between 5 and 10
-    expect(w).toEqual([0, 0, 0.5, 0.5, 0, 0]);
+    expect(w).toEqual([0, 0, 0.5, 0.5, 0, 0, 0, 0]);
     const w2 = levelWeights(1);
     expect(w2[0]).toBeCloseTo(0.6);
     expect(w2[1]).toBeCloseTo(0.4);
   });
   it('clamps out-of-range and non-finite values', () => {
     expect(levelWeights(-3)[0]).toBe(1);
-    expect(levelWeights(99)[BLUR_LEVELS_REF.length - 1]).toBe(1);
+    expect(levelWeights(999)[BLUR_LEVELS_REF.length - 1]).toBe(1);
     expect(levelWeights(Number.NaN)[0]).toBe(1);
   });
 });
@@ -117,9 +137,13 @@ describe('levelFactor / planPyramid', () => {
   });
   it('plans monotone factors and quadrature increments that add up', () => {
     const plan = planPyramid(1024, 768);
-    expect(plan.map((p) => p.factor)).toEqual([1, 1, 1, 2, 4, 8]);
+    // 2.5 .. 100 reference px; the 70 and 100 px levels (v0.2) both stop at 1/16: 100 / 32 < 4 texels.
+    expect(plan.map((p) => p.factor)).toEqual([1, 1, 1, 2, 4, 8, 16, 16]);
     expect(plan[5]?.width).toBe(128);
     expect(plan[5]?.height).toBe(96);
+    expect(plan[7]?.width).toBe(64);
+    expect(plan[7]?.height).toBe(48);
+    expect(plan[7]?.sigmaPx).toBe(MAX_BLUR_PX);
     let total = 0;
     for (const p of plan) {
       total = Math.sqrt(total * total + p.incrementPx * p.incrementPx);
@@ -130,10 +154,12 @@ describe('levelFactor / planPyramid', () => {
     const small = planPyramid(1024, 768);
     const big = planPyramid(4096, 3072);
     big.forEach((p, i) => expect(p.sigmaPx).toBeCloseTo((small[i]?.sigmaPx ?? 0) * 4));
-    // Same texel sigma at the top level: the big image just uses a bigger factor.
-    const s = small[5];
-    const b = big[5];
-    expect((b?.sigmaPx ?? 0) / (b?.factor ?? 1)).toBeCloseTo((s?.sigmaPx ?? 0) / (s?.factor ?? 1));
+    // Same texel sigma at the 40 px and top levels: the big image just uses a bigger factor.
+    for (const k of [5, small.length - 1]) {
+      const s = small[k];
+      const b = big[k];
+      expect((b?.sigmaPx ?? 0) / (b?.factor ?? 1)).toBeCloseTo((s?.sigmaPx ?? 0) / (s?.factor ?? 1));
+    }
   });
 });
 
@@ -187,7 +213,7 @@ describe('fitToMaxSide', () => {
 
 describe('scaleRenderParams', () => {
   it('scales fixation and lenses, leaves maps and globals', () => {
-    const maps = { width: 1, height: 1, a: new Uint8Array(4), b: new Uint8Array(4) };
+    const maps = { width: 1, height: 1, a: new Uint8Array(4), b: new Uint8Array(4), c: new Uint8Array(4) };
     const globals = defaultGlobals();
     const p: RenderParams = {
       maps,

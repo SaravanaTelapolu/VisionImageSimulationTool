@@ -115,6 +115,18 @@ export function isFeatherEnabled(shape: ShapeType): boolean {
 }
 
 export const SIZE_CHANGE_NOTE = 'Size change works on spots (ellipses) only.';
+
+/** Per-region dark-spot colour (D05), shown in the Spots group right after Dark spot. */
+export const DARK_SPOT_SHADE_DEF: SliderDef = {
+  label: 'Dark spot shade',
+  min: 0,
+  max: 1,
+  step: 0.01,
+  unit: '%',
+  scale: 100,
+  help: '0% is black; higher is a greyer patch.',
+};
+export const DARK_SPOT_SHADE_OFF_NOTE = 'Turn up Dark spot to choose how dark it is.';
 export const FEATHER_FULL_NOTE = 'A whole-image region has no edge to soften.';
 export const FEATHER_MASK_NOTE = 'A brush region is softened with the brush softness setting, not here.';
 
@@ -131,7 +143,8 @@ export const FEATHER_DEF: SliderDef = {
   help: '0% is a sharp edge; 100% fades out smoothly across the whole region.',
 };
 
-export type NumericGlobalKey = Exclude<keyof ProfileGlobals, 'ghostOffset'>;
+/** Globals with a slider. darkSpotShade is deprecated (per region since v0.2) and has none. */
+export type NumericGlobalKey = Exclude<keyof ProfileGlobals, 'ghostOffset' | 'darkSpotShade'>;
 
 export const GLOBAL_DEFS: Record<NumericGlobalKey, SliderDef> = {
   distortWaveSize: {
@@ -160,15 +173,6 @@ export const GLOBAL_DEFS: Record<NumericGlobalKey, SliderDef> = {
     unit: '%',
     scale: 100,
     help: 'How far lines bend when Distortion is at 100%.',
-  },
-  darkSpotShade: {
-    label: 'Dark spot shade',
-    min: 0,
-    max: 1,
-    step: 0.01,
-    unit: '%',
-    scale: 100,
-    help: '0% is black; higher is a greyer patch.',
   },
 };
 

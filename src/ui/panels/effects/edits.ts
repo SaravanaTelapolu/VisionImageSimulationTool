@@ -6,6 +6,7 @@ import { updateEffects, updateGlobals, updateRegion, findRegion } from '../../..
 import type { EffectKey, Eye, Profile } from '../../../model/types';
 import { clamp } from '../../controls/format';
 import { EFFECT_DEFS, FEATHER_DEF, GHOST_DEF, GLOBAL_DEFS, VIEWING_DISTANCE_DEF, type NumericGlobalKey } from './effectDefs';
+import { DARK_SPOT_SHADE_DEF } from './effectDefs';
 
 export function setEffect(profile: Profile, regionId: string, key: EffectKey, value: number): Profile {
   const region = findRegion(profile, regionId);
@@ -22,6 +23,15 @@ export function setFeather(profile: Profile, regionId: string, value: number): P
   const v = clamp(value, FEATHER_DEF.min, FEATHER_DEF.max);
   if (region.feather === v) return profile;
   return updateRegion(profile, regionId, { feather: v });
+}
+
+/** Sets a region's own dark-spot shade (0 = black, 1 = mid grey). */
+export function setDarkSpotShade(profile: Profile, regionId: string, value: number): Profile {
+  const region = findRegion(profile, regionId);
+  if (!region) return profile;
+  const v = clamp(value, DARK_SPOT_SHADE_DEF.min, DARK_SPOT_SHADE_DEF.max);
+  if (region.darkSpotShade === v) return profile;
+  return updateRegion(profile, regionId, { darkSpotShade: v });
 }
 
 export function setGlobal(profile: Profile, key: NumericGlobalKey, value: number): Profile {

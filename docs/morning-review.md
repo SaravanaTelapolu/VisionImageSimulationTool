@@ -33,14 +33,14 @@ Tick or answer inline; the next session reads this file.
 | D02 | Vite 6 is fine for now | Unchanged |
 | D03 | Push now for safety; more pushes are fine | Done (v0.1) |
 | D04 | "You are a better judge" | Kept: blur is defined at a 768 px shorter side and scaled, so preview and export match |
-| D05 | Per-region dark-spot shade preferred | Being implemented (each region gets its own grey ↔ black setting) |
+| D05 | Per-region dark-spot shade preferred | Done (v0.2): each region has its own "Dark spot shade" slider next to Dark spot (Effects → Spots). Where spots overlap, the stronger spot's shade wins (darker on a tie). Old profiles keep their look. |
 | D06 | Parked until you test | Unchanged |
 | D01, D07–D27 | OK | Unchanged |
 | Q1 | Android phone; iPhone is an optional roadmap item | Added to docs/roadmap.md |
 | Q2 | All effects is a good start | Unchanged |
 | Q3 | Editable is fine; near vision first, far vision later; want to change the default | Being implemented: a "default viewing distance" setting with Near / Computer / Far presets |
 | Q4 | Current default is good | Unchanged |
-| Q5 | Make it configurable, current default | Being implemented: export size setting — "Up to 4096 px" (default) or "Full resolution" |
+| Q5 | Make it configurable, current default | Done (v0.2): Export → Export size: "Up to 4096 px (default)" or "Full resolution" (rendered in tiles, no visible seams). If the device cannot hold the full image, a smaller one is saved and the panel says so. |
 | Q6 | Current default is good | Unchanged |
 
 ## Decisions made (change any you disagree with)
@@ -50,8 +50,8 @@ Tick or answer inline; the next session reads this file.
 | D1 | Stack = option 3 (TypeScript, Vite, Preact, WebGL2, IndexedDB, PWA) | Your choice |
 | D2 | Vite 6 / Vitest 3, not Vite 7 | This PC has Node 18.20.1; Vite 7 needs Node 20+. CI uses Node 20. |
 | D3 | All work on local branch `develop`; nothing pushed | Pushing publishes to GitHub; left for you |
-| D4 | Blur strength (0–40 px) is defined at a 768 px shorter side and scaled for other sizes | Same look on preview and full-size export |
-| D5 | Dark-spot shade (grey ↔ black) is one setting per profile, not per region | Keeps shaders simple, like wave size and ghost offset in the plan |
+| D4 | Blur strength (0–100 px since v0.2; was 0–40) is defined at a 768 px shorter side and scaled for other sizes | Same look on preview and full-size export |
+| D5 | ~~Dark-spot shade is one setting per profile~~ Changed in v0.2: per region (your D05 answer) | A third effect map carries each spot's shade |
 | D6 | Distortion: per-region strength; wave size, direction and max amplitude (default 0.8% of shorter side, see D12) per profile | Matches the plan's "set once per profile" note |
 | D7 | Size change applies to ellipse regions only, up to 8 | Plan's uniform-based design |
 | D8 | Effect maps rasterised in TypeScript at ≤ 512 px and upscaled on the GPU | Fast, testable, maps are smooth anyway |
@@ -59,7 +59,7 @@ Tick or answer inline; the next session reads this file.
 | D10 | Undo keeps 100 steps; a continuous slider drag is one step | Plan asks for ≥ 50 |
 | D11 | +y is down in profile coordinates | Screen convention |
 | D12 | Default max distortion lowered to 0.8% of the shorter side | At 2% the renderer agent found 100% distortion folds lines into a mess |
-| D13 | Full-size export above 4096 px (or the GPU limit) is downscaled, not tiled | Simpler; phone photos are usually around 4000 px. See Q5 |
+| D13 | Full-size export above 4096 px (or the GPU limit) is downscaled by default; v0.2 adds "Full resolution" (tiled) | See Q5 |
 | D14 | "Spot" asks you to tap the photo where it goes; without a photo it lands on the crosshair | Faster than dragging from the centre |
 | D15 | Profiles get a 5th tab ("Profiles"); the timeline opens from the Compare and Profiles tabs | Easier to find than a menu; still fits at 360 px |
 | D16 | Effect maps are built in a Web Worker | Desktop showed frames close to 30 ms; a phone would miss the 50 ms target |
