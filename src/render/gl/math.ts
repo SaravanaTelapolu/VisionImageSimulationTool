@@ -4,9 +4,20 @@ import type { RenderParams, SizeChangeLens } from '../types';
 
 /**
  * Blur pyramid levels, as Gaussian standard deviations in reference pixels
- * (pixels at BLUR_REFERENCE_SHORT_SIDE). Level 0 is the untouched source.
+ * (pixels at BLUR_REFERENCE_SHORT_SIDE). Level 0 is the untouched source. Neighbouring levels are
+ * at most 2x apart, so mixing two of them stays close to a single Gaussian (v0.2: 70 and 100 added
+ * for MAX_BLUR_PX = 100; the big levels are stored at 1/16..1/64 resolution, so they cost little).
  */
-export const BLUR_LEVELS_REF: readonly number[] = [0, 2.5, 5, 10, 20, MAX_BLUR_PX];
+export const BLUR_LEVELS_REF: readonly number[] = [0, 2.5, 5, 10, 20, 40, 70, MAX_BLUR_PX];
+
+/**
+ * The level the missing-area fill falls back to where no surroundings are found (40 reference px,
+ * the top level before v0.2), so the fill looks the same as before MAX_BLUR_PX was raised.
+ */
+export const FILL_TOP_LEVEL = 5;
+
+/** The level the missing-area fill's validity weights are taken from (10 reference px). */
+export const FILL_BASE_LEVEL = 3;
 
 /** Pyramid level used as the "local mean" for contrast loss. */
 export const CONTRAST_MEAN_LEVEL = 4;

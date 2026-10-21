@@ -4,7 +4,7 @@ import { MAX_SIZE_CHANGE, MAX_SIZE_CHANGE_LENSES } from '../../model/types';
 import type { EffectMaps, RenderParams } from '../types';
 import { BLUR_FRAG, FILL_COMPOSE_FRAG, FILL_WEIGHT_FRAG, FULLSCREEN_VERT } from '../shaders/common';
 import { EFFECTS_FRAG, PYRAMID_LEVEL_COUNT } from '../shaders/effects';
-import { BLUR_LEVELS_REF } from './math';
+import { BLUR_LEVELS_REF, FILL_BASE_LEVEL, FILL_TOP_LEVEL } from './math';
 import {
   GLProgram,
   chooseTargetFormat,
@@ -85,6 +85,8 @@ export class GLPipeline {
   private tile: TileFrame | null = null;
   /** Missing-area fill built elsewhere (whole image, tiled export); used instead of our own. */
   private externalFill: WebGLTexture | null = null;
+  /** Pyramid levels from `from` up, built elsewhere for the whole image (tiled export). */
+  private sharedLevels: { from: number; tex: WebGLTexture[] } | null = null;
 
   private mapA: WebGLTexture;
   private mapB: WebGLTexture;
@@ -168,7 +170,9 @@ export class GLPipeline {
     const t = this.tile;
     const plan = planPyramid(src.width, src.height, BLUR_LEVELS_REF, t ? { width: t.fullWidth, height: t.fullHeight } : undefined);
     this.levels = [src];
-    for (let k = 1; k < plan.length; k++) {
+    // With shared whole-image levels, only the finer levels are built for this source.
+    const count = this.sharedLevels ? Math.min(plan.length, this.sharedLevels.from) : plan.length;
+    for (let k = 1; k < count; k++) {
       const p = plan[k];
       const prevPlan = plan[k - 1];
       const input = this.levels[k - 1];
@@ -268,6 +272,27 @@ export class GLPipeline {
   }
 
   /**
+   * Uses `textures` (levels from..from + n - 1, built by takeLevels() on the whole image in the same
+   * context) instead of building those levels; they are read in whole-image coordinates. Takes
+   * effect from the next setSource(). Pass null to build every level again.
+   */
+  setSharedLevels(from: number, textures: WebGLTexture[] | null): void {
+    this.sharedLevels = textures && from < PYRAMID_LEVEL_COUNT ? { from: Math.max(1, from), tex: textures } : null;
+  }
+
+  /**
+   * Hands over pyramid levels `from` and up of the current source: the caller owns the returned
+   * targets (deleteTarget). Build the fill (takeFill) first; it reads these levels.
+   */
+  takeLevels(from: number): Target[] {
+    const k = Math.max(1, from);
+    if (k >= this.levels.length) return [];
+    const taken = this.levels.slice(k);
+    this.levels = this.levels.slice(0, k);
+    return taken;
+  }
+
+  /**
    * Builds the missing-area fill for `maps` on the current source and hands it over: the caller
    * owns the returned target (deleteTarget) and may use it after this pipeline is disposed.
    * Null when the maps have no missing area.
@@ -301,8 +326,8 @@ export class GLPipeline {
       this.fill = { weight: mk(), temp: mk(), f: [mk(), mk(), mk()] };
     }
     const fill = this.fill;
-    const base = this.levels[Math.min(3, this.levels.length - 1)] ?? src;
-    const top = this.levels[this.levels.length - 1] ?? src;
+    const base = this.levels[Math.min(FILL_BASE_LEVEL, this.levels.length - 1)] ?? src;
+    const top = this.levels[Math.min(FILL_TOP_LEVEL, this.levels.length - 1)] ?? src;
 
     // Premultiplied colour * validity weight.
     const wp = this.fillWeightProg;
@@ -378,12 +403,15 @@ export class GLPipeline {
     const p = this.fxProg;
     p.use();
     gl.bindVertexArray(this.vao);
+    const shared = this.sharedLevels;
     for (let i = 0; i < PYRAMID_LEVEL_COUNT; i++) {
-      const lvl = this.levels[i] ?? this.levels[this.levels.length - 1] ?? src;
+      const own = this.levels[i];
+      const tex = own?.tex ?? (shared ? shared.tex[i - shared.from] : undefined) ?? this.levels[this.levels.length - 1]?.tex ?? src.tex;
       p.set1i(`uL${i}`, i);
       gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, lvl.tex);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
     }
+    p.set1i('uSharedFrom', shared ? shared.from : PYRAMID_LEVEL_COUNT);
     const fillTex = this.externalFill ?? this.fill?.weight.tex ?? null;
     const hasFill = !params.bypass && this.hasFillIn && !!fillTex;
     p.set1i('uFill', UNIT_FILL);

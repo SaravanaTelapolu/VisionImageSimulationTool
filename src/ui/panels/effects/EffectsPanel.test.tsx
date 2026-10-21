@@ -77,7 +77,7 @@ describe('EffectsPanel', () => {
     }
     const blur = sliderByLabel('Blur');
     expect(blur.min).toBe('0');
-    expect(blur.max).toBe('40');
+    expect(blur.max).toBe('100');
     expect(blur.getAttribute('aria-valuetext')).toBe('0.0 px');
   });
 

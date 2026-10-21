@@ -96,14 +96,14 @@ describe('levelWeights', () => {
   });
   it('splits between the two nearest levels', () => {
     const w = levelWeights(7.5); // halfway between 5 and 10
-    expect(w).toEqual([0, 0, 0.5, 0.5, 0, 0]);
+    expect(w).toEqual([0, 0, 0.5, 0.5, 0, 0, 0, 0]);
     const w2 = levelWeights(1);
     expect(w2[0]).toBeCloseTo(0.6);
     expect(w2[1]).toBeCloseTo(0.4);
   });
   it('clamps out-of-range and non-finite values', () => {
     expect(levelWeights(-3)[0]).toBe(1);
-    expect(levelWeights(99)[BLUR_LEVELS_REF.length - 1]).toBe(1);
+    expect(levelWeights(999)[BLUR_LEVELS_REF.length - 1]).toBe(1);
     expect(levelWeights(Number.NaN)[0]).toBe(1);
   });
 });

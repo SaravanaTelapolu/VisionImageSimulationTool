@@ -9,7 +9,7 @@
  *   Ghost offset, distortion wavelength and amplitude are in shorter-side units, so preview and
  *   full-size export look the same.
  * - setSource(): uploads the source (RGBA8, LINEAR) and builds a blur pyramid with sigmas
- *   0, 2.5, 5, 10, 20, 40 reference px (gl/math.ts BLUR_LEVELS_REF). Each level is built from the
+ *   0, 2.5, 5, 10, 20, 40, 70, 100 reference px (gl/math.ts BLUR_LEVELS_REF). Each level is built from the
  *   previous one with separable Gaussian passes (incremental sigma, merged bilinear taps); levels
  *   whose sigma is large are stored at 1/2, 1/4, 1/8 ... resolution (sigma stays >= 4 texels).
  *   Targets are RGBA16F when EXT_color_buffer_float is available, else RGBA8.
@@ -19,7 +19,8 @@
  * - Missing area (fillIn): when maps change and any fillIn > 0, a low-res (128 texels on the short
  *   side) push-pull fill is built: colour premultiplied by validity (1 - fillIn)^4, normalised
  *   Gaussian blurs at 6, 20 and 64 reference px, composed finest-valid-first, falling back to the
- *   40 px pyramid level. The hole fills with surrounding colour/texture, never a dark patch.
+ *   40 px pyramid level (FILL_TOP_LEVEL, kept at 40 when the maximum blur went to 100 in v0.2, so
+ *   the fill looks as before). The hole fills with surrounding colour/texture, never a dark patch.
  * - render(): ONE full-screen pass (the plan's 3 passes merged): warped sample coordinate
  *   (size-change lenses, then sine + value-noise distortion anchored at the fixation point,
  *   amplitude = mapA.g * distortMaxAmplitude) -> variable blur (two nearest pyramid levels mixed)
@@ -39,8 +40,10 @@
  *   (min(maxSide, 4096)) are rendered in tiles into a 2D canvas of the full size. Each tile renders
  *   its core from core + margin source pixels; the margin covers the furthest sample (lenses,
  *   distortion, ghost) plus 3 sigma of the widest blur level used, and tiles are aligned to the
- *   pyramid's largest downscale factor, so seams are invisible (see gl/tiles.ts). The missing-area
- *   fill is built once from a downscaled copy of the whole image and shared by every tile. If the
+ *   per-tile levels' largest downscale factor, so seams are invisible (see gl/tiles.ts). The
+ *   missing-area fill and the coarse blur levels (those stored at no more than the copy's
+ *   resolution anyway) are built once from a one-pass copy of the whole image and shared by every
+ *   tile, so the margin only covers the fine levels (v0.2 Blur100). If the
  *   full-size canvas cannot be allocated (phone canvas limits) or the margin is too large, the
  *   normal downscaled export runs instead and `lastExport.fallback` says why.
  * - Contexts are created with preserveDrawingBuffer: true so the canvas can be read back (drawImage
@@ -50,9 +53,9 @@
  */
 import type { RenderParams, Renderer } from './types';
 import { GLPipeline, type SourceInfo } from './gl/pipeline';
-import { EXPORT_MAX_SIDE, planPyramid } from './gl/math';
+import { EXPORT_MAX_SIDE, fitToMaxSide, planPyramid } from './gl/math';
 import { deleteTarget, type Target } from './gl/glUtils';
-import { FILL_SOURCE_MAX_SIDE, canvasSizeAllowed, planTiles, pyramidAlign, tileReach, type Rect } from './gl/tiles';
+import { canvasSizeAllowed, planTiles, pyramidAlign, sharedLevelsFrom, tileReach, type Rect } from './gl/tiles';
 import { createGpuTimer, type GpuTimer } from './gl/timer';
 
 export { scaleRenderParams } from './gl/math';
@@ -413,22 +416,33 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
     const crop = document.createElement('canvas');
     let pipe: GLPipeline | null = null;
     let fill: Target | null = null;
+    let shared: Target[] = [];
     try {
       pipe = new GLPipeline(gl);
       const tileMax = Math.min(pipe.maxSide, EXPORT_MAX_SIDE);
-      // Each tile's margin follows the effects over its own core (see gl/tiles.ts).
+      // Coarse blur levels and the missing-area fill come from one whole-image copy (one GPU pass);
+      // finer levels are built per tile. Each tile's margin follows the effects over its own core.
       const pyramid = planPyramid(W, H);
-      const plan = planTiles(W, H, tileMax, (core) => tileReach(params, W, H, pyramid, core).marginPx, pyramidAlign(W, H));
+      const copy = fitToMaxSide(W, H, tileMax);
+      const from = sharedLevelsFrom(pyramid, copy.width / W);
+      const plan = planTiles(
+        W,
+        H,
+        tileMax,
+        (core) => tileReach(params, W, H, pyramid, core, from).marginPx,
+        pyramidAlign(W, H, from),
+      );
       if (!plan) return FALLBACK_MARGIN;
       const out = allocateCanvas(W, H);
       if (!out) return FALLBACK_CANVAS;
       const ctx = out.getContext('2d');
       if (!ctx) return FALLBACK_CANVAS;
 
-      // Missing-area fill: built once from a small copy of the whole image, shared by every tile.
-      pipe.setSource(image, W, H, FILL_SOURCE_MAX_SIDE);
+      pipe.setSource(image, W, H, tileMax);
       fill = pipe.takeFill(params.maps);
+      shared = pipe.takeLevels(from);
       pipe.setExternalFill(fill?.tex ?? null);
+      pipe.setSharedLevels(from, shared.length > 0 ? shared.map((t) => t.tex) : null);
       const t1 = performance.now();
 
       for (const tile of plan.tiles) {
@@ -446,8 +460,8 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
       }
       const t2 = performance.now();
       console.info(
-        `[renderer] Tiled export ${W}x${H}: ${plan.tiles.length} tiles, ` +
-          `largest margin ${plan.margin} px, ${Math.round(t2 - t0)} ms.`,
+        `[renderer] Tiled export ${W}x${H}: ${plan.tiles.length} tiles, largest margin ${plan.margin} px, ` +
+          `levels ${from}+ shared, ${Math.round(t2 - t0)} ms.`,
       );
       return {
         canvas: out,
@@ -466,7 +480,7 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
       };
     } finally {
       pipe?.dispose();
-      if (fill && !gl.isContextLost()) deleteTarget(gl, fill);
+      if (!gl.isContextLost()) for (const t of [fill, ...shared]) deleteTarget(gl, t);
       releaseContext(gl);
       glCanvas.width = 1;
       glCanvas.height = 1;

@@ -21,7 +21,8 @@ function levelWeightExpr(i: number): string {
 
 const samplerDecls = LEVELS.map((_, i) => `uniform sampler2D uL${i};`).join('\n');
 const pyramidBody = LEVELS.map(
-  (_, i) => `  w = ${levelWeightExpr(i)};\n  if (w > 0.0) c += w * textureLod(uL${i}, uv, 0.0).rgb;`,
+  (_, i) =>
+    `  w = ${levelWeightExpr(i)};\n  if (w > 0.0) c += w * textureLod(uL${i}, ${i} < uSharedFrom ? uvT : uvF, 0.0).rgb;`,
 ).join('\n');
 
 export const EFFECTS_FRAG = /* glsl */ `#version 300 es
@@ -31,12 +32,13 @@ precision highp int;
 
 ${samplerDecls}
 uniform sampler2D uFill;   // missing-area fill colour, whole image (same orientation as the image)
-uniform sampler2D uMapA;   // blur/40, distortion, contrastLoss, dimming
+uniform sampler2D uMapA;   // blur / MAX_BLUR_PX (${MAX_BLUR_PX}), distortion, contrastLoss, dimming
 uniform sampler2D uMapB;   // darkSpot, fillIn, colourFade, doubleImage
 uniform sampler2D uMapC;   // r: dark-spot shade of the strongest spot (0 = black, 1 = mid grey)
 uniform vec2 uSize;        // output (tile) size in px
 uniform vec2 uOrigin;      // tile's top-left in full-image px (0, 0 when not tiled)
 uniform vec2 uFull;        // full image size in px (= uSize when not tiled)
+uniform int uSharedFrom;   // levels >= this cover the whole image (tiled export), the rest this tile
 uniform bool uFlipY;       // true when drawing to the canvas (bottom-up framebuffer)
 uniform bool uBypass;
 uniform bool uHasFill;
@@ -50,7 +52,11 @@ uniform vec4 uLensA[MAX_LENSES]; // cx, cy (px), 1/rx, 1/ry (1/px)
 uniform vec4 uLensB[MAX_LENSES]; // cos(rot), sin(rot), amount, feather
 out vec4 outColor;
 
-vec3 pyramid(vec2 uv, float b) {
+// Blur at full-image position q: tile levels are read at (q - uOrigin) / uSize, shared
+// whole-image levels at q / uFull (identical when not tiled).
+vec3 pyramid(vec2 q, float b) {
+  vec2 uvT = (q - uOrigin) / uSize;
+  vec2 uvF = q / uFull;
   vec3 c = vec3(0.0);
   float w;
 ${pyramidBody}
@@ -132,17 +138,17 @@ void main() {
   if (A.g > 0.0 && uDistAmp > 0.0) q += distortion(p, A.g);
   vec2 uv = (q - uOrigin) / uSize;
 
-  vec3 col = pyramid(uv, b);
+  vec3 col = pyramid(q, b);
 
   if (uHasFill && B.g > 0.0) col = mix(col, textureLod(uFill, q / uFull, 0.0).rgb, B.g);
 
   if (B.a > 0.0) {
-    vec3 ghost = pyramid((q - uGhost - uOrigin) / uSize, b);
+    vec3 ghost = pyramid(q - uGhost, b);
     col = mix(col, ghost, B.a * 0.5);
   }
 
   if (A.b > 0.0) {
-    vec3 m = textureLod(uL${CONTRAST_MEAN_LEVEL}, uv, 0.0).rgb;
+    vec3 m = textureLod(uL${CONTRAST_MEAN_LEVEL}, ${CONTRAST_MEAN_LEVEL} < uSharedFrom ? uv : q / uFull, 0.0).rgb;
     col = m + (col - m) * (1.0 - 0.85 * A.b);
     col = mix(col, vec3(0.82), 0.3 * A.b);
   }

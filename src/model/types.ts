@@ -8,7 +8,8 @@ export const PROFILE_VERSION = 1;
 
 /** Blur strengths are stored in pixels at this reference shorter side and scaled at render time. */
 export const BLUR_REFERENCE_SHORT_SIDE = 768;
-export const MAX_BLUR_PX = 40;
+/** Raised from 40 to 100 in v0.2 (stored values are px, so existing profiles look the same). */
+export const MAX_BLUR_PX = 100;
 export const MAX_SIZE_CHANGE = 0.3;
 /** Size change is applied per ellipse as a shader uniform, so only this many are honoured. */
 export const MAX_SIZE_CHANGE_LENSES = 8;

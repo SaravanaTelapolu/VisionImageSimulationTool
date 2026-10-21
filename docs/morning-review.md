@@ -50,7 +50,7 @@ Tick or answer inline; the next session reads this file.
 | D1 | Stack = option 3 (TypeScript, Vite, Preact, WebGL2, IndexedDB, PWA) | Your choice |
 | D2 | Vite 6 / Vitest 3, not Vite 7 | This PC has Node 18.20.1; Vite 7 needs Node 20+. CI uses Node 20. |
 | D3 | All work on local branch `develop`; nothing pushed | Pushing publishes to GitHub; left for you |
-| D4 | Blur strength (0–40 px) is defined at a 768 px shorter side and scaled for other sizes | Same look on preview and full-size export |
+| D4 | Blur strength (0–100 px since v0.2; was 0–40) is defined at a 768 px shorter side and scaled for other sizes | Same look on preview and full-size export |
 | D5 | ~~Dark-spot shade is one setting per profile~~ Changed in v0.2: per region (your D05 answer) | A third effect map carries each spot's shade |
 | D6 | Distortion: per-region strength; wave size, direction and max amplitude (default 0.8% of shorter side, see D12) per profile | Matches the plan's "set once per profile" note |
 | D7 | Size change applies to ellipse regions only, up to 8 | Plan's uniform-based design |

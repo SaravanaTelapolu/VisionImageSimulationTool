@@ -52,7 +52,7 @@ describe('effect definitions', () => {
 describe('edits', () => {
   it('sets an effect immutably and clamps to range', () => {
     const { region, profile } = sample();
-    const next = setEffect(profile, region.id, 'blur', 99);
+    const next = setEffect(profile, region.id, 'blur', 999);
     expect(next.regions[0]?.effects.blur).toBe(MAX_BLUR_PX);
     expect(profile.regions[0]?.effects.blur).toBe(0);
     expect(setEffect(profile, region.id, 'sizeChange', -5).regions[0]?.effects.sizeChange).toBe(-MAX_SIZE_CHANGE);

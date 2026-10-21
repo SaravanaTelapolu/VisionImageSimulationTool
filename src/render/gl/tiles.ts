@@ -1,14 +1,18 @@
 // Pure maths for tiled full-resolution export (v0.2, Q5). No WebGL here; unit-tested in Node.
 //
-// A tile renders the core rectangle it owns from a source rectangle = core + margin, so every
-// output pixel of the core sees the same source pixels as an untiled render would:
+// The image is rendered once at reduced size (at most one GPU pass, e.g. 4096 px) to build what
+// is shared by every tile: the missing-area fill and the coarse blur levels. A coarse level is
+// shared when its full-size version would be stored at no more than that copy's resolution (its
+// downscale factor x copy scale >= 1), so sharing loses no detail; tiles then read it in
+// whole-image coordinates and cannot disagree. Only the fine levels are built per tile, and a tile
+// renders the core rectangle it owns from a source rectangle = core + margin, so every output
+// pixel of the core sees the same source pixels as an untiled render would:
 // - margin >= how far any output pixel can sample (size-change lenses + distortion + ghost
-//   offset) + the reach of the widest blur level used (3 sigma) + a little bilinear slack;
-// - tile source rectangles start (and, inside the image, end) on multiples of the pyramid's
-//   largest downscale factor, so the decimated pyramid levels of neighbouring tiles lie on the
-//   same texel grid. The image is treated as padded to a multiple of that factor by repeating its
-//   last row and column, and every tile sees the same padding, so edges match too.
-// - Missing-area fill is built once from the whole (downscaled) image and shared by all tiles.
+//   offset) + the reach of the widest per-tile blur level it reads (3 sigma) + bilinear slack;
+// - tile source rectangles start (and, inside the image, end) on multiples of the largest
+//   downscale factor of the per-tile levels, so the decimated levels of neighbouring tiles lie on
+//   the same texel grid. The image is treated as padded to a multiple of that factor by repeating
+//   its last row and column, and every tile sees the same padding, so edges match too.
 import { MAX_BLUR_PX, MAX_SIZE_CHANGE } from '../../model/types';
 import type { RenderParams } from '../types';
 import { BLUR_LEVELS_REF, CONTRAST_MEAN_LEVEL, channelHasAny, planPyramid, type PyramidLevelPlan } from './math';
@@ -19,8 +23,6 @@ export const MAX_CANVAS_SIDE = 16384;
 export const MAX_CANVAS_AREA = 16384 * 16384;
 /** A tile's core must be at least this many pixels wide, or tiling is not worth it. */
 export const MIN_TILE_CORE = 256;
-/** Long side of the whole-image copy the shared missing-area fill is built from. */
-export const FILL_SOURCE_MAX_SIDE = 1536;
 
 /** Highest per-channel byte in an RGBA8 map (0 when the channel is empty). */
 export function channelMax(data: Uint8Array, channel: number): number {
@@ -89,6 +91,7 @@ export function tileReach(
   fullHeight: number,
   plan: PyramidLevelPlan[],
   rect?: Rect,
+  localLevels: number = plan.length,
 ): TileReach {
   const short = Math.min(fullWidth, fullHeight);
   const maps = params.maps;
@@ -133,7 +136,8 @@ export function tileReach(
   let topLevel = topLevelFor(blurRef);
   if (ma[2]! > 0) topLevel = Math.max(topLevel, CONTRAST_MEAN_LEVEL);
   topLevel = Math.min(topLevel, plan.length - 1);
-  const lvl = plan[topLevel];
+  // Shared whole-image levels need no margin: only the widest per-tile level counts.
+  const lvl = plan[Math.min(topLevel, Math.max(0, localLevels - 1))];
   const blurPx = lvl ? 3 * lvl.sigmaPx + 2 * lvl.factor : 0;
   return { warpPx, topLevel, blurPx, marginPx: Math.ceil(warpPx + blurPx + 2) };
 }
@@ -228,10 +232,20 @@ export function planTiles(width: number, height: number, tileMax: number, margin
   return { paddedWidth, paddedHeight, margin: maxMargin, align: A, tiles };
 }
 
-/** The pyramid alignment for an image: its largest level downscale factor. */
-export function pyramidAlign(width: number, height: number): number {
-  const plan = planPyramid(width, height);
+/** The pyramid alignment for an image: the largest downscale factor of its first `levels` levels. */
+export function pyramidAlign(width: number, height: number, levels?: number): number {
+  const plan = planPyramid(width, height).slice(0, levels);
   return plan.reduce((m, p) => Math.max(m, p.factor), 1);
+}
+
+/**
+ * First pyramid level that can be shared from a whole-image copy at `copyScale` (copy size / full
+ * size, <= 1): the first level (>= 1) whose full-size downscale factor x copyScale >= 1, i.e. it
+ * would be stored at no more than the copy's resolution. plan.length when none can.
+ */
+export function sharedLevelsFrom(plan: PyramidLevelPlan[], copyScale: number): number {
+  for (let k = 1; k < plan.length; k++) if ((plan[k]?.factor ?? 0) * copyScale >= 1) return k;
+  return plan.length;
 }
 
 /** True when a 2D canvas of this size is within the usual browser limits (it may still fail). */
