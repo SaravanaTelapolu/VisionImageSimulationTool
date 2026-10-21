@@ -50,6 +50,8 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 
 ## Log (newest first)
 
+- 2026-10-21 06:28 IST — Second usage limit ~02:30 to 06:20 stopped W4-2, W5-1, W5-2, W5-3; all resumed at 06:28. Playwright e2e on develop (07198be, with InstallPrompt mounted): 6/6 pass in 2.8 min.
+
 - 2026-10-21 02:23 IST — Merged W4-4 review findings and W4-3 e2e tests. Fix wave launched: W5-1 (H2), W5-2 (Opus: H1, H3, M5, L4, L8–L11), W5-3 (M2–M4, L1, L3, L5, L6). W4-2 (still running) also took M1, L2, L7.
 
 - 2026-10-21 02:01 IST — Merged W3-4 (freehand/brush), W3-6 (map worker), W3-3 (export panel), W3-1 (compare/present/wiring). 513 tests, build green. All original phases 0–6 are implemented. Launched W4-2 (a11y/UX), W4-4 (Opus review); W4-3 (e2e) running since 01:55.

@@ -47,6 +47,7 @@ Tick or answer inline; the next session reads this file.
 ## Overnight incidents
 
 - ~22:57–01:20: the Claude usage limit stopped all agents; the build resumed automatically at 01:28.
+- ~02:30–06:20: a second usage limit; the build resumed automatically at 06:28.
 
 ## Notes from agents
 
