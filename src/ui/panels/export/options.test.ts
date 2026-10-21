@@ -10,6 +10,7 @@ import {
   loadExportOptions,
   parseDateInput,
   planExportFiles,
+  reducedNotice,
   resultMessage,
   sanitizeExportOptions,
   saveExportOptions,
@@ -48,7 +49,29 @@ describe('defaults', () => {
       orientation: 'auto',
       labels: true,
       caption: true,
+      size: 'limited',
     });
+  });
+});
+
+describe('export size (Q5)', () => {
+  it('persists Full resolution and falls back to the default for bad values', () => {
+    const s = fakeStorage();
+    saveExportOptions({ ...DEFAULT_EXPORT_OPTIONS, size: 'full' }, s);
+    expect(loadExportOptions(s).size).toBe('full');
+    expect(sanitizeExportOptions({ size: 'huge' }).size).toBe('limited');
+    expect(sanitizeExportOptions({}).size).toBe('limited');
+  });
+
+  it('explains a reduced export, with the reason', () => {
+    const facts = { width: 4096, height: 2731, downscaled: true, originalWidth: 6000, originalHeight: 4000 };
+    expect(reducedNotice(facts, 'limited')).toBe(
+      'Exported at 4096 × 2731 px — reduced from 6000 × 4000 px. Choose Export size: Full resolution to keep every pixel.',
+    );
+    expect(reducedNotice({ ...facts, fallback: 'This device could not hold an image that large.' }, 'full')).toBe(
+      'Exported at 4096 × 2731 px — reduced from 6000 × 4000 px. This device could not hold an image that large.',
+    );
+    expect(reducedNotice({ ...facts, downscaled: false, width: 6000, height: 4000 }, 'full')).toBe('');
   });
 });
 

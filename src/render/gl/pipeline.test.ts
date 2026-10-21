@@ -89,6 +89,40 @@ describe('GLPipeline with a fake context', () => {
     expect(named).not.toContain('uShade');
   });
 
+  it('renders a tile in full-image coordinates with a shared fill (Q5)', () => {
+    const { gl, calls } = fakeGl();
+    const pipe = new GLPipeline(gl);
+    pipe.setSource({ width: 64, height: 32 } as unknown as TexImageSource, 64, 32, 4096, {
+      x: 128,
+      y: 96,
+      fullWidth: 1000,
+      fullHeight: 500,
+    });
+    const shared = { shared: true } as unknown as WebGLTexture;
+    pipe.setExternalFill(shared);
+    const m = maps(); // B.g = 200: missing area present
+    calls.length = 0;
+    pipe.render(params(m));
+    const f2 = calls.filter((c) => c.name === 'uniform2f').map((c) => c.args);
+    expect(f2).toContainEqual(['uOrigin', 128, 96]);
+    expect(f2).toContainEqual(['uFull', 1000, 500]);
+    expect(f2).toContainEqual(['uSize', 64, 32]);
+    // Ghost offset is in units of the FULL image's shorter side (500), not the tile's.
+    expect(f2).toContainEqual(['uGhost', 0.01 * 500, 0]);
+    expect(calls.some((c) => c.name === 'bindTexture' && c.args[1] === shared)).toBe(true);
+    expect(calls.filter((c) => c.name === 'uniform1i').map((c) => c.args)).toContainEqual(['uHasFill', 1]);
+    // Its own fill is never built (no fill-weight pass ran).
+    expect(calls.some((c) => c.name === 'drawArrays')).toBe(true);
+    expect(calls.filter((c) => c.name === 'drawArrays')).toHaveLength(1);
+  });
+
+  it('refuses a tile that would need downscaling', () => {
+    const { gl } = fakeGl();
+    const pipe = new GLPipeline(gl);
+    const tile = { x: 0, y: 0, fullWidth: 20000, fullHeight: 20000 };
+    expect(() => pipe.setSource({ width: 9000, height: 10 } as unknown as TexImageSource, 9000, 10, 4096, tile)).toThrow();
+  });
+
   it('re-uploads the maps when only map C changes', () => {
     const { gl, calls } = fakeGl();
     const pipe = new GLPipeline(gl);

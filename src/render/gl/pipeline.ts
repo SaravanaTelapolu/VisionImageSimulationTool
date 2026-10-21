@@ -4,6 +4,7 @@ import { MAX_SIZE_CHANGE, MAX_SIZE_CHANGE_LENSES } from '../../model/types';
 import type { EffectMaps, RenderParams } from '../types';
 import { BLUR_FRAG, FILL_COMPOSE_FRAG, FILL_WEIGHT_FRAG, FULLSCREEN_VERT } from '../shaders/common';
 import { EFFECTS_FRAG, PYRAMID_LEVEL_COUNT } from '../shaders/effects';
+import { BLUR_LEVELS_REF } from './math';
 import {
   GLProgram,
   chooseTargetFormat,
@@ -44,6 +45,18 @@ export interface SourceInfo {
   downscaled: boolean;
 }
 
+/**
+ * Where an uploaded source sits in a larger image (tiled export): its top-left corner (x, y) in
+ * the full image's pixels and the full image's size. Effect maps, the fixation point, lenses and
+ * the shared fill are all addressed in full-image coordinates; blur sigmas follow the full image.
+ */
+export interface TileFrame {
+  x: number;
+  y: number;
+  fullWidth: number;
+  fullHeight: number;
+}
+
 interface FillTargets {
   weight: Target; // also receives the composed result
   temp: Target;
@@ -69,6 +82,9 @@ export class GLPipeline {
   private source: Target | null = null; // texture only; fbo unused but harmless
   private levels: Target[] = [];
   private info: SourceInfo | null = null;
+  private tile: TileFrame | null = null;
+  /** Missing-area fill built elsewhere (whole image, tiled export); used instead of our own. */
+  private externalFill: WebGLTexture | null = null;
 
   private mapA: WebGLTexture;
   private mapB: WebGLTexture;
@@ -114,9 +130,10 @@ export class GLPipeline {
    * Uploads the source (downscaling through a 2D canvas when it exceeds `maxSide`) and rebuilds
    * the blur pyramid. Resizes the context's canvas to the texture size.
    */
-  setSource(image: TexImageSource, width: number, height: number, maxSide = this.maxSide): SourceInfo {
+  setSource(image: TexImageSource, width: number, height: number, maxSide = this.maxSide, tile?: TileFrame): SourceInfo {
     const gl = this.gl;
     const fit = fitToMaxSide(width, height, Math.min(maxSide, this.maxSide));
+    if (tile && fit.downscaled) throw new Error('A tile must fit the GPU without downscaling.');
     const natural = intrinsicSize(image);
     const direct = !fit.downscaled && natural?.width === width && natural.height === height;
     const upload: TexImageSource = direct ? image : resampleToCanvas(image, fit.width, fit.height);
@@ -139,6 +156,7 @@ export class GLPipeline {
     if (canvas.width !== fit.width) canvas.width = fit.width;
     if (canvas.height !== fit.height) canvas.height = fit.height;
 
+    this.tile = tile ? { ...tile } : null;
     this.buildPyramid();
     this.fillDirty = true;
     return this.info;
@@ -147,7 +165,8 @@ export class GLPipeline {
   private buildPyramid(): void {
     const src = this.source;
     if (!src) return;
-    const plan = planPyramid(src.width, src.height);
+    const t = this.tile;
+    const plan = planPyramid(src.width, src.height, BLUR_LEVELS_REF, t ? { width: t.fullWidth, height: t.fullHeight } : undefined);
     this.levels = [src];
     for (let k = 1; k < plan.length; k++) {
       const p = plan[k];
@@ -240,9 +259,34 @@ export class GLPipeline {
     this.fillDirty = true;
   }
 
+  /**
+   * Uses `tex` (a fill built by takeFill() on the whole image, in the same context) instead of
+   * building one from this source. Pass null to go back to building our own.
+   */
+  setExternalFill(tex: WebGLTexture | null): void {
+    this.externalFill = tex;
+  }
+
+  /**
+   * Builds the missing-area fill for `maps` on the current source and hands it over: the caller
+   * owns the returned target (deleteTarget) and may use it after this pipeline is disposed.
+   * Null when the maps have no missing area.
+   */
+  takeFill(maps: EffectMaps): Target | null {
+    this.updateMaps(maps);
+    this.fillDirty = true;
+    this.updateFill();
+    const fill = this.fill;
+    if (!fill || !this.hasFillIn) return null;
+    for (const t of [fill.temp, ...fill.f]) deleteTarget(this.gl, t);
+    this.fill = null;
+    this.fillDirty = true;
+    return fill.weight;
+  }
+
   /** Builds the missing-area fill texture (low resolution) from the pyramid and map B. */
   private updateFill(): void {
-    if (!this.fillDirty) return;
+    if (!this.fillDirty || this.externalFill) return;
     this.fillDirty = false;
     const src = this.source;
     if (!src || !this.hasFillIn) return;
@@ -323,7 +367,10 @@ export class GLPipeline {
 
     const W = src.width;
     const H = src.height;
-    const short = Math.min(W, H);
+    const t = this.tile;
+    const fullW = t ? t.fullWidth : W;
+    const fullH = t ? t.fullHeight : H;
+    const short = Math.min(fullW, fullH);
     const sx = W / info.declaredWidth;
     const sy = H / info.declaredHeight;
     const g = params.globals;
@@ -337,10 +384,11 @@ export class GLPipeline {
       gl.activeTexture(gl.TEXTURE0 + i);
       gl.bindTexture(gl.TEXTURE_2D, lvl.tex);
     }
-    const hasFill = !params.bypass && this.hasFillIn && !!this.fill;
+    const fillTex = this.externalFill ?? this.fill?.weight.tex ?? null;
+    const hasFill = !params.bypass && this.hasFillIn && !!fillTex;
     p.set1i('uFill', UNIT_FILL);
     gl.activeTexture(gl.TEXTURE0 + UNIT_FILL);
-    gl.bindTexture(gl.TEXTURE_2D, hasFill && this.fill ? this.fill.weight.tex : src.tex);
+    gl.bindTexture(gl.TEXTURE_2D, hasFill && fillTex ? fillTex : src.tex);
     p.set1i('uMapA', UNIT_MAP_A);
     gl.activeTexture(gl.TEXTURE0 + UNIT_MAP_A);
     gl.bindTexture(gl.TEXTURE_2D, this.mapA);
@@ -352,6 +400,8 @@ export class GLPipeline {
     gl.bindTexture(gl.TEXTURE_2D, this.mapC);
 
     p.set2f('uSize', W, H);
+    p.set2f('uOrigin', t ? t.x : 0, t ? t.y : 0);
+    p.set2f('uFull', fullW, fullH);
     p.set1i('uFlipY', 1);
     p.set1i('uBypass', params.bypass ? 1 : 0);
     p.set1i('uHasFill', hasFill ? 1 : 0);
@@ -404,6 +454,7 @@ export class GLPipeline {
     deleteTarget(gl, this.source);
     this.source = null;
     this.info = null;
+    this.tile = null;
     this.freeFill();
   }
 

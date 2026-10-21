@@ -52,6 +52,8 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 
 ## Log (newest first)
 
+- 2026-10-21 v0.2 Q5 — Export size option ("Up to 4096 px" default / "Full resolution"). Full resolution renders in tiles of at most min(GPU limit, 4096) px (src/render/gl/tiles.ts): each tile's margin covers lenses + distortion + ghost + 3 sigma of the widest blur level read over its own core; tiles align to the pyramid's largest downscale factor; the missing-area fill is built once from a 1536 px copy. Falls back to the downscaled export (with a notice) when the full-size canvas cannot be allocated. Contract: `Renderer` unchanged; `WebGLRenderer` gains options/`exportFullSizeWith`, `ExportInfo.tiles/fallback`.
+
 - 2026-10-21 v0.2 D05 — Contract change: `Region.darkSpotShade` (0 black .. 1 mid grey) added in src/model/types.ts; `ProfileGlobals.darkSpotShade` kept but deprecated (fallback for older profiles, read by v0.1). `EffectMaps.c` added in src/render/types.ts: C.r = shade of the strongest dark spot (ties darker, 1-texel dilation), other channels reserved. No PROFILE_VERSION bump (additive field with a fallback).
 
 - 2026-10-21 07:07 IST — Merged W5-4. Final checks on develop: typecheck, 592 unit tests, build, Playwright 8/8 (Edge, desktop + mobile). README.md written, CLAUDE.md refreshed. BUILD_STATUS set to COMPLETE; auto-resume cron and scheduled task switched off.

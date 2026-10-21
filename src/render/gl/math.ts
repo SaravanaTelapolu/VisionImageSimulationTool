@@ -122,14 +122,19 @@ export interface PyramidLevelPlan {
   incrementPx: number;
 }
 
-/** Plans the blur pyramid for an image: each level is built from the previous one. */
+/**
+ * Plans the blur pyramid for an image: each level is built from the previous one. For a tile of a
+ * larger image (tiled export), pass the full image size as `full`: sigmas and downscale factors
+ * then follow the full image, so every tile's levels match; sizes follow width x height.
+ */
 export function planPyramid(
   width: number,
   height: number,
   levels: readonly number[] = BLUR_LEVELS_REF,
+  full?: { width: number; height: number },
 ): PyramidLevelPlan[] {
-  const scale = pixelScale(width, height);
-  const short = Math.min(width, height);
+  const scale = full ? pixelScale(full.width, full.height) : pixelScale(width, height);
+  const short = full ? Math.min(full.width, full.height) : Math.min(width, height);
   const plan: PyramidLevelPlan[] = [];
   let prevSigma = 0;
   let prevFactor = 1;

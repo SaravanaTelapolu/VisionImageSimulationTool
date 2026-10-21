@@ -30,15 +30,17 @@ precision highp int;
 #define MAX_LENSES ${MAX_SIZE_CHANGE_LENSES}
 
 ${samplerDecls}
-uniform sampler2D uFill;   // missing-area fill colour (same orientation as the image)
+uniform sampler2D uFill;   // missing-area fill colour, whole image (same orientation as the image)
 uniform sampler2D uMapA;   // blur/40, distortion, contrastLoss, dimming
 uniform sampler2D uMapB;   // darkSpot, fillIn, colourFade, doubleImage
 uniform sampler2D uMapC;   // r: dark-spot shade of the strongest spot (0 = black, 1 = mid grey)
-uniform vec2 uSize;        // output size in px
+uniform vec2 uSize;        // output (tile) size in px
+uniform vec2 uOrigin;      // tile's top-left in full-image px (0, 0 when not tiled)
+uniform vec2 uFull;        // full image size in px (= uSize when not tiled)
 uniform bool uFlipY;       // true when drawing to the canvas (bottom-up framebuffer)
 uniform bool uBypass;
 uniform bool uHasFill;
-uniform vec2 uFix;         // fixation, px
+uniform vec2 uFix;         // fixation, full-image px
 uniform vec2 uWaveDir;     // unit vector of the distortion direction
 uniform float uWaveLen;    // px
 uniform float uDistAmp;    // px at distortion = 1
@@ -112,27 +114,30 @@ vec2 applyLenses(vec2 p) {
   return wsum > 0.0 ? p + sum / wsum : p;
 }
 
+// Pixel positions p and q are in full-image px; pyramid levels cover only this tile, so they are
+// read at (q - uOrigin) / uSize. Effect maps and the fill cover the whole image: q / uFull.
 void main() {
-  vec2 p = vec2(gl_FragCoord.x, uFlipY ? uSize.y - gl_FragCoord.y : gl_FragCoord.y);
-  vec2 uv0 = p / uSize;
+  vec2 pl = vec2(gl_FragCoord.x, uFlipY ? uSize.y - gl_FragCoord.y : gl_FragCoord.y);
   if (uBypass) {
-    outColor = vec4(textureLod(uL0, uv0, 0.0).rgb, 1.0);
+    outColor = vec4(textureLod(uL0, pl / uSize, 0.0).rgb, 1.0);
     return;
   }
+  vec2 p = pl + uOrigin;
+  vec2 uv0 = p / uFull;
   vec4 A = textureLod(uMapA, uv0, 0.0);
   vec4 B = textureLod(uMapB, uv0, 0.0);
   float b = A.r * ${f(MAX_BLUR_PX)};
 
   vec2 q = applyLenses(p);
   if (A.g > 0.0 && uDistAmp > 0.0) q += distortion(p, A.g);
-  vec2 uv = q / uSize;
+  vec2 uv = (q - uOrigin) / uSize;
 
   vec3 col = pyramid(uv, b);
 
-  if (uHasFill && B.g > 0.0) col = mix(col, textureLod(uFill, uv, 0.0).rgb, B.g);
+  if (uHasFill && B.g > 0.0) col = mix(col, textureLod(uFill, q / uFull, 0.0).rgb, B.g);
 
   if (B.a > 0.0) {
-    vec3 ghost = pyramid((q - uGhost) / uSize, b);
+    vec3 ghost = pyramid((q - uGhost - uOrigin) / uSize, b);
     col = mix(col, ghost, B.a * 0.5);
   }
 

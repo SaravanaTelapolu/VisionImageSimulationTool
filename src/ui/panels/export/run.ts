@@ -18,6 +18,11 @@ export interface PreparedExport {
   /** Pixel size of the simulated render. */
   width: number;
   height: number;
+  /** Pixel size of the original photo. */
+  originalWidth: number;
+  originalHeight: number;
+  /** Why "Full resolution" fell back to a smaller image, when it did. */
+  fallback?: string;
 }
 
 const mime = (o: ExportOptions): 'image/png' | 'image/jpeg' => (o.format === 'jpeg' ? 'image/jpeg' : 'image/png');
@@ -61,12 +66,26 @@ export async function prepareExport(
   // one-line approximation strip (review L3). The Original export stays clean and needs no render.
   const needPixels = opts.sideBySide || opts.simulated;
   let simCanvas: HTMLCanvasElement | null = null;
-  let size = { width: 0, height: 0, downscaled: false };
+  const fullResolution = opts.size === 'full';
+  let size: Pick<PreparedExport, 'width' | 'height' | 'downscaled' | 'originalWidth' | 'originalHeight' | 'fallback'> = {
+    width: 0,
+    height: 0,
+    downscaled: false,
+    originalWidth: 0,
+    originalHeight: 0,
+  };
   if (needPixels) {
-    onProgress('Rendering…');
-    const sim = await renderFullSizeCanvas();
+    onProgress(fullResolution ? 'Rendering at full resolution…' : 'Rendering…');
+    const sim = await renderFullSizeCanvas({ fullResolution });
     simCanvas = sim.canvas;
-    size = { width: sim.width, height: sim.height, downscaled: sim.downscaled };
+    size = {
+      width: sim.width,
+      height: sim.height,
+      downscaled: sim.downscaled,
+      originalWidth: sim.originalWidth,
+      originalHeight: sim.originalHeight,
+      ...(sim.fallback ? { fallback: sim.fallback } : {}),
+    };
   }
 
   if (opts.simulated && simCanvas) {
@@ -77,8 +96,10 @@ export async function prepareExport(
 
   if (opts.original) {
     onProgress('Preparing the original…');
-    const orig = await getOriginalCanvas();
-    if (!simCanvas) size = { width: orig.width, height: orig.height, downscaled: false };
+    const orig = await getOriginalCanvas(undefined, { fullResolution });
+    if (!simCanvas) {
+      size = { width: orig.width, height: orig.height, downscaled: false, originalWidth: orig.width, originalHeight: orig.height };
+    }
     files.push({ blob: await canvasToBlob(orig, type, quality), name: nameOf('original') });
   }
 
