@@ -11,6 +11,12 @@ Items for later versions. The current version is tracked in [development-coding-
   - Web Share with files;
   - storage that Safari may clear after 7 days without use.
 
+## Planned features
+
+- **Rectangle spot ("+ Spot (rectangle)").** Two ready-to-build plans; pick one:
+  - [Option A](feature-rect-spot-option-A.md): quick, a four-corner freehand outline (1–2 h; does not stay rectangular, no rotate, no size change).
+  - [Option B](feature-rect-spot-option-B.md): a real rectangle shape that edits like the oval (about half a day; recommended).
+
 ## After first phone tests
 
 - **Far vision.** Once near vision (reading distance) has been simulated and tracked, add profiles for far vision. This needs larger viewing distances and test images suited to distance, such as a street scene or signage, viewed on a laptop or TV.
