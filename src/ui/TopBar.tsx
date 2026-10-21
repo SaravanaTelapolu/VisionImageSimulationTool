@@ -20,6 +20,9 @@ import { PerformanceLine } from './preview/PreviewNotice';
 
 const TEXT_STEP = 0.1;
 
+/** The step-by-step help page (public/help.html). Opened in a new tab so unsaved edits stay. */
+export const HELP_URL = 'help.html';
+
 
 function MoreMenu() {
   const [open, setOpen] = useState(false);
@@ -97,6 +100,9 @@ function MoreMenu() {
           >
             Calibration guide
           </button>
+          <a class="menu-item" href={HELP_URL} target="_blank" rel="noopener" onClick={() => setOpen(false)}>
+            Help and how-to
+          </a>
           <div class="menu-sep" />
           <PerformanceLine />
         </div>

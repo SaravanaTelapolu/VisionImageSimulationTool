@@ -26,7 +26,7 @@ import { SideBySide } from './panels/compare/SideBySide';
 import { PresentMode } from './present/PresentMode';
 import { Sheet } from './Sheet';
 import { TimelineHost } from './TimelineHost';
-import { QuickBar, TopBar } from './TopBar';
+import { HELP_URL, QuickBar, TopBar } from './TopBar';
 import { announcement } from './announce';
 import { installCompareAutoSwitch } from './compareSwitch';
 import { RegionOverlay } from './edit/RegionOverlay';
@@ -157,6 +157,9 @@ export function App() {
                 <button type="button" class="link-btn" onClick={openCalibration}>
                   New here? Open the calibration guide
                 </button>
+                <a class="link-btn" href={HELP_URL} target="_blank" rel="noopener">
+                  How to use the app (Help)
+                </a>
               </div>
             )}
             <QuickBar />

@@ -216,6 +216,9 @@ button {
 }
 
 .link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--tap);
   padding: 0 8px;
   border: 0;
@@ -280,6 +283,7 @@ button {
   color: var(--text);
   text-align: left;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
   touch-action: manipulation;
 }

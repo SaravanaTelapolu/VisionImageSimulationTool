@@ -31,3 +31,6 @@ export const manifestConfig: Partial<ManifestOptions> = {
 
 /** Glob patterns of build output that the service worker precaches. */
 export const PRECACHE_GLOBS = ['**/*.{js,css,html,svg,png,woff2}'];
+
+/** Help-page screenshots and animations are large and only useful online, so they are not precached. */
+export const PRECACHE_IGNORES = ['help/media/**'];

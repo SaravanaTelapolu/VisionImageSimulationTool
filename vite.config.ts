@@ -4,7 +4,7 @@ import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
 // @ts-ignore -- @types/node is not installed (and no dependency may be added)
 import { webcrypto } from 'node:crypto';
-import { manifestConfig, PRECACHE_GLOBS } from './src/pwa/manifest';
+import { manifestConfig, PRECACHE_GLOBS, PRECACHE_IGNORES } from './src/pwa/manifest';
 
 // Node 18 has no global Web Crypto, which workbox's minifier needs (serialize-javascript).
 // Polyfill it in this process; the minifier's worker threads cannot be polyfilled, so on such a
@@ -27,6 +27,7 @@ export default defineConfig({
       includeAssets: ['icons/apple-touch-icon.png', 'icons/favicon.svg'],
       workbox: {
         globPatterns: PRECACHE_GLOBS,
+        globIgnores: PRECACHE_IGNORES,
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
         mode: canMinifySw ? 'production' : 'development',
