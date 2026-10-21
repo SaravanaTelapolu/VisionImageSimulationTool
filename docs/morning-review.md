@@ -33,6 +33,10 @@ Tick or answer inline; the next session reads this file.
 | D19 | Sharing is two steps: "Prepare images", then "Share" | Android only opens the share sheet straight after a tap; rendering can take seconds |
 | D20 | Present mode keeps the screen on while open, where the browser allows it | So the screen doesn't dim while the doctor looks |
 | D21 | Side-by-side compare is view-only; editing switches back to Single | It replaces the editable view |
+| D22 | Undo, Redo and Flip sit in a bar at the bottom of the image (thumb reach); the top bar keeps the name and menu | One-handed use on a phone |
+| D23 | Imports are limited (5 MB file, 200 regions, 500 profiles per bundle) | Protects the app from huge or corrupt files |
+| D24 | The app asks the browser to keep your data after your first save (not at startup) | Browsers grant this more readily after real use |
+| D25 | Every export except "Original" carries the approximation note, even with the caption off | Honesty requirement |
 
 ## Questions (answer when convenient; the build continues on the assumption shown)
 
@@ -72,4 +76,6 @@ Choices the agents made, which you may want to change:
 - **Freehand/brush (W3-4):** brush size is 1–30 % of the shorter side; a second finger cancels the current stroke. Freehand and Brush need a photo first.
 - **Export (W3-3):** the caption and labels go on the Simulated and Side-by-side files; the Original file stays clean. Side-by-side is capped at 2048 px on the long side.
 - **Compare (W3-1):** with no photo loaded, the timeline uses the Amsler grid.
+- **Accessibility (W4-2):** ellipse handles can't be moved with the keyboard yet (the crosshair can). Failed shares don't fall back to a download automatically; use "Download instead".
+- **State fixes (W5-3):** a photo in HEIC format that the browser can't open now shows a clear message with the iPhone setting to switch to JPEG.
 - **Calibration (W1-G):** viewing distance is accepted from 10 to 150 cm. The guide has 5 steps; the last one is tips.
