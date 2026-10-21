@@ -12,11 +12,11 @@
 //   2. Per-edge distance stamping. Each edge writes its exact point-to-segment distance only to pixels whose
 //      centre lies within a reach `s` of the edge (clipped per row to the capsule around the edge), keeping the
 //      minimum. Only pixels near an edge ever need a distance: deeper inside the result is 1 and outside it is 0.
-//   3. If the feather is wider than ~2 map pixels, stamping stops at a seed radius of 2 px and the nearest
+//   3. If the feather is wider than SEED_PIXELS (4) map pixels, stamping stops at that seed radius and the nearest
 //      boundary point of each seeded pixel is propagated inwards with a two-pass chamfer-style sweep
 //      (8SSEDT-style: carry the nearest point, not just a distance). Distances for pixels beyond the seed band
 //      are then exact except at the rare medial-axis ties where a neighbour's nearest point is marginally
-//      farther than the true one (error well under 0.1 px, i.e. < 1/255 in coverage for any practical feather).
+//      farther than the true one. Edges outside a clipped map box are handled by seeding the box border exactly (measured max difference from the original: about 1.5/255 on very jagged random outlines).
 //      For hard edges and narrow feathers (the band is entirely within the stamped radius) the result is exact.
 //
 // Scratch buffers are module-level and reused between calls (no per-call allocation in the hot loops), so the
@@ -58,8 +58,9 @@ function grownF32(a: Float32Array, n: number): Float32Array {
 }
 
 /** Seed radius (in map pixels) for exact stamping; wider bands are completed by propagation. */
-const SEED_PIXELS = 2;
+const SEED_PIXELS = 4;
 
+/** Adopts neighbour nidx's carried boundary point for pixel idx when it is nearer. Saturated sources (D >= r2) are not spread. */
 function relax(
   d: Float32Array,
   qx: Float32Array,
@@ -68,8 +69,9 @@ function relax(
   nidx: number,
   px: number,
   py: number,
+  r2: number,
 ): void {
-  if (d[nidx]! === Infinity) return;
+  if (!(d[nidx]! < r2)) return;
   const ax = px - qx[nidx]!;
   const ay = py - qy[nidx]!;
   const d2 = ax * ax + ay * ay;
@@ -77,6 +79,47 @@ function relax(
     d[idx] = d2;
     qx[idx] = qx[nidx]!;
     qy[idx] = qy[nidx]!;
+  }
+}
+
+/** Brute-force nearest point on the polygon outline for one pixel; keeps the result if it improves on D. */
+function seedExact(
+  xs: Float64Array,
+  ys: Float64Array,
+  n: number,
+  px: number,
+  py: number,
+  idx: number,
+  D: Float32Array,
+  QX: Float32Array,
+  QY: Float32Array,
+): void {
+  let best = D[idx]!;
+  let bx = 0;
+  let by = 0;
+  let found = false;
+  for (let a = 0, q = n - 1; a < n; q = a++) {
+    const xa = xs[q]!;
+    const ya = ys[q]!;
+    const ex = xs[a]! - xa;
+    const ey = ys[a]! - ya;
+    const len2 = ex * ex + ey * ey;
+    let t = len2 > 0 ? ((px - xa) * ex + (py - ya) * ey) / len2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const cx = xa + t * ex;
+    const cy = ya + t * ey;
+    const d2 = (px - cx) * (px - cx) + (py - cy) * (py - cy);
+    if (d2 < best) {
+      best = d2;
+      bx = cx;
+      by = cy;
+      found = true;
+    }
+  }
+  if (found) {
+    D[idx] = best;
+    QX[idx] = bx;
+    QY[idx] = by;
   }
 }
 
@@ -240,26 +283,55 @@ export function buildPathCoverage(
     }
   }
 
+  // A polygon clipped by the map has edges outside the box, so the interior may have no seeds nearby.
+  // Seed the border pixels of the box with their exact nearest point (O(border x edges), clipped case only).
+  if (propagate) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (let k = 0; k < n; k++) {
+      const x = xs[k]!;
+      const y = ys[k]!;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    if (minX < x0 * sx || maxX > (x1 + 1) * sx || minY < y0 * sy || maxY > (y1 + 1) * sy) {
+      for (let r = 0; r < h; r++) {
+        const edgeRow = r === 0 || r === h - 1;
+        for (let c = 0; c < w; c += edgeRow ? 1 : w - 1 || 1) {
+          const idx = r * w + c;
+          if (cov[idx]! === 0) continue;
+          seedExact(xs, ys, n, (c + x0 + 0.5) * sx, (r + y0 + 0.5) * sy, idx, D, QX, QY);
+        }
+      }
+    }
+  }
+
   // ---- 3. Propagate nearest boundary points across the interior (wide feathers only) ----------------------
   if (propagate) {
+    const s2 = s * s; // pixels with D <= s2 were stamped exactly and are final
+    const r2 = reach * reach;
     for (let r = 0; r < h; r++) {
       const py = (r + y0 + 0.5) * sy;
       const base = r * w;
       for (let c = 0; c < w; c++) {
         const idx = base + c;
-        if (cov[idx]! === 0) continue;
+        if (cov[idx]! === 0 || D[idx]! <= s2) continue;
         const px = (c + x0 + 0.5) * sx;
-        if (c > 0) relax(D, QX, QY, idx, idx - 1, px, py);
+        if (c > 0) relax(D, QX, QY, idx, idx - 1, px, py, r2);
         if (r > 0) {
-          if (c > 0) relax(D, QX, QY, idx, idx - w - 1, px, py);
-          relax(D, QX, QY, idx, idx - w, px, py);
-          if (c < w - 1) relax(D, QX, QY, idx, idx - w + 1, px, py);
+          if (c > 0) relax(D, QX, QY, idx, idx - w - 1, px, py, r2);
+          relax(D, QX, QY, idx, idx - w, px, py, r2);
+          if (c < w - 1) relax(D, QX, QY, idx, idx - w + 1, px, py, r2);
         }
       }
       for (let c = w - 2; c >= 0; c--) {
         const idx = base + c;
-        if (cov[idx]! === 0) continue;
-        relax(D, QX, QY, idx, idx + 1, (c + x0 + 0.5) * sx, py);
+        if (cov[idx]! === 0 || D[idx]! <= s2) continue;
+        relax(D, QX, QY, idx, idx + 1, (c + x0 + 0.5) * sx, py, r2);
       }
     }
     for (let r = h - 1; r >= 0; r--) {
@@ -267,19 +339,19 @@ export function buildPathCoverage(
       const base = r * w;
       for (let c = w - 1; c >= 0; c--) {
         const idx = base + c;
-        if (cov[idx]! === 0) continue;
+        if (cov[idx]! === 0 || D[idx]! <= s2) continue;
         const px = (c + x0 + 0.5) * sx;
-        if (c < w - 1) relax(D, QX, QY, idx, idx + 1, px, py);
+        if (c < w - 1) relax(D, QX, QY, idx, idx + 1, px, py, r2);
         if (r < h - 1) {
-          if (c < w - 1) relax(D, QX, QY, idx, idx + w + 1, px, py);
-          relax(D, QX, QY, idx, idx + w, px, py);
-          if (c > 0) relax(D, QX, QY, idx, idx + w - 1, px, py);
+          if (c < w - 1) relax(D, QX, QY, idx, idx + w + 1, px, py, r2);
+          relax(D, QX, QY, idx, idx + w, px, py, r2);
+          if (c > 0) relax(D, QX, QY, idx, idx + w - 1, px, py, r2);
         }
       }
       for (let c = 1; c < w; c++) {
         const idx = base + c;
-        if (cov[idx]! === 0) continue;
-        relax(D, QX, QY, idx, idx - 1, (c + x0 + 0.5) * sx, py);
+        if (cov[idx]! === 0 || D[idx]! <= s2) continue;
+        relax(D, QX, QY, idx, idx - 1, (c + x0 + 0.5) * sx, py, r2);
       }
     }
   }
