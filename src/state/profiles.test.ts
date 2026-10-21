@@ -5,10 +5,12 @@ import { _resetForTests } from '../storage/db';
 import { getPhoto, getProfile, getSetting, profilesToBundleBlob, profileToJsonBlob, saveProfile } from '../storage';
 import * as share from '../export/share';
 import {
+  DEFAULT_DISTANCE_KEY,
   LAST_PROFILE_KEY,
   _resetProfilesStateForTests,
   currentIsSaved,
   currentPhotoSaved,
+  defaultDistanceCm,
   deleteProfileById,
   dirty,
   duplicateCurrentAsCheckup,
@@ -18,6 +20,7 @@ import {
   exportProfileById,
   importJsonFile,
   loadAllProfiles,
+  loadDefaultDistance,
   newProfile,
   notice,
   persistentStorage,
@@ -27,6 +30,7 @@ import {
   refreshList,
   renameCurrent,
   restoreLastProfile,
+  setDefaultDistance,
   saveCurrent,
   savePhotoWithCurrent,
   storageError,
@@ -384,5 +388,76 @@ describe('storage unavailable', () => {
     } finally {
       if (original) Object.defineProperty(globalThis, 'indexedDB', original);
     }
+  });
+});
+
+describe('default viewing distance (v0.2 Q3)', () => {
+  it('is 40 cm until set, and new profiles use it', () => {
+    expect(defaultDistanceCm.value).toBe(40);
+    expect(newProfile().viewingDistanceCm).toBe(40);
+  });
+
+  it('persists the setting and new profiles use it', async () => {
+    expect(await setDefaultDistance(300)).toBe(300);
+    expect(await getSetting<number>(DEFAULT_DISTANCE_KEY, -1)).toBe(300);
+    expect(newProfile().viewingDistanceCm).toBe(300);
+    expect(profile.value.viewingDistanceCm).toBe(300);
+    expect(dirty.value).toBe(false);
+
+    defaultDistanceCm.value = 40; // a fresh start: the signal is back to its default
+    expect(await loadDefaultDistance()).toBe(300);
+    expect(defaultDistanceCm.value).toBe(300);
+  });
+
+  it('clamps stored values and ignores garbage', async () => {
+    expect(await setDefaultDistance(9999)).toBe(600);
+    expect(await getSetting<number>(DEFAULT_DISTANCE_KEY, -1)).toBe(600);
+    const { setSetting } = await import('../storage');
+    await setSetting(DEFAULT_DISTANCE_KEY, 'far');
+    expect(await loadDefaultDistance()).toBe(40);
+  });
+
+  it('the initial profile takes the setting on startup when nothing was touched', async () => {
+    await setDefaultDistance(70);
+    defaultDistanceCm.value = 40;
+    resetProfile(); // the initial blank profile, at 40 cm
+    _resetProfilesStateForTests();
+    expect(profile.value.viewingDistanceCm).toBe(40);
+    expect(await restoreLastProfile()).toBe(false);
+    expect(profile.value.viewingDistanceCm).toBe(70);
+    expect(dirty.value).toBe(false);
+    expect(canUndo.value).toBe(false);
+  });
+
+  it('does not change the initial profile when the user edited meanwhile', async () => {
+    await setDefaultDistance(70);
+    defaultDistanceCm.value = 40;
+    resetProfile();
+    _resetProfilesStateForTests();
+    const restoring = restoreLastProfile();
+    addRegion(); // the user acts before the storage reads finish
+    expect(await restoring).toBe(false);
+    expect(profile.value.viewingDistanceCm).toBe(40);
+    expect(profile.value.regions).toHaveLength(1);
+  });
+
+  it('does not touch a restored profile, but still loads the setting', async () => {
+    addRegion();
+    await saveCurrent();
+    const id = profile.value.id;
+    await setDefaultDistance(300);
+    defaultDistanceCm.value = 40;
+    resetProfile();
+    expect(await restoreLastProfile()).toBe(true);
+    expect(profile.value.id).toBe(id);
+    expect(profile.value.viewingDistanceCm).toBe(40);
+    expect(defaultDistanceCm.value).toBe(300);
+  });
+
+  it('listed profiles carry their distance', async () => {
+    await setDefaultDistance(300);
+    newProfile();
+    await saveCurrent();
+    expect(profileList.value[0]?.viewingDistanceCm).toBe(300);
   });
 });

@@ -15,7 +15,7 @@ import {
   undo,
   viewMode,
 } from '../state/store';
-import { restoreLastProfile } from '../state/profiles';
+import { defaultDistanceCm, restoreLastProfile, setDefaultDistance } from '../state/profiles';
 import { calibrationOpen, closeCalibration, compareMode, openCalibration, presentOpen, timelineOpen } from '../state/ui';
 import { InstallPrompt } from '../pwa';
 import { CalibrationGuide } from './calibration/CalibrationGuide';
@@ -66,6 +66,8 @@ function Calibration() {
       onDistanceChange={(cm) =>
         applyEdit((q) => (q.viewingDistanceCm === cm ? q : { ...q, viewingDistanceCm: cm }), 'calibration-distance')
       }
+      defaultDistanceCm={defaultDistanceCm.value}
+      onMakeDefaultDistance={(cm) => void setDefaultDistance(cm)}
       onFlip={flipView}
       onChooseTestImage={(kind) => {
         if (kind === 'amsler') void loadTestImage('amsler');

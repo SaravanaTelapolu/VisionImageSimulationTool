@@ -449,11 +449,11 @@ describe('size bounds (L5)', () => {
     expect(errorsOf(withProfile((p) => (p.regions = many(MAX_REGIONS_PER_PROFILE + 1))))).toMatch(/limit of 200/);
   });
 
-  it('clamps the viewing distance to 10..150 cm and cuts over-long text', () => {
+  it('clamps the viewing distance to 10..600 cm and cuts over-long text', () => {
     const hi = validateProfile(withProfile((p) => (p.viewingDistanceCm = 1e9)));
     const lo = validateProfile(withProfile((p) => (p.viewingDistanceCm = 0.5)));
     if (!hi.ok || !lo.ok) throw new Error('expected ok');
-    expect(hi.profile.viewingDistanceCm).toBe(150);
+    expect(hi.profile.viewingDistanceCm).toBe(600);
     expect(lo.profile.viewingDistanceCm).toBe(10);
     const long = validateProfile(withProfile((p) => ((p.name = 'n'.repeat(5000)), (p.note = 'x'.repeat(50000)))));
     if (!long.ok) throw new Error('expected ok');

@@ -73,7 +73,7 @@ describe('edits', () => {
     const g = setGhostOffset(setGhostOffset(profile, 0, 0.03), 1, -0.9);
     expect(g.globals.ghostOffset).toEqual([0.03, -0.05]);
     expect(profile.globals.ghostOffset).toEqual([0.01, 0]);
-    expect(setViewingDistance(profile, 500).viewingDistanceCm).toBe(150);
+    expect(setViewingDistance(profile, 900).viewingDistanceCm).toBe(600);
     expect(setViewingDistance(profile, 3).viewingDistanceCm).toBe(10);
     expect(setEye(profile, 'left').eye).toBe('left');
   });
