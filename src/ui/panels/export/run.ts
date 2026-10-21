@@ -2,7 +2,7 @@
 // take seconds), then "share" runs straight from a fresh tap, because navigator.share needs one.
 import { canvasToBlob, composeExport } from '../../../export';
 import type { ShareFile } from '../../../export';
-import { getOriginalCanvas, renderFullSize } from '../../../state/render';
+import { getOriginalCanvas, renderFullSizeCanvas } from '../../../state/render';
 import { captionLinesFromFields, planExportFiles, type CaptionFields, type ExportOptions } from './options';
 
 /** Long side of each panel in the side-by-side image (keeps the canvas inside phone limits). */
@@ -21,21 +21,6 @@ export interface PreparedExport {
 }
 
 const mime = (o: ExportOptions): 'image/png' | 'image/jpeg' => (o.format === 'jpeg' ? 'image/jpeg' : 'image/png');
-
-async function blobToCanvas(blob: Blob): Promise<HTMLCanvasElement> {
-  const bmp = await createImageBitmap(blob);
-  try {
-    const c = document.createElement('canvas');
-    c.width = bmp.width;
-    c.height = bmp.height;
-    const ctx = c.getContext('2d');
-    if (!ctx) throw new Error('2D canvas is not available.');
-    ctx.drawImage(bmp, 0, 0);
-    return c;
-  } finally {
-    bmp.close();
-  }
-}
 
 /** The canvas itself, or a copy scaled down so its long side is at most maxSide. */
 export function scaledCopy(src: HTMLCanvasElement, maxSide: number): HTMLCanvasElement {
@@ -71,28 +56,29 @@ export async function prepareExport(
   const files: ShareFile[] = [];
   const nameOf = (kind: string): string => plan.find((p) => p.kind === kind)?.name ?? `${kind}.${opts.format}`;
 
-  // The simulation is rendered once. When its pixels are needed again (caption, JPEG re-encode,
-  // side by side) it is rendered as PNG so nothing is compressed twice.
-  const needPixels = opts.sideBySide || (opts.simulated && opts.caption);
-  onProgress('Rendering…');
-  const sim = await renderFullSize(needPixels ? { type: 'image/png' } : { type, quality });
-  const simCanvas = needPixels ? await blobToCanvas(sim.blob) : null;
+  // The simulation is rendered once, as a canvas (no PNG round trip). A simulated file always goes
+  // through composeExport, because it must carry the caption or, when the caption is off, the
+  // one-line approximation strip (review L3). The Original export stays clean and needs no render.
+  const needPixels = opts.sideBySide || opts.simulated;
+  let simCanvas: HTMLCanvasElement | null = null;
+  let size = { width: 0, height: 0, downscaled: false };
+  if (needPixels) {
+    onProgress('Rendering…');
+    const sim = await renderFullSizeCanvas();
+    simCanvas = sim.canvas;
+    size = { width: sim.width, height: sim.height, downscaled: sim.downscaled };
+  }
 
-  if (opts.simulated) {
-    if (simCanvas && opts.caption) {
-      onProgress('Adding the caption…');
-      const withCaption = composeExport({ simulated: simCanvas, orientation: 'auto', ...(caption ? { caption } : {}) });
-      files.push({ blob: await canvasToBlob(withCaption, type, quality), name: nameOf('simulated') });
-    } else if (simCanvas && type !== 'image/png') {
-      files.push({ blob: await canvasToBlob(simCanvas, type, quality), name: nameOf('simulated') });
-    } else {
-      files.push({ blob: sim.blob, name: nameOf('simulated') });
-    }
+  if (opts.simulated && simCanvas) {
+    onProgress(caption ? 'Adding the caption…' : 'Adding the approximation note…');
+    const composed = composeExport({ simulated: simCanvas, orientation: 'auto', ...(caption ? { caption } : {}) });
+    files.push({ blob: await canvasToBlob(composed, type, quality), name: nameOf('simulated') });
   }
 
   if (opts.original) {
     onProgress('Preparing the original…');
     const orig = await getOriginalCanvas();
+    if (!simCanvas) size = { width: orig.width, height: orig.height, downscaled: false };
     files.push({ blob: await canvasToBlob(orig, type, quality), name: nameOf('original') });
   }
 
@@ -111,7 +97,7 @@ export async function prepareExport(
   }
 
   const shareFiles = files.map((f) => new File([f.blob], f.name, { type: f.blob.type }));
-  return { files, shareFiles, downscaled: sim.downscaled, width: sim.width, height: sim.height };
+  return { files, shareFiles, ...size };
 }
 
 // --- Step 2: share or download, straight from a tap ---------------------------------------------

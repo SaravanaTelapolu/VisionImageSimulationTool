@@ -208,6 +208,7 @@ export function ExportPanel() {
       />
 
       <Check label="Caption under the image" checked={opts.caption} onChange={(v) => setOpt('caption', v)} />
+      {!opts.caption && <p class="export-fixed-note">A one-line "{APPROXIMATION_LINE}" note is still added.</p>}
       {opts.caption && (
         <div class="export-caption-fields">
           <div class="export-fields-row">

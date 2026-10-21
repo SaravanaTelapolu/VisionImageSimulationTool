@@ -14,6 +14,7 @@ import {
   newProfile,
   notice,
   openProfile,
+  persistentStorage,
   profileList,
   refreshList,
   renameCurrent,
@@ -35,6 +36,15 @@ type Pending = { kind: 'delete' | 'open' | 'new'; id: string } | null;
 const CONFIRM_MS = 5000;
 
 const eyeLabel = (eye: string): string => (eye === 'left' ? 'Left eye' : 'Right eye');
+
+/** One-line note on how safe the saved profiles are, from the browser's persistent-storage answer. */
+export function storageHintText(persistent: boolean | null): string {
+  if (persistent === true) return 'Saved on this device (protected from automatic clearing).';
+  if (persistent === false) {
+    return 'Saved on this device only. The browser may clear it if storage runs low — use Export all to keep a backup.';
+  }
+  return '';
+}
 
 /** Saved eye maps: save, open, duplicate as a check-up, export, import, delete. */
 export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
@@ -65,6 +75,7 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
   const error = storageError.value;
   const message = notice.value;
   const canSavePhoto = image.value?.original != null;
+  const storageHint = storageHintText(persistentStorage.value);
 
   const onNew = () => {
     if (isDirty && !isPending('new', '')) return arm({ kind: 'new', id: '' });
@@ -244,6 +255,11 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
           Export all
         </button>
       </section>
+      {storageHint && (
+        <p class="pf-hint pf-storage-hint" data-persistent={persistentStorage.value ? 'true' : 'false'}>
+          {storageHint}
+        </p>
+      )}
       <p class="pf-hint">My own approximation, not a clinical measurement. Profiles stay on this device unless you export them.</p>
     </div>
   );

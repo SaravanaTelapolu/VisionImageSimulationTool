@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { _resetProfilesStateForTests, profileList, saveCurrent } from '../../../state/profiles';
+import { _resetProfilesStateForTests, persistentStorage, profileList, saveCurrent } from '../../../state/profiles';
 import { applyEdit, profile, resetProfile } from '../../../state/store';
 import { defaultEllipse, newRegion } from '../../../model/defaults';
 import { _resetForTests } from '../../../storage/db';
@@ -81,5 +81,30 @@ describe('ProfilesPanel', () => {
     } finally {
       if (original) Object.defineProperty(globalThis, 'indexedDB', original);
     }
+  });
+
+  it('shows a storage hint that follows persistentStorage (nothing while unknown)', async () => {
+    act(() => render(<ProfilesPanel />, host));
+    await flush();
+    expect(host.querySelector('.pf-storage-hint')).toBeNull();
+
+    act(() => {
+      persistentStorage.value = false;
+    });
+    expect(host.querySelector('.pf-storage-hint')?.textContent).toBe(
+      'Saved on this device only. The browser may clear it if storage runs low — use Export all to keep a backup.',
+    );
+
+    act(() => {
+      persistentStorage.value = true;
+    });
+    expect(host.querySelector('.pf-storage-hint')?.textContent).toBe(
+      'Saved on this device (protected from automatic clearing).',
+    );
+
+    act(() => {
+      persistentStorage.value = null;
+    });
+    expect(host.querySelector('.pf-storage-hint')).toBeNull();
   });
 });

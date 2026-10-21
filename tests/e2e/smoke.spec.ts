@@ -21,7 +21,12 @@ function watchErrors(page: Page): string[] {
 
 /** The pixels the user sees in the image area (preview canvas + region outlines), as base64 PNG. */
 async function shot(page: Page): Promise<string> {
-  const png = await page.locator('.viewport').screenshot({ animations: 'disabled' });
+  // The quick-actions toolbar and the toasts (including the one-off "Ready to work offline") float
+  // over the image and change with undo/flip state or time, so they are hidden: only the image
+  // itself is compared.
+  const png = await page
+    .locator('.viewport')
+    .screenshot({ animations: 'disabled', style: '.quickbar, .toast, .pwa-toast { visibility: hidden !important; }' });
   return png.toString('base64');
 }
 
@@ -98,6 +103,11 @@ async function disableWebShare(page: Page): Promise<void> {
   });
 }
 
+/** Export is two steps: "Prepare images" renders the files, then Share / Download appear. */
+async function prepareImages(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Prepare images' }).click();
+}
+
 async function expectPngDownload(download: Download): Promise<number> {
   expect(download.suggestedFilename()).toMatch(/\.png$/);
   const file = await download.path();
@@ -144,8 +154,13 @@ test('amsler grid: add a spot, blur it, flip, undo and export PNGs', async ({ pa
   const blurred = await settledShot(page);
   await expectPreviewRunning(page);
 
+  // Undo, Redo and Flip live in the "Quick actions" toolbar under the image.
+  const quick = page.getByRole('toolbar', { name: 'Quick actions' });
+  await expect(quick.getByRole('button', { name: 'Undo', exact: true })).toBeVisible();
+  await expect(quick.getByRole('button', { name: 'Redo', exact: true })).toBeVisible();
+
   // Flip shows the original (no simulation), flipping back restores the blurred preview.
-  const flip = page.getByRole('button', { name: /Tap to show (original|simulated)/ });
+  const flip = quick.getByRole('button', { name: /Tap to show (original|simulated)/ });
   await flip.click();
   await expect(page.locator('.badge')).toHaveText('Original');
   const original = await settledShot(page);
@@ -156,7 +171,7 @@ test('amsler grid: add a spot, blur it, flip, undo and export PNGs', async ({ pa
   expect(await pixelDiff(page, restored, blurred)).toBeLessThan(SAME_PIXELS);
 
   // Undo: first the blur, then the spot itself.
-  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const undo = quick.getByRole('button', { name: 'Undo', exact: true });
   await undo.click();
   await expect(blur).not.toHaveValue(max!);
   await expect
@@ -168,14 +183,17 @@ test('amsler grid: add a spot, blur it, flip, undo and export PNGs', async ({ pa
   await expect(page.getByText('Add a spot where your vision is affected.')).toBeVisible();
 
   // Redo brings the spot back, and export has something to say about it.
-  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await quick.getByRole('button', { name: 'Redo', exact: true }).click();
   await expect(regions.getByRole('listitem')).toHaveCount(1);
 
   // Export: defaults are simulated + side-by-side PNGs, delivered as downloads.
   await openTab(page, 'Export');
   const downloads: Download[] = [];
   page.on('download', (d) => downloads.push(d));
-  await page.getByRole('button', { name: 'Share / Save' }).click();
+  await prepareImages(page);
+  // Without a share sheet the second step is a single "Download" button.
+  await expect(page.getByRole('button', { name: 'Share', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Download', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: /Downloaded \d+ files?/ })).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => downloads.length).toBeGreaterThanOrEqual(1);
   for (const d of downloads) expect(await expectPngDownload(d)).toBeGreaterThan(0);
@@ -200,7 +218,10 @@ test('export hands every file to the share sheet when it is available', async ({
   await page.goto('/');
   await loadAmsler(page);
   await openTab(page, 'Export');
-  await page.getByRole('button', { name: 'Share / Save' }).click();
+  await prepareImages(page);
+  // With a share sheet: "Share" is the main button and "Download instead" the fallback.
+  await expect(page.getByRole('button', { name: 'Download instead' })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Shared' })).toBeVisible({ timeout: 30_000 });
   const shared = await page.evaluate(
     () => (window as unknown as { __shared: { name: string; type: string; size: number }[] }).__shared,
@@ -239,23 +260,35 @@ test('choose photo from a file, show it, and be ready for offline use', async ({
   const sw = await page.request.get(new URL('sw.js', page.url()).toString());
   expect(sw.ok()).toBe(true);
 
-  // The service worker registers (asserted once the app registers it, see the report on InstallPrompt).
-  let registered = false;
-  for (let i = 0; i < 16 && !registered; i++) {
-    registered = await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration()));
-    if (!registered) await page.waitForTimeout(500);
-  }
-  test.info().annotations.push({ type: 'service-worker-registered', description: String(registered) });
-  if (registered) {
-    const state = await page.evaluate(async () => {
-      const reg = await navigator.serviceWorker.ready;
-      return (reg.active ?? reg.waiting ?? reg.installing)?.state ?? 'none';
-    });
-    expect(['activating', 'activated']).toContain(state);
-    await expect
-      .poll(async () => page.evaluate(async () => (await caches.keys()).length), { timeout: 20_000 })
-      .toBeGreaterThan(0);
-  }
+  // The service worker registers (InstallPrompt registers it on mount) within a few seconds.
+  await expect
+    .poll(async () => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())), {
+      message: 'the service worker should register',
+      timeout: 15_000,
+    })
+    .toBe(true);
+  const state = await page.evaluate(async () => {
+    const reg = await navigator.serviceWorker.ready;
+    return (reg.active ?? reg.waiting ?? reg.installing)?.state ?? 'none';
+  });
+  expect(['activating', 'activated']).toContain(state);
+  await expect
+    .poll(async () => page.evaluate(async () => (await caches.keys()).length), { timeout: 20_000 })
+    .toBeGreaterThan(0);
 
+  expect(errors).toEqual([]);
+});
+
+test('the "More options" menu opens, offers text size and closes with Escape', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/');
+  const more = page.getByRole('button', { name: 'More options', exact: true });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: 'Larger text' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Calibration guide', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
   expect(errors).toEqual([]);
 });
