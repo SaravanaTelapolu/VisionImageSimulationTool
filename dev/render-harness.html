@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Render Harness</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #111;
+        --fg: #eee;
+        --muted: #9a9a9a;
+        --panel: #1c1c1c;
+        --accent: #6cf;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 14px/1.35 system-ui, sans-serif;
+      }
+      .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px;
+      }
+      .view {
+        flex: 1 1 520px;
+        min-width: 0;
+      }
+      .view canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        background: #000;
+        cursor: crosshair;
+        touch-action: none;
+      }
+      .stats {
+        font-family: ui-monospace, monospace;
+        margin: 6px 0;
+        color: var(--accent);
+        white-space: pre-wrap;
+      }
+      .panel {
+        flex: 0 1 340px;
+        background: var(--panel);
+        padding: 10px 12px;
+        border-radius: 8px;
+        max-height: calc(100vh - 24px);
+        overflow: auto;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 12px 0 4px;
+      }
+      label.row {
+        display: grid;
+        grid-template-columns: 110px 1fr 52px;
+        align-items: center;
+        gap: 6px;
+        min-height: 30px;
+      }
+      label.row output {
+        font-family: ui-monospace, monospace;
+        text-align: right;
+        font-size: 12px;
+      }
+      label.check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 30px;
+      }
+      button,
+      select {
+        min-height: 36px;
+        padding: 0 12px;
+        margin: 4px 4px 4px 0;
+        background: #2a2a2a;
+        color: var(--fg);
+        border: 1px solid #444;
+        border-radius: 6px;
+      }
+      #exportOut img {
+        max-width: 100%;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="view">
+        <div id="canvasHost"></div>
+        <div class="stats" id="stats">starting…</div>
+        <div id="exportOut"></div>
+      </div>
+      <div class="panel" id="panel"></div>
+    </div>
+    <script type="module" src="/src/render/dev/harness.ts"></script>
+  </body>
+</html>

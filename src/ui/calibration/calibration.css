@@ -1,0 +1,208 @@
+.cal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100dvh;
+  background: var(--bg, #000);
+  color: var(--text, #fff);
+  font: 1.125rem/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.cal-header,
+.cal-body,
+.cal-footer {
+  width: 100%;
+  max-width: 560px;
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px
+    calc(12px + env(safe-area-inset-left));
+  background: var(--surface, #14141a);
+  border-bottom: 1px solid var(--border, #6e6e84);
+}
+
+.cal-indicator {
+  margin: 0;
+  font-weight: 700;
+  color: var(--accent, #ffd54a);
+}
+
+.cal-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px calc(16px + env(safe-area-inset-right)) 16px calc(16px + env(safe-area-inset-left));
+}
+
+.cal-title {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.cal-title:focus {
+  outline: 3px solid var(--accent, #ffd54a);
+  outline-offset: 4px;
+}
+
+.cal-eyes,
+.cal-muted {
+  margin: 0 0 12px;
+  color: var(--muted, #c4c4d0);
+  font-size: 0.95rem;
+}
+
+.cal-list {
+  margin: 0 0 12px;
+  padding-left: 1.3em;
+}
+
+.cal-list li {
+  margin-bottom: 8px;
+}
+
+.cal-fieldset {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 2px solid var(--border, #6e6e84);
+  border-radius: 8px;
+}
+
+.cal-fieldset legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.cal-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap, 44px);
+  cursor: pointer;
+}
+
+.cal-choice input {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  accent-color: var(--accent, #ffd54a);
+}
+
+.cal-field {
+  display: block;
+  margin: 12px 0 4px;
+  font-weight: 600;
+}
+
+.cal-input {
+  width: 100%;
+  min-height: var(--tap, 44px);
+  padding: 8px 12px;
+  border: 2px solid var(--border, #6e6e84);
+  border-radius: 8px;
+  background: var(--surface, #14141a);
+  color: var(--text, #fff);
+  font: inherit;
+}
+
+.cal-input:focus {
+  outline: 3px solid var(--accent, #ffd54a);
+  outline-offset: 2px;
+}
+
+.cal-input[aria-invalid='true'] {
+  border-color: var(--danger, #ff8a80);
+}
+
+.cal-textarea {
+  resize: vertical;
+}
+
+.cal-error {
+  margin: 4px 0 8px;
+  color: var(--danger, #ff8a80);
+}
+
+.cal-note {
+  margin: 12px 0;
+  padding: 12px;
+  border: 2px solid var(--accent, #ffd54a);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.cal-figure {
+  display: block;
+  width: min(60vw, 220px);
+  height: auto;
+  margin: 8px auto 12px;
+  border: 2px solid var(--border, #6e6e84);
+}
+
+.cal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 12px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom))
+    calc(16px + env(safe-area-inset-left));
+  background: var(--surface, #14141a);
+  border-top: 1px solid var(--border, #6e6e84);
+}
+
+.cal-footer .cal-btn {
+  flex: 1 1 0;
+}
+
+.cal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  min-width: var(--tap, 44px);
+  padding: 0 16px;
+  border: 2px solid var(--accent, #ffd54a);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cal-btn:focus-visible {
+  outline: 3px solid var(--text, #fff);
+  outline-offset: 2px;
+}
+
+.cal-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cal-btn-primary {
+  background: var(--accent, #ffd54a);
+  color: var(--accent-text, #000);
+}
+
+.cal-btn-secondary,
+.cal-btn-ghost {
+  background: transparent;
+  color: var(--text, #fff);
+}
+
+.cal-btn-ghost {
+  min-height: var(--tap, 44px);
+  border-color: var(--border, #6e6e84);
+}
+
+.cal-wide {
+  width: 100%;
+  margin-top: 8px;
+}

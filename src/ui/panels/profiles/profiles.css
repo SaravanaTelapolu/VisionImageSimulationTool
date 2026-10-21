@@ -1,0 +1,366 @@
+/* Profiles panel and timeline. Uses the app colour variables from app.css. */
+
+.pf {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.pf-msg {
+  margin: 0;
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  overflow-wrap: anywhere;
+}
+
+.pf-msg-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.pf-card,
+.pf-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+
+.pf-item[data-current='true'] {
+  border-color: var(--accent);
+}
+
+.pf-card-head,
+.pf-list-head,
+.pf-item-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pf-item-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pf-h {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pf-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pf-input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 10px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.pf-meta,
+.pf-note,
+.pf-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.pf-note {
+  color: var(--text);
+  font-style: italic;
+}
+
+.pf-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.pf-state-ok {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.pf-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.pf-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pf-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 4px 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.pf-btn:hover:not(:disabled) {
+  border-color: var(--text);
+}
+
+.pf-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pf-btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.pf-btn-danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #000;
+}
+
+.pf-file {
+  overflow: hidden;
+}
+
+.pf-file input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pf-file:focus-within {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* ---- Timeline --------------------------------------------------------------------------- */
+
+.tl {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  background: var(--bg);
+  color: var(--text);
+}
+
+.tl-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tl-title {
+  margin: 0;
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+.tl-controls {
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.tl-controls summary {
+  min-height: var(--tap);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tl-controls-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  padding: 0 12px 12px;
+  overflow-y: auto;
+}
+
+.tl-profiles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tl-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+}
+
+.tl-check input {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.tl-stage {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 6px;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior: contain;
+}
+
+.tl-tile {
+  flex: 0 0 86%;
+  min-width: 0;
+  scroll-snap-align: center;
+}
+
+.tl-pic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: #0a0a0e;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.tl-pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  -webkit-touch-callout: none;
+}
+
+.tl-wait {
+  color: var(--muted);
+}
+
+.tl-caption {
+  display: flex;
+  flex-direction: column;
+  margin: 6px 0 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.tl-caption span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.tl-note,
+.tl-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.tl-large {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg);
+}
+
+.tl-large img {
+  flex: 1 1 0;
+  min-height: 0;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+@media (min-width: 900px) {
+  .tl-stage {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-content: start;
+    scroll-snap-type: none;
+  }
+
+  .tl-tile {
+    flex: none;
+  }
+}
