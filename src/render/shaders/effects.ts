@@ -89,8 +89,11 @@ float lensWeight(float r, float feather) {
   return smoothstep(0.0, 1.0, (1.0 - r) / feather);
 }
 
+// Overlapping lenses do not compound (L8): each lens's own displacement is blended with weight
+// |amount * w|^4, a continuous "strongest lens wins". Mirrors warpByLenses() in render/lenses.ts.
 vec2 applyLenses(vec2 p) {
-  vec2 q = p;
+  vec2 sum = vec2(0.0);
+  float wsum = 0.0;
   for (int i = 0; i < MAX_LENSES; i++) {
     if (i >= uLensCount) break;
     vec4 A = uLensA[i];
@@ -98,9 +101,15 @@ vec2 applyLenses(vec2 p) {
     vec2 d = p - A.xy;
     vec2 local = vec2(B.x * d.x + B.y * d.y, -B.y * d.x + B.x * d.y) * A.zw;
     float w = lensWeight(length(local), B.w);
-    if (w > 0.0) q = A.xy + (q - A.xy) / (1.0 + B.z * w);
+    float s = abs(B.z * w);
+    if (s > 0.0) {
+      float k = s * s;
+      k *= k;
+      sum += d * (1.0 / (1.0 + B.z * w) - 1.0) * k;
+      wsum += k;
+    }
   }
-  return q;
+  return wsum > 0.0 ? p + sum / wsum : p;
 }
 
 void main() {
