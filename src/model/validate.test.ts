@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { migrateProfile, parseProfileJson, serializeProfile, validateProfile } from './validate';
+import {
+  MAX_MASK_DATA_URL_LENGTH,
+  MAX_PATH_POINTS,
+  MAX_REGIONS_PER_PROFILE,
+  migrateProfile, parseProfileJson,
+  serializeProfile,
+  validateProfile,
+} from './validate';
 import { PROFILE_VERSION, type Profile } from './types';
 import { defaultGlobals, emptyEffects } from './defaults';
 
@@ -407,5 +414,51 @@ describe('serializeProfile', () => {
     const text = serializeProfile(p);
     expect(text.split('\n').length).toBeGreaterThan(10);
     expect(JSON.parse(text)).toEqual(p);
+  });
+});
+
+describe('size bounds (L5)', () => {
+  const withProfile = (fn: (p: any) => void): unknown => {
+    const p = JSON.parse(JSON.stringify(fullProfile()));
+    fn(p);
+    return p;
+  };
+  const errorsOf = (input: unknown): string => {
+    const r = validateProfile(input);
+    if (r.ok) throw new Error('expected failure');
+    return r.errors.join(' ');
+  };
+
+  it('accepts a path at the point limit and rejects one over it, with a clear error', () => {
+    const pts = (n: number) => Array.from({ length: n }, (_, i) => [i / n, 0.5]);
+    expect(validateProfile(withProfile((p) => (p.regions[1].shape.points = pts(MAX_PATH_POINTS)))).ok).toBe(true);
+    const msg = errorsOf(withProfile((p) => (p.regions[1].shape.points = pts(MAX_PATH_POINTS + 1))));
+    expect(msg).toMatch(/more than the limit of 5000/);
+  });
+
+  it('rejects a mask data URL over 2 MB', () => {
+    const big = 'data:image/png;base64,' + 'A'.repeat(MAX_MASK_DATA_URL_LENGTH);
+    expect(errorsOf(withProfile((p) => (p.regions[2].shape.dataUrl = big)))).toMatch(/brush mask is .* MB/);
+    const fits = 'data:image/png;base64,' + 'A'.repeat(MAX_MASK_DATA_URL_LENGTH - 100);
+    expect(validateProfile(withProfile((p) => (p.regions[2].shape.dataUrl = fits))).ok).toBe(true);
+  });
+
+  it('rejects a profile with more than 200 regions', () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `r${i}`, name: 'x', visible: true, feather: 0, effects: emptyEffects(), shape: { type: 'full' } }));
+    expect(validateProfile(withProfile((p) => (p.regions = many(MAX_REGIONS_PER_PROFILE)))).ok).toBe(true);
+    expect(errorsOf(withProfile((p) => (p.regions = many(MAX_REGIONS_PER_PROFILE + 1))))).toMatch(/limit of 200/);
+  });
+
+  it('clamps the viewing distance to 10..150 cm and cuts over-long text', () => {
+    const hi = validateProfile(withProfile((p) => (p.viewingDistanceCm = 1e9)));
+    const lo = validateProfile(withProfile((p) => (p.viewingDistanceCm = 0.5)));
+    if (!hi.ok || !lo.ok) throw new Error('expected ok');
+    expect(hi.profile.viewingDistanceCm).toBe(150);
+    expect(lo.profile.viewingDistanceCm).toBe(10);
+    const long = validateProfile(withProfile((p) => ((p.name = 'n'.repeat(5000)), (p.note = 'x'.repeat(50000)))));
+    if (!long.ok) throw new Error('expected ok');
+    expect(long.profile.name).toHaveLength(200);
+    expect(long.profile.note).toHaveLength(10000);
+    expect(long.warnings.join(' ')).toMatch(/too long/);
   });
 });

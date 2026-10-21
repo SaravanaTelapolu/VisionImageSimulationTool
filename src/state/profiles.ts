@@ -17,12 +17,13 @@ import {
   listProfiles,
   profileToJsonBlob,
   profilesToBundleBlob,
+  requestPersistentStorage,
   savePhoto,
   saveProfile,
   setSetting,
   type ProfileSummary,
 } from '../storage';
-import { applyEdit, image, loadPhoto, profile, resetProfile } from './store';
+import { activityCount, applyEdit, endEdit, image, loadPhoto, profile, resetProfile } from './store';
 
 export const LAST_PROFILE_KEY = 'lastProfileId';
 
@@ -38,6 +39,14 @@ export const notice = signal('');
 export const busy = signal(false);
 /** Whether the current profile has a photo saved with it. */
 export const currentPhotoSaved = signal(false);
+
+/**
+ * Whether the browser agreed to keep saved profiles (persistent storage): null until asked, which
+ * happens once, after the first successful save. The UI may show "Saved on this device — export a
+ * backup file" either way; when false, a backup export is the only protection against eviction.
+ */
+export const persistentStorage = signal<boolean | null>(null);
+let persistAsked = false;
 
 /**
  * Fingerprint of the current profile as last saved/opened/created (updatedAt ignored), or null when
@@ -94,6 +103,20 @@ async function rememberLast(id: string): Promise<void> {
   }
 }
 
+/** Asks the browser once per session to keep this origin's storage, after a profile was saved. */
+function askPersistOnce(): void {
+  if (persistAsked) return;
+  persistAsked = true;
+  void requestPersistentStorage().then(
+    (granted) => {
+      persistentStorage.value = granted;
+    },
+    () => {
+      persistentStorage.value = false;
+    },
+  );
+}
+
 async function readList(): Promise<void> {
   profileList.value = await listProfiles();
 }
@@ -122,6 +145,7 @@ export async function saveCurrent(): Promise<Profile | null> {
   return guarded<Profile | null>(null, async () => {
     const snapshot = profile.value;
     const stored = await saveProfile(snapshot);
+    askPersistOnce();
     baseline.value = profileFingerprint(snapshot);
     await rememberLast(stored.id);
     await readList();
@@ -130,8 +154,12 @@ export async function saveCurrent(): Promise<Profile | null> {
   });
 }
 
-/** Loads a saved profile into the editor (undo history is cleared) plus its saved photo, if any. */
-export async function openProfile(id: string): Promise<boolean> {
+/**
+ * Loads a saved profile into the editor (undo history is cleared) plus its saved photo, if any.
+ * With `ifUntouchedSince` (an activityCount() value) it gives up, changing nothing, when the user
+ * edited or loaded anything after that moment.
+ */
+export async function openProfile(id: string, opts: { ifUntouchedSince?: number } = {}): Promise<boolean> {
   const opened = await guarded<{ p: Profile; hasPhoto: boolean; photo: File | null } | null>(null, async () => {
     const p = await getProfile(id);
     if (!p) {
@@ -152,6 +180,7 @@ export async function openProfile(id: string): Promise<boolean> {
     return { p, hasPhoto, photo };
   });
   if (!opened) return false;
+  if (opts.ifUntouchedSince !== undefined && activityCount() !== opts.ifUntouchedSince) return false;
   resetProfile(opened.p);
   baseline.value = profileFingerprint(opened.p);
   currentPhotoSaved.value = opened.hasPhoto;
@@ -201,7 +230,10 @@ export async function duplicateProfileById(id: string): Promise<Profile | null> 
 export function renameCurrent(name: string): boolean {
   const next = name.trim();
   if (next === '') return false;
-  applyEdit((p) => (p.name === next ? p : { ...p, name: next }), 'rename');
+  // One rename is one undo step: never coalesce, and end any run so the next rename starts fresh.
+  endEdit();
+  applyEdit((p) => (p.name === next ? p : { ...p, name: next }));
+  endEdit();
   return true;
 }
 
@@ -322,11 +354,15 @@ export async function savePhotoWithCurrent(): Promise<boolean> {
 
 /** Call once on startup: refreshes the list and re-opens the profile used last time, if it still exists. */
 export async function restoreLastProfile(): Promise<boolean> {
+  // The storage reads below are slow on a cold start; if the user edits or loads anything meanwhile,
+  // the restore is dropped rather than overwriting their work.
+  const since = activityCount();
   const listed = await refreshList();
   if (!listed) return false;
   const id = await getSetting<string | null>(LAST_PROFILE_KEY, null);
   if (!id || !profileList.value.some((s) => s.id === id)) return false;
-  return openProfile(id);
+  if (activityCount() !== since) return false;
+  return openProfile(id, { ifUntouchedSince: since });
 }
 
 /** Test helper: resets this module's state (the store and storage are reset by the caller). */
@@ -337,4 +373,6 @@ export function _resetProfilesStateForTests(): void {
   busy.value = false;
   currentPhotoSaved.value = false;
   baseline.value = profileFingerprint(profile.peek());
+  persistentStorage.value = null;
+  persistAsked = false;
 }

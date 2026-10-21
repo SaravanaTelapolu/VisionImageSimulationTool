@@ -1,4 +1,4 @@
-import { wrapText } from './caption';
+import { APPROXIMATION_LINE, wrapText } from './caption';
 import { captionPadFor, labelBandFor, layoutExport, lineHeightFor } from './layout';
 
 export type SizedImageSource = CanvasImageSource & { width: number; height: number };
@@ -10,6 +10,11 @@ export interface ComposeOptions {
   caption?: string[];
   labels?: boolean;
   background?: string;
+  /**
+   * With no caption lines, a small strip carrying the "my own approximation" note is still added
+   * (default true). Pass false only for images that must stay clean, such as the Original export.
+   */
+  approximationNote?: boolean;
 }
 
 const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -47,7 +52,10 @@ export function composeExport(opts: ComposeOptions): HTMLCanvasElement {
   const pad = captionPadFor(fontPx);
   const measure = (s: string): number => ctx.measureText(s).width;
   const wrapped: string[] = [];
-  for (const line of opts.caption ?? []) wrapped.push(...wrapText(line, probe.width - 2 * pad, measure));
+  const captionLines = opts.caption ?? [];
+  // A caption always ends with the approximation line already; without one, add just that line.
+  const noteOnly = captionLines.length === 0 && (opts.approximationNote ?? true);
+  for (const line of noteOnly ? [APPROXIMATION_LINE] : captionLines) wrapped.push(...wrapText(line, probe.width - 2 * pad, measure));
 
   const layout = layoutExport({ ...base, captionLines: wrapped.length });
   // Resizing resets the context state, so everything is set after this.
@@ -75,7 +83,7 @@ export function composeExport(opts: ComposeOptions): HTMLCanvasElement {
     const c = layout.caption;
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(c.x, c.y, c.w, c.h);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = noteOnly ? '#c8c8c8' : '#ffffff';
     ctx.font = `${fontPx}px ${FONT_FAMILY}`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';

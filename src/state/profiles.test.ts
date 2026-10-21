@@ -20,6 +20,7 @@ import {
   loadAllProfiles,
   newProfile,
   notice,
+  persistentStorage,
   openProfile,
   profileFingerprint,
   profileList,
@@ -30,7 +31,7 @@ import {
   savePhotoWithCurrent,
   storageError,
 } from './profiles';
-import { applyEdit, image, profile, resetProfile, undo } from './store';
+import { applyEdit, canUndo, image, profile, resetProfile, undo } from './store';
 
 vi.mock('../export/share', () => ({
   shareOrDownload: vi.fn(async () => 'downloaded'),
@@ -128,7 +129,89 @@ describe('save, list, open', () => {
   });
 });
 
+describe('startup restore never overwrites the user (M2)', () => {
+  it('is skipped when the user edits while the restore is still reading storage', async () => {
+    addRegion();
+    await saveCurrent();
+    const savedId = profile.value.id;
+    newProfile('Fresh');
+    const freshId = profile.value.id;
+    const restoring = restoreLastProfile();
+    addRegion(); // the user acts before the storage reads finish
+    expect(await restoring).toBe(false);
+    expect(profile.value.id).toBe(freshId);
+    expect(profile.value.id).not.toBe(savedId);
+    expect(profile.value.regions).toHaveLength(1);
+    expect(canUndo.value).toBe(true);
+  });
+
+  it('is skipped when the user opened another profile meanwhile', async () => {
+    addRegion();
+    await saveCurrent();
+    const restoring = restoreLastProfile();
+    newProfile('Mine');
+    expect(await restoring).toBe(false);
+    expect(profile.value.name).toBe('Mine');
+  });
+
+  it('still restores into a pristine state', async () => {
+    addRegion();
+    await saveCurrent();
+    const id = profile.value.id;
+    newProfile();
+    expect(await restoreLastProfile()).toBe(true);
+    expect(profile.value.id).toBe(id);
+  });
+});
+
+describe('persistent storage (M4)', () => {
+  it('is requested once, after the first successful save, and the answer is remembered', async () => {
+    const persist = vi.fn(() => Promise.resolve(true));
+    vi.stubGlobal('navigator', { storage: { persist } });
+    try {
+      expect(persist).not.toHaveBeenCalled();
+      expect(persistentStorage.value).toBeNull();
+      await refreshList();
+      await restoreLastProfile();
+      expect(persist).not.toHaveBeenCalled(); // not on startup
+      addRegion();
+      await saveCurrent();
+      await vi.waitFor(() => expect(persistentStorage.value).toBe(true));
+      addRegion();
+      await saveCurrent();
+      await saveCurrent();
+      expect(persist).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('is not requested when the save fails', async () => {
+    const persist = vi.fn(() => Promise.resolve(false));
+    vi.stubGlobal('navigator', { storage: { persist } });
+    try {
+      vi.stubGlobal('indexedDB', undefined);
+      await _resetForTests();
+      expect(await saveCurrent()).toBeNull();
+      expect(persist).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe('rename', () => {
+  it('two consecutive renames are two undo steps (L1)', () => {
+    renameCurrent('First');
+    renameCurrent('Second');
+    expect(profile.value.name).toBe('Second');
+    undo();
+    expect(profile.value.name).toBe('First');
+    undo();
+    expect(profile.value.name).toBe('Right eye');
+    expect(canUndo.value).toBe(false);
+  });
+
   it('renames through applyEdit (undoable, marks dirty) and ignores blank names', () => {
     expect(renameCurrent('  Follow-up  ')).toBe(true);
     expect(profile.value.name).toBe('Follow-up');

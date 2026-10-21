@@ -64,18 +64,20 @@ export async function loadWorkingImage(file: File, maxLongSide = 2048): Promise<
         return { original: file, working: full, width, height };
       }
       try {
-        const resized = await createImageBitmap(full, {
-          resizeWidth: width,
-          resizeHeight: height,
-          resizeQuality: 'high',
-        });
+        try {
+          const resized = await createImageBitmap(full, {
+            resizeWidth: width,
+            resizeHeight: height,
+            resizeQuality: 'high',
+          });
+          return { original: file, working: resized, width: resized.width, height: resized.height };
+        } catch {
+          // Resize options unsupported: draw the full bitmap onto a canvas instead.
+          const canvas = drawToCanvas(full, width, height);
+          return { original: file, working: canvas, width, height };
+        }
+      } finally {
         full.close();
-        return { original: file, working: resized, width: resized.width, height: resized.height };
-      } catch {
-        // Resize options unsupported: draw the full bitmap onto a canvas instead.
-        const canvas = drawToCanvas(full, width, height);
-        full.close();
-        return { original: file, working: canvas, width, height };
       }
     } catch {
       // fall through to the <img> + canvas decoder

@@ -85,7 +85,73 @@ export function flipView(): void {
   viewMode.value = viewMode.value === 'simulated' ? 'original' : 'simulated';
 }
 
-/** Use a ready-made image (built-in test image, or a decoded photo). Resets fixation to centre. */
+// --- Activity and image loading ----------------------------------------------------------
+
+/**
+ * Bumped on every user-driven change (edit, profile reset, image load request). Startup restore
+ * compares it before and after its slow storage reads and gives up when it moved, so it never
+ * overwrites what the user did in the meantime.
+ */
+let activity = 0;
+
+export function activityCount(): number {
+  return activity;
+}
+
+/** Marks that the user has done something (see activityCount). */
+export function noteActivity(): void {
+  activity++;
+}
+
+/** Latest-wins token: each load request takes the next number; only the newest may apply its result. */
+let loadSeq = 0;
+/** Loads still running (stale ones included), so photoLoading stays true until the last one ends. */
+let loadsInFlight = 0;
+
+/** How long a replaced ImageBitmap stays open, so views and exports still drawing from it finish first. */
+export const BITMAP_CLOSE_DELAY_MS = 5000;
+
+function isClosable(x: unknown): x is { close(): void } {
+  return typeof x === 'object' && x !== null && typeof (x as { close?: unknown }).close === 'function';
+}
+
+/** Closes an ImageBitmap-like source (canvases are left to the garbage collector). */
+function closeSource(src: unknown): void {
+  if (!isClosable(src)) return;
+  try {
+    src.close();
+  } catch {
+    // already closed
+  }
+}
+
+/** Closes a replaced working bitmap after a short delay, unless it is the current image again. */
+function releaseLater(src: CanvasImageSource): void {
+  if (!isClosable(src)) return;
+  setTimeout(() => {
+    if (image.peek()?.working !== src) closeSource(src);
+  }, BITMAP_CLOSE_DELAY_MS);
+}
+
+function applyImage(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  name: string,
+  original: File | null,
+): void {
+  const previous = image.peek()?.working;
+  image.value = { original, working: source, width, height, name };
+  fixation.value = { x: width / 2, y: height / 2 };
+  viewMode.value = 'simulated';
+  photoError.value = '';
+  if (previous && previous !== source) releaseLater(previous);
+}
+
+/**
+ * Use a ready-made image (built-in test image, or a decoded photo). Resets fixation to centre.
+ * Any photo still loading is cancelled (its result will be discarded).
+ */
 export function setWorkingImage(
   source: CanvasImageSource,
   width: number,
@@ -93,44 +159,79 @@ export function setWorkingImage(
   name: string,
   original: File | null = null,
 ): void {
-  image.value = { original, working: source, width, height, name };
-  fixation.value = { x: width / 2, y: height / 2 };
-  viewMode.value = 'simulated';
-  photoError.value = '';
+  loadSeq++;
+  activity++;
+  applyImage(source, width, height, name, original);
 }
 
-/** Decodes a photo file and makes it the current image. Resolves false (and sets photoError) on failure. */
-export async function loadPhoto(file: File): Promise<boolean> {
+const HEIC_RE = /\.(heic|heif)$/i;
+
+function isHeic(file: File): boolean {
+  return /^image\/hei[cf]$/i.test(file.type) || HEIC_RE.test(file.name);
+}
+
+export const HEIC_ERROR =
+  "This photo format can't be opened in this browser — try JPEG (on iPhone: Settings → Camera → Formats → Most Compatible).";
+export const GENERIC_PHOTO_ERROR =
+  "This photo can't be opened — the file may be damaged or in a format this browser doesn't support. Try a JPEG or PNG.";
+
+/** Plain-language reason a photo could not be opened. */
+export function photoErrorFor(file: File): string {
+  return isHeic(file) ? HEIC_ERROR : GENERIC_PHOTO_ERROR;
+}
+
+/** Runs one load with latest-wins semantics. `fn` resolves the image; `fail` is the error message. */
+async function runLoad<T>(
+  fn: () => Promise<T>,
+  apply: (r: T) => void,
+  discard: (r: T) => void,
+  fail: string,
+): Promise<boolean> {
+  const token = ++loadSeq;
+  activity++;
+  loadsInFlight++;
   photoLoading.value = true;
   photoError.value = '';
   try {
-    const img = await loadWorkingImage(file);
-    setWorkingImage(img.working, img.width, img.height, file.name, img.original);
+    const result = await fn();
+    if (token !== loadSeq) {
+      discard(result);
+      return false;
+    }
+    apply(result);
     return true;
   } catch {
-    photoError.value = 'Could not open that image.';
+    if (token === loadSeq) photoError.value = fail;
     return false;
   } finally {
-    photoLoading.value = false;
+    loadsInFlight--;
+    photoLoading.value = loadsInFlight > 0;
   }
+}
+
+/**
+ * Decodes a photo file and makes it the current image. Resolves false (and sets photoError) on
+ * failure, and false without any message when a newer load request replaced this one.
+ */
+export async function loadPhoto(file: File): Promise<boolean> {
+  return runLoad(
+    () => loadWorkingImage(file),
+    (img) => applyImage(img.working, img.width, img.height, file.name, img.original),
+    (img) => closeSource(img.working),
+    photoErrorFor(file),
+  );
 }
 
 /** Draws a built-in test image (see assets/testImages) and makes it the current image. */
 export async function loadTestImage(id: string): Promise<boolean> {
   const def = testImages.find((t) => t.id === id);
   if (!def) return false;
-  photoLoading.value = true;
-  photoError.value = '';
-  try {
-    const canvas = await rasterizeTestImage(def);
-    setWorkingImage(canvas, canvas.width, canvas.height, def.name);
-    return true;
-  } catch {
-    photoError.value = 'Could not draw that test image.';
-    return false;
-  } finally {
-    photoLoading.value = false;
-  }
+  return runLoad(
+    () => rasterizeTestImage(def),
+    (canvas) => applyImage(canvas, canvas.width, canvas.height, def.name, null),
+    () => undefined,
+    'Could not draw that test image.',
+  );
 }
 
 // --- Profile edits and undo ---------------------------------------------------------------
@@ -165,6 +266,7 @@ export function applyEdit(fn: (p: Profile) => Profile, coalesceKey?: string): vo
   const result = fn(cur);
   if (result === cur) return;
   const next: Profile = { ...result, updatedAt: new Date().toISOString() };
+  activity++;
   history.push(next, coalesceKey);
   syncFromHistory();
 }
@@ -184,6 +286,7 @@ export function redo(): void {
 
 /** Replaces the whole profile (new, or loaded from storage) and clears undo history. */
 export function resetProfile(p: Profile = newProfile()): void {
+  activity++;
   history.reset(p);
   syncFromHistory();
   selectedRegionId.value = null;
