@@ -30,14 +30,13 @@ export const MAX_REGIONS_PER_PROFILE = 200;
 export const MAX_PATH_POINTS = 5000;
 /** Maximum length, in characters, of a brush-mask data URL (about 2 MB). */
 export const MAX_MASK_DATA_URL_LENGTH = 2 * 1024 * 1024;
-export const MIN_VIEWING_DISTANCE_CM = 10;
-export const MAX_VIEWING_DISTANCE_CM = 150;
+import { DEFAULT_VIEWING_DISTANCE_CM, MAX_VIEWING_DISTANCE_CM, MIN_VIEWING_DISTANCE_CM } from './distance';
+export { MAX_VIEWING_DISTANCE_CM, MIN_VIEWING_DISTANCE_CM };
 export const MAX_NAME_LENGTH = 200;
 export const MAX_NOTE_LENGTH = 10000;
 const DEFAULT_NAME = 'Untitled profile';
 const DEFAULT_REGION_NAME = 'Region';
 const DEFAULT_FEATHER = 0.3;
-const DEFAULT_VIEWING_DISTANCE_CM = 40;
 
 const EFFECT_RANGES: Record<EffectKey, [number, number]> = {
   blur: [0, MAX_BLUR_PX],

@@ -78,6 +78,7 @@ describe('eye text helpers', () => {
     expect(parseDistanceCm('')).toBeNull();
     expect(parseDistanceCm('abc')).toBeNull();
     expect(parseDistanceCm('5')).toBeNull();
-    expect(parseDistanceCm('500')).toBeNull();
+    expect(parseDistanceCm('700')).toBeNull();
+    expect(parseDistanceCm('500')).toBe(500);
   });
 });

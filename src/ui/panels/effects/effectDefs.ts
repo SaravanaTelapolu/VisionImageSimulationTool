@@ -190,7 +190,7 @@ export const GHOST_DEF: SliderDef = {
 export const VIEWING_DISTANCE_DEF: SliderDef = {
   label: 'Viewing distance',
   min: 10,
-  max: 150,
+  max: 600,
   step: 1,
   unit: 'cm',
   scale: 1,

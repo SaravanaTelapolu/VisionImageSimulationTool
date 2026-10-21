@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { testImages, rasterizeTestImage, type TestImage } from '../../../assets/testImages';
 import { APPROXIMATION_LINE, wrapText } from '../../../export/caption';
 import { shareOrDownload } from '../../../export/share';
+import { distanceLabel } from '../../../model/distance';
 import type { Profile } from '../../../model/types';
 import {
   defaultTimelineSelection,
@@ -118,7 +119,11 @@ export function composeTimelineImage(
     ctx.drawImage(e.canvas, pos.x, pos.y, L.tileWidth, L.tileHeight);
     ctx.fillStyle = '#ffffff';
     ctx.font = `600 ${L.fontPx}px ${FONT}`;
-    const date = formatProfileDate(e.profile.createdAt);
+    const date = fitText(
+      ctx,
+      `${formatProfileDate(e.profile.createdAt)} · ${distanceLabel(e.profile.viewingDistanceCm)}`,
+      L.tileWidth,
+    );
     ctx.fillText(date, pos.x, pos.y + L.tileHeight + Math.round(L.fontPx * 1.3));
     ctx.fillStyle = '#c4c4d0';
     ctx.font = `${L.fontPx}px ${FONT}`;
@@ -310,7 +315,9 @@ export function TimelineView({ profiles, source, renderWithProfile, onClose }: T
                   onChange={() => setSelected((s) => toggleId(s, p.id))}
                 />
                 <span>
-                  {p.name} <span class="pf-meta">· {formatProfileDate(p.createdAt)}</span>
+                  {p.name} <span class="pf-meta">
+                    · {formatProfileDate(p.createdAt)} · {distanceLabel(p.viewingDistanceCm)}
+                  </span>
                 </span>
               </label>
             ))}
@@ -354,6 +361,7 @@ export function TimelineView({ profiles, source, renderWithProfile, onClose }: T
                 <p class="tl-caption">
                   <strong>{formatProfileDate(p.createdAt)}</strong>
                   <span>{p.name}</span>
+                  <span>{distanceLabel(p.viewingDistanceCm)}</span>
                 </p>
               </li>
             );
@@ -368,6 +376,7 @@ export function TimelineView({ profiles, source, renderWithProfile, onClose }: T
           <p class="tl-caption">
             <strong>{formatProfileDate(largeProfile.createdAt)}</strong>
             <span>{largeProfile.name}</span>
+            <span>{distanceLabel(largeProfile.viewingDistanceCm)}</span>
           </p>
           <button type="button" class="pf-btn" onClick={() => setLarge(null)}>
             Back to timeline

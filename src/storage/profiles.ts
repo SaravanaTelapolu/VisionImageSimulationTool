@@ -15,6 +15,7 @@ export interface ProfileSummary {
   updatedAt: string;
   note: string;
   regionCount: number;
+  viewingDistanceCm: number;
 }
 
 export function summarizeProfile(p: Profile): ProfileSummary {
@@ -26,6 +27,7 @@ export function summarizeProfile(p: Profile): ProfileSummary {
     updatedAt: p.updatedAt,
     note: p.note,
     regionCount: p.regions.length,
+    viewingDistanceCm: p.viewingDistanceCm,
   };
 }
 
