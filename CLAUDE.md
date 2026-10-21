@@ -15,8 +15,11 @@ TypeScript (strict) · Vite 6 · Preact + @preact/signals · WebGL2 shaders · I
 ## Layout
 
 - `src/model/` profile types (`types.ts` is the shared contract), coords, defaults, validation, ops, undo history
-- `src/render/` effect-map builder, WebGL renderer (`gl/`, `shaders/`), `types.ts` contract
-- `src/state/` signals store · `src/ui/` components · `src/storage/` IndexedDB + JSON · `src/export/` compose, caption, share · `src/assets/` test images · `src/image/` photo loading
+- `src/render/` effect-map builder (pure TS; `pathCoverage.ts` for freehand), map Web Worker (`mapWorker*.ts`), WebGL renderer (`createRenderer.ts`, `gl/`, `shaders/`; design notes at the top of createRenderer.ts), `types.ts` contract
+- `src/state/` signals: `store.ts` (profile, image, undo), `render.ts` (live preview loop + export/timeline render API), `edit.ts`, `masks.ts`, `profiles.ts`, `ui.ts`
+- `src/ui/` components: viewport, edit tools (ellipse, freehand, brush), panels (regions, effects, compare, export, profiles), calibration, present mode, controls
+- `src/storage/` IndexedDB + JSON import/export · `src/export/` compose, caption, share · `src/assets/` test images · `src/image/` photo loading · `src/pwa/` service worker + install prompt
+- `tests/e2e/` Playwright smoke tests; `dev/render-harness.html` is a WebGL effects harness (`npm run dev`, then /dev/render-harness.html)
 
 ## Rules
 
