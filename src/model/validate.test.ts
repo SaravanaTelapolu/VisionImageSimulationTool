@@ -8,7 +8,7 @@ import {
   upgradeStoredProfile,
   validateProfile,
 } from './validate';
-import { PROFILE_VERSION, type Profile } from './types';
+import { MAX_BLUR_PX, PROFILE_VERSION, type Profile } from './types';
 import { defaultGlobals, emptyEffects } from './defaults';
 
 /** The sample from docs/Vision-Simulator-Plan.md (Data model). */
@@ -187,7 +187,7 @@ describe('validateProfile: clamping', () => {
   it('clamps effect values into their ranges with warnings', () => {
     const r = ok(mutate((p) => {
       Object.assign(p.regions[0].effects, {
-        blur: 99,
+        blur: 999,
         darkSpot: 2,
         fillIn: -1,
         distortion: 1.5,
@@ -199,7 +199,7 @@ describe('validateProfile: clamping', () => {
       });
     }));
     expect(r.profile.regions[0]!.effects).toEqual({
-      blur: 40,
+      blur: MAX_BLUR_PX,
       darkSpot: 1,
       fillIn: 0,
       distortion: 1,
@@ -219,6 +219,15 @@ describe('validateProfile: clamping', () => {
     }));
     expect(r.profile.regions[0]!.effects.sizeChange).toBe(0.3);
     expect(r.profile.regions[0]!.effects.blur).toBe(0);
+  });
+
+  it('keeps blur up to MAX_BLUR_PX (100 px since v0.2) without a warning', () => {
+    expect(MAX_BLUR_PX).toBe(100);
+    const r = ok(mutate((p) => {
+      p.regions[0].effects.blur = 99;
+    }));
+    expect(r.profile.regions[0]!.effects.blur).toBe(99);
+    expect(r.warnings).toHaveLength(0);
   });
 
   it('clamps feather into 0..1', () => {

@@ -3,8 +3,9 @@
 // The image is rendered once at reduced size (at most one GPU pass, e.g. 4096 px) to build what
 // is shared by every tile: the missing-area fill and the coarse blur levels. A coarse level is
 // shared when its full-size version would be stored at no more than that copy's resolution (its
-// downscale factor x copy scale >= 1), so sharing loses no detail; tiles then read it in
-// whole-image coordinates and cannot disagree. Only the fine levels are built per tile, and a tile
+// downscale factor x copy scale >= 1): the copy's version is then as close to the true Gaussian as
+// a full-size one (tiles.test.ts checks this). Tiles read shared levels in whole-image coordinates,
+// so they cannot disagree. Only the fine levels are built per tile, and a tile
 // renders the core rectangle it owns from a source rectangle = core + margin, so every output
 // pixel of the core sees the same source pixels as an untiled render would:
 // - margin >= how far any output pixel can sample (size-change lenses + distortion + ghost

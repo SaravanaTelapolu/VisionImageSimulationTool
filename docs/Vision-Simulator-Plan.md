@@ -55,7 +55,7 @@ The core idea is an **eye map**: a set of affected regions defined relative to w
 
 | Effect | Control | What it shows |
 | --- | --- | --- |
-| Blur | Strength 0 to 40 px | Loss of sharpness |
+| Blur | Strength 0 to 100 px (0 to 40 px before v0.2) | Loss of sharpness |
 | Dark spot | Opacity 0 to 100%, colour grey to black | Scotoma seen as a dark patch |
 | Missing area | Strength 0 to 100% | Scotoma the brain "fills in": surrounding texture smeared across it, no dark patch |
 | Distortion | Amplitude, wave size, direction | Wavy or bent lines (metamorphopsia) |
