@@ -71,23 +71,19 @@ export async function prepareExport(
   const files: ShareFile[] = [];
   const nameOf = (kind: string): string => plan.find((p) => p.kind === kind)?.name ?? `${kind}.${opts.format}`;
 
-  // The simulation is rendered once. When its pixels are needed again (caption, JPEG re-encode,
-  // side by side) it is rendered as PNG so nothing is compressed twice.
-  const needPixels = opts.sideBySide || (opts.simulated && opts.caption);
+  // The simulation is rendered once. A simulated file always goes through composeExport, because it
+  // must carry the caption or, when the caption is off, the one-line approximation strip (review
+  // L3). So its pixels are needed whenever it or the side-by-side image is requested; they are
+  // rendered as PNG so nothing is compressed twice. The Original export stays clean.
+  const needPixels = opts.sideBySide || opts.simulated;
   onProgress('Rendering…');
   const sim = await renderFullSize(needPixels ? { type: 'image/png' } : { type, quality });
   const simCanvas = needPixels ? await blobToCanvas(sim.blob) : null;
 
-  if (opts.simulated) {
-    if (simCanvas && opts.caption) {
-      onProgress('Adding the caption…');
-      const withCaption = composeExport({ simulated: simCanvas, orientation: 'auto', ...(caption ? { caption } : {}) });
-      files.push({ blob: await canvasToBlob(withCaption, type, quality), name: nameOf('simulated') });
-    } else if (simCanvas && type !== 'image/png') {
-      files.push({ blob: await canvasToBlob(simCanvas, type, quality), name: nameOf('simulated') });
-    } else {
-      files.push({ blob: sim.blob, name: nameOf('simulated') });
-    }
+  if (opts.simulated && simCanvas) {
+    onProgress(caption ? 'Adding the caption…' : 'Adding the approximation note…');
+    const composed = composeExport({ simulated: simCanvas, orientation: 'auto', ...(caption ? { caption } : {}) });
+    files.push({ blob: await canvasToBlob(composed, type, quality), name: nameOf('simulated') });
   }
 
   if (opts.original) {
