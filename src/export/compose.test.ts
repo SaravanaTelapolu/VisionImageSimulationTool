@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { APPROXIMATION_LINE } from './caption';
 import { canvasToBlob, composeExport, type SizedImageSource } from './compose';
 import { layoutExport } from './layout';
 
@@ -37,6 +38,7 @@ describe('composeExport', () => {
       original: img(600, 800),
       orientation: 'auto',
       labels: true,
+      approximationNote: false,
     });
     const expected = layoutExport({
       simulated: { w: 600, h: 800 },
@@ -57,7 +59,7 @@ describe('composeExport', () => {
     const long = 'word '.repeat(40).trim();
     const lines = ['short line', long];
     const withCaption = composeExport({ simulated: img(600, 800), orientation: 'auto', caption: lines });
-    const without = composeExport({ simulated: img(600, 800), orientation: 'auto' });
+    const without = composeExport({ simulated: img(600, 800), orientation: 'auto', approximationNote: false });
     expect(withCaption.width).toBe(without.width);
     expect(withCaption.height).toBeGreaterThan(without.height);
     const texts = calls.filter((c) => c.fn === 'fillText').map((c) => c.args[0] as string);
@@ -66,9 +68,30 @@ describe('composeExport', () => {
     expect(texts.every((t) => t.length * 10 <= 600)).toBe(true);
   });
 
+  it('adds a small approximation strip when the caption is off', () => {
+    const clean = composeExport({ simulated: img(600, 800), orientation: 'auto', approximationNote: false });
+    const cleanCalls = calls.length;
+    const withNote = composeExport({ simulated: img(600, 800), orientation: 'auto' });
+    expect(withNote.height).toBeGreaterThan(clean.height);
+    const texts = calls.slice(cleanCalls).filter((c) => c.fn === 'fillText').map((c) => c.args[0]);
+    expect(texts.join(' ')).toContain('approximation');
+  });
+
+  it('adds the strip to side-by-side exports without a caption', () => {
+    composeExport({ simulated: img(600, 800), original: img(600, 800), orientation: 'auto' });
+    const texts = calls.filter((c) => c.fn === 'fillText').map((c) => c.args[0] as string);
+    expect(texts.join(' ')).toContain('approximation');
+  });
+
+  it('does not duplicate the note when a caption (which already carries it) is given', () => {
+    composeExport({ simulated: img(600, 800), orientation: 'auto', caption: ['hello', APPROXIMATION_LINE] });
+    const texts = calls.filter((c) => c.fn === 'fillText').map((c) => c.args[0] as string);
+    expect(texts.join(' ').split('approximation').length - 1).toBe(1);
+  });
+
   it('uses naturalWidth/naturalHeight when present', () => {
     const el = { width: 10, height: 10, naturalWidth: 400, naturalHeight: 300 } as unknown as SizedImageSource;
-    const canvas = composeExport({ simulated: el, orientation: 'auto' });
+    const canvas = composeExport({ simulated: el, orientation: 'auto', approximationNote: false });
     expect([canvas.width, canvas.height]).toEqual([400, 300]);
   });
 });
