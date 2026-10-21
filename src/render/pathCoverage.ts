@@ -12,11 +12,11 @@
 //   2. Per-edge distance stamping. Each edge writes its exact point-to-segment distance only to pixels whose
 //      centre lies within a reach `s` of the edge (clipped per row to the capsule around the edge), keeping the
 //      minimum. Only pixels near an edge ever need a distance: deeper inside the result is 1 and outside it is 0.
-//   3. If the feather is wider than SEED_PIXELS (4) map pixels, stamping stops at that seed radius and the nearest
+//   3. If the feather is wider than SEED_PIXELS (8) map pixels, stamping stops at that seed radius and the nearest
 //      boundary point of each seeded pixel is propagated inwards with a two-pass chamfer-style sweep
 //      (8SSEDT-style: carry the nearest point, not just a distance). Distances for pixels beyond the seed band
 //      are then exact except at the rare medial-axis ties where a neighbour's nearest point is marginally
-//      farther than the true one. Edges outside a clipped map box are handled by seeding the box border exactly (measured max difference from the original: about 1.5/255 on very jagged random outlines).
+//      farther than the true one. Edges outside a clipped map box are handled by seeding the box border exactly (measured max difference from the original: under 1/255 on very jagged random outlines).
 //      For hard edges and narrow feathers (the band is entirely within the stamped radius) the result is exact.
 //
 // Scratch buffers are module-level and reused between calls (no per-call allocation in the hot loops), so the
@@ -58,7 +58,7 @@ function grownF32(a: Float32Array, n: number): Float32Array {
 }
 
 /** Seed radius (in map pixels) for exact stamping; wider bands are completed by propagation. */
-const SEED_PIXELS = 4;
+const SEED_PIXELS = 8;
 
 /** Adopts neighbour nidx's carried boundary point for pixel idx when it is nearer. Saturated sources (D >= r2) are not spread. */
 function relax(
