@@ -3,10 +3,23 @@
 Everything the overnight build decided without you. Nothing here blocked the build.
 Tick or answer inline; the next session reads this file.
 
+## Where things stand (2026-10-21 07:07 IST)
+
+- **The app is built.** Every feature in the plan (F1–F9) is on the local branch `develop`. Phases 0–7 are done.
+- **Checks:** 592 unit tests, a production build and 8 end-to-end tests (Edge, desktop and phone size) all pass.
+- **Verified by agents in a desktop browser:**
+  - live preview, editing, flip, undo, wipe, side by side, present mode, profiles, timeline and export;
+  - layout at phone width and at 150 % text.
+- **Not verified yet:** anything on a real phone — speed, touch drawing, the share sheet, installing and working offline.
+- Code review: 3 High and 5 Medium findings found and fixed. The Low items are fixed except where noted in docs/code-review-findings.md.
+- To try it now on this PC: `npm run dev`, then open http://localhost:5173.
+
 ## Needs your action
 
 - [ ] **Push and deploy.** Work is committed locally on branch `develop` only (not pushed). To publish: push `develop`, merge to `main`, then GitHub → Settings → Pages → Source: "GitHub Actions". The repo must be public for free Pages hosting (photos never go in the repo).
-- [ ] **Test on your phone** once deployed: each "Done when" line in docs/Vision-Simulator-Plan.md.
+- [ ] **Test on your phone** once deployed: each "Done when" line in docs/Vision-Simulator-Plan.md. Check ⋯ → Performance while dragging a slider (target under 50 ms), the Share button to WhatsApp, and Install app → airplane mode.
+- [ ] **Clean up agent worktrees** when you're happy: they live in `.claude/worktrees/` (git-ignored) with branches `worktree-agent-*`. All of their work is merged into `develop`.
+- [ ] The backup scheduled task "vision-sim-auto-resume" was disabled. Delete it from the app's Scheduled list if you don't need it.
 
 ## Decisions made (change any you disagree with)
 

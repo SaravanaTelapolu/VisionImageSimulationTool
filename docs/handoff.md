@@ -1,7 +1,7 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-21T06:56+05:30
-BUILD_STATUS: IN_PROGRESS
+HEARTBEAT: 2026-10-21T07:07+05:30
+BUILD_STATUS: COMPLETE
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
 
@@ -22,9 +22,9 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 ## Current state
 
 - Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: W0–W4, W5-1, W5-2, W5-3. All review High/Medium findings fixed.
-- Running: W5-4 e2e update + small wiring (worktree).
-- Next: merge W5-1, W5-2, W5-4 → run `npm run e2e` on develop → final docs (README, morning review) → BUILD_STATUS: COMPLETE → delete the in-session cron and disable the scheduled task vision-sim-auto-resume.
+- Done: every task in the plan (W0–W5). App complete on `develop`; checks green (typecheck, 592 unit, build, 8 e2e).
+- Running: nothing.
+- Next (Saravana): push `develop`, merge to `main`, enable GitHub Pages; test on the phone; answer docs/morning-review.md. Future Claude sessions: take follow-ups from morning-review.md and docs/code-review-findings.md (Low items left), one task per session.
 
 ## Known gotchas
 
@@ -33,7 +33,7 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 - Usage limits stop every agent at once. An agent with no commits may lose its worktree (auto-cleaned); tell agents to commit early. Resume a stopped agent by messaging it; restart it if its worktree is gone.
 - In bash, never put backticks inside a double-quoted `node -e` script — the shell runs them. Use a script file.
 
-## Auto-resume set-up (overnight 2026-10-20)
+## Auto-resume set-up (overnight 2026-10-20) — switched off at completion
 
 - In-session cron (session-only) fires about every 20 minutes and tells the orchestrator to continue if idle.
 - Backup: a Claude desktop scheduled task `vision-sim-auto-resume` runs hourly; it only acts if HEARTBEAT is older than 8 hours and BUILD_STATUS is not COMPLETE (meaning the original session died). Disable it once the build is complete.
