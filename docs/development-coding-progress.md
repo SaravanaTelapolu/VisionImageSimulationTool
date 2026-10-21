@@ -30,7 +30,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W4-2 | Accessibility + UX pass (incl. two-step share, wipe knob, compare auto-switch; review M1, L2, L7) | Sonnet | done | merged 3df1563; checked in browser at 375 px and desktop, 100 % and 150 % text |
 | W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | done | merged 07198be; 3/3 pass on desktop + mobile projects (swiftshader WebGL) |
 | W4-4 | Opus code review → docs/code-review-findings.md | Opus | done | merged ec94301: 0 critical, 3 high, 5 medium, 11 low |
-| W5-1 | Review H2: fast freehand coverage | Sonnet | running | worktree, started 02:23 |
+| W5-1 | Review H2: fast freehand coverage | Sonnet | done | merged; 200-pt outline ~1 s → 24–28 ms (feather 0.3), 6–9 ms (no feather) |
 | W5-2 | Review H1, H3, M5, L4, L8–L11: render fixes | Opus | running | worktree, started 02:23 |
 | W5-3 | Review M2–M4, L1, L3, L5, L6: state/storage/export fixes | Sonnet | done | merged d7a78ca; L3 simulated-only wiring moved to W5-4 |
 | W5-4 | Update e2e for new UI; L3 wiring in export run; storage-persistence hint | Sonnet | running | worktree, started 06:40 |
