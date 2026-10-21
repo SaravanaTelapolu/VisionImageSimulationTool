@@ -52,6 +52,8 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 
 ## Log (newest first)
 
+- 2026-10-21 IST — IIS packaging: `deploy/iis/` (web.config, install-iis.ps1, README.txt) and `scripts/package-iis.ps1` (`npm run package:iis`) → `release/VisionSimulator-iis-<version>.zip`. Packaging checked in Windows PowerShell 5.1 and PowerShell 7; install-iis.ps1 not yet run against IIS (needs an elevated session). Tag `v1.0.1` moved to this commit.
+
 - 2026-10-21 IST — `develop` (identical to `main` at v1.0) deleted locally and on GitHub; work continues on `main`. CLAUDE.md and handoff updated. Added `.claude/launch.json` (dev-server preview config). Tagged `v1.0.1`.
 
 - 2026-10-21 IST — **v1.0.** Resumed after the session limit: finished and merged the two open v0.2 worktrees — Eye choice (Left/Right radio group, defaultEye setting, automatic name follows the eye) and D05 + Q5 + Blur100 (MAX_BLUR_PX 40 → 100, pyramid levels 70/100, tiled export shares coarse levels; `src/model/types.ts` contract change). Added the Help page (`public/help.html`, ⋯ menu → Help and how-to, start-screen link; help media not precached), GIFs/screenshots recorded from the built app by `scripts/help-capture` (`npm run help:capture`), and an illustrated README. package.json version 1.0.0. Checks: typecheck, unit tests, build, Playwright e2e. Merged to `main`, tagged `v1.0`.

@@ -80,4 +80,18 @@ Project guide for Claude Code sessions: [CLAUDE.md](CLAUDE.md). Requirements and
 2. On GitHub: **Settings → Pages → Source: GitHub Actions** (once).
 3. The `deploy.yml` workflow builds and publishes on every push to `main`, at `https://<user>.github.io/VisionImageSimulationTool/`.
 
+## Deploy on IIS (Windows Server)
+
+```bash
+npm run package:iis
+```
+
+This builds the app and creates `release/VisionSimulator-iis-<version>.zip` (add `-CleanInstall` to the script to run `npm ci` first). The zip holds:
+
+- `site/` — the app plus the IIS [web.config](deploy/iis/web.config) (MIME type for `.webmanifest`, cache rules so updates arrive quickly);
+- `install-iis.ps1` — creates the application pool ("No Managed Code") and a website or an application under an existing site, or updates the files of an existing install;
+- `README.txt` — step-by-step instructions, by script or by hand in IIS Manager.
+
+On the server, extract the zip and run from an elevated Windows PowerShell, for example `.\install-iis.ps1 -WhatIf` then `.\install-iis.ps1 -ParentSite "Default Web Site" -AppPath /VisionSim`. Use HTTPS: installing the app and offline use need it. The source files live in [deploy/iis](deploy/iis); the packaging script is [scripts/package-iis.ps1](scripts/package-iis.ps1).
+
 No photos are ever stored in the repository or sent anywhere.

@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
-    "help:capture": "playwright test -c scripts/help-capture/playwright.config.ts && node scripts/help-capture/make-gifs.mjs"
+    "help:capture": "playwright test -c scripts/help-capture/playwright.config.ts && node scripts/help-capture/make-gifs.mjs",
+    "package:iis": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-iis.ps1"
   },
   "dependencies": {
     "@preact/signals": "^1.3.4",

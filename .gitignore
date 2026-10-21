@@ -66,3 +66,6 @@ test-results/
 
 # Help-page capture recordings (the GIFs land in public/help/media)
 scripts/help-capture/out/
+
+# IIS packages made by scripts/package-iis.ps1
+release/
