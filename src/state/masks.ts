@@ -16,8 +16,11 @@ export const maskData = signal<Map<string, MaskData>>(new Map());
 const SPARE_CACHE_ENTRIES = 8;
 
 const cache = new Map<string, MaskData>(); // dataUrl -> decoded; insertion order = recency
-const pending = new Set<string>();
+/** Decodes in flight, by dataUrl (shared by the live sync and decodeMasksFor). */
+const pending = new Map<string, Promise<MaskData | null>>();
 const failed = new Set<string>();
+/** Bumped by resetMaskCache so decodes started before a reset are not stored afterwards. */
+let epoch = 0;
 
 // --- Codec (DOM) --------------------------------------------------------------------------
 
@@ -100,6 +103,7 @@ export function maskCacheSize(): number {
 
 /** Clears the cache and published data (for tests and profile switches). */
 export function resetMaskCache(): void {
+  epoch++;
   cache.clear();
   pending.clear();
   failed.clear();
@@ -113,23 +117,66 @@ export function setLiveMask(id: string, data: MaskData): void {
   maskData.value = next;
 }
 
-function request(dataUrl: string): void {
-  if (pending.has(dataUrl) || failed.has(dataUrl)) return;
-  pending.add(dataUrl);
-  void codec.decode(dataUrl).then(
-    (data) => finishDecode(dataUrl, data),
-    () => finishDecode(dataUrl, null),
-  );
+/** Starts (or joins) the decode of a dataUrl. Resolves with the decoded data, or null on failure. */
+function request(dataUrl: string): Promise<MaskData | null> {
+  const hit = cache.get(dataUrl);
+  if (hit) return Promise.resolve(hit);
+  if (failed.has(dataUrl)) return Promise.resolve(null);
+  const inFlight = pending.get(dataUrl);
+  if (inFlight) return inFlight;
+  const started = epoch;
+  const finish = (data: MaskData | null): MaskData | null => {
+    if (started !== epoch) return data; // the cache was reset meanwhile: do not store or publish
+    if (pending.get(dataUrl) === done) pending.delete(dataUrl);
+    if (data) {
+      if (!cache.has(dataUrl)) cache.set(dataUrl, data);
+    } else {
+      failed.add(dataUrl);
+    }
+    syncMasks(profile.peek());
+    return cache.get(dataUrl) ?? data;
+  };
+  let decoding: Promise<MaskData | null>;
+  try {
+    decoding = codec.decode(dataUrl);
+  } catch {
+    decoding = Promise.resolve(null);
+  }
+  const done: Promise<MaskData | null> = decoding.then(finish, () => finish(null));
+  pending.set(dataUrl, done);
+  return done;
 }
 
-function finishDecode(dataUrl: string, data: MaskData | null): void {
-  pending.delete(dataUrl);
-  if (data) {
-    if (!cache.has(dataUrl)) cache.set(dataUrl, data);
-  } else {
-    failed.add(dataUrl);
+/** True while the given mask dataUrl is still being decoded. */
+export function isMaskPending(dataUrl: string): boolean {
+  return pending.has(dataUrl);
+}
+
+/**
+ * Decoded data for every visible mask region of `p`, from that profile's own dataUrls (keyed by
+ * region id). Uses the shared dataUrl cache and joins decodes already in flight, so it never
+ * returns data that belongs to another profile or to an older version of a region. Regions whose
+ * PNG cannot be decoded are left out. Use it for one-off renders (export, timeline).
+ */
+export async function decodeMasksFor(p: Profile): Promise<Map<string, MaskData>> {
+  const out = new Map<string, MaskData>();
+  const jobs: Promise<void>[] = [];
+  for (const r of p.regions) {
+    if (r.shape.type !== 'mask' || !r.visible) continue;
+    const id = r.id;
+    jobs.push(
+      request(r.shape.dataUrl).then((data) => {
+        if (data) out.set(id, data);
+      }),
+    );
   }
-  syncMasks(profile.peek());
+  await Promise.all(jobs);
+  return out;
+}
+
+/** Resolves once no mask decode is in flight (each pass waits for the decodes started so far). */
+export async function masksReady(): Promise<void> {
+  while (pending.size > 0) await Promise.all([...pending.values()]);
 }
 
 function trimCache(used: ReadonlySet<string>): void {
@@ -163,7 +210,7 @@ export function syncMasks(p: Profile): void {
       // Keep showing the previous data for this region until the new one has decoded.
       const old = prev.get(r.id);
       if (old) next.set(r.id, old);
-      request(url);
+      void request(url);
     }
   }
   trimCache(used);
