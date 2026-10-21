@@ -15,6 +15,13 @@ describe('buildCaptionLines', () => {
     expect(lines[0]).toBe('5 Jan 2026 · Left eye · viewed at 37.5 cm');
   });
 
+  it("names the profile's chosen eye, whatever the profile is called (v0.2 eye choice)", () => {
+    const left = buildCaptionLines({ date, eye: 'left', viewingDistanceCm: 40, profileName: 'Right eye' });
+    expect(left[0]).toBe('20 Oct 2026 · Left eye · viewed at 40 cm');
+    expect(left.join(' | ')).not.toContain('· Right eye ·');
+    expect(buildCaptionLines({ date, eye: 'right', viewingDistanceCm: 40 })[0]).toContain('· Right eye ·');
+  });
+
   it('includes profile name and note before the approximation line', () => {
     const lines = buildCaptionLines({
       date,

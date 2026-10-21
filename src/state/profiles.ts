@@ -59,13 +59,14 @@ let persistAsked = false;
 export const defaultDistanceCm = signal<number>(DEFAULT_VIEWING_DISTANCE_CM);
 
 /**
- * The affected eye given to new profiles. Changed with setDefaultEye() (and by setCurrentEye(), so
- * the next new profile matches); loaded from storage by loadDefaultEye() (restoreLastProfile does it).
+ * The affected eye given to new profiles: the saved setting, FALLBACK_EYE ('right') until one is
+ * known. Changed with setDefaultEye() (the first setCurrentEye() also sets it); loaded from storage by
+ * loadDefaultEye() (restoreLastProfile does it).
  */
 export const defaultEye = signal<Eye>(FALLBACK_EYE);
 /**
- * Whether the user has chosen an eye (a saved setting, a restored profile, or a choice made this
- * session). While false the empty state asks "Which eye do you want to simulate?".
+ * Whether an eye is known for this user: a saved default, a restored profile, or a choice made this
+ * session. While false the first-run empty state asks "Which eye do you want to simulate?".
  */
 export const eyeChosen = signal(false);
 
@@ -253,16 +254,20 @@ export async function setDefaultEye(eye: Eye): Promise<void> {
 
 /**
  * Sets the affected eye of the current profile (one undo step). An automatic name ("Right eye")
- * follows the eye; a name the user typed is kept. Also becomes the default for new profiles.
+ * follows the eye; a name the user typed is kept. The very first choice (no default eye known yet)
+ * also becomes the default for new profiles; after that the default changes only in Settings.
  */
 export function setCurrentEye(eye: Eye): void {
-  const untouchedBlank = !dirty.peek() && !currentIsSaved.peek();
-  endEdit();
-  applyEdit((p) => withEye(p, eye));
-  endEdit();
-  // A blank, never-saved profile is not "unsaved work": choosing the eye should not make it so.
-  if (untouchedBlank) baseline.value = profileFingerprint(profile.peek());
-  void setDefaultEye(eye);
+  const first = !eyeChosen.peek();
+  if (profile.peek().eye !== eye) {
+    const untouchedBlank = !dirty.peek() && !currentIsSaved.peek();
+    endEdit();
+    applyEdit((p) => withEye(p, eye));
+    endEdit();
+    // A blank, never-saved profile is not "unsaved work": choosing the eye should not make it so.
+    if (untouchedBlank) baseline.value = profileFingerprint(profile.peek());
+  }
+  if (first) void setDefaultEye(eye);
 }
 
 /** Starts an empty profile at the default viewing distance and eye (the current photo stays). Unsaved changes are discarded. */

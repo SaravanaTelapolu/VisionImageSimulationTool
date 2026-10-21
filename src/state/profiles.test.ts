@@ -6,14 +6,17 @@ import { getPhoto, getProfile, getSetting, profilesToBundleBlob, profileToJsonBl
 import * as share from '../export/share';
 import {
   DEFAULT_DISTANCE_KEY,
+  DEFAULT_EYE_KEY,
   LAST_PROFILE_KEY,
   _resetProfilesStateForTests,
   currentIsSaved,
   currentPhotoSaved,
   defaultDistanceCm,
+  defaultEye,
   deleteProfileById,
   dirty,
   duplicateCurrentAsCheckup,
+  eyeChosen,
   duplicateProfileById,
   exportAllJson,
   exportCurrentJson,
@@ -21,6 +24,7 @@ import {
   importJsonFile,
   loadAllProfiles,
   loadDefaultDistance,
+  loadDefaultEye,
   newProfile,
   notice,
   persistentStorage,
@@ -30,7 +34,9 @@ import {
   refreshList,
   renameCurrent,
   restoreLastProfile,
+  setCurrentEye,
   setDefaultDistance,
+  setDefaultEye,
   saveCurrent,
   savePhotoWithCurrent,
   storageError,
@@ -459,5 +465,104 @@ describe('default viewing distance (v0.2 Q3)', () => {
     newProfile();
     await saveCurrent();
     expect(profileList.value[0]?.viewingDistanceCm).toBe(300);
+  });
+});
+
+describe('eye choice and default eye (v0.2)', () => {
+  it('is right until set, unchosen, and new profiles use it', () => {
+    expect(defaultEye.value).toBe('right');
+    expect(eyeChosen.value).toBe(false);
+    expect(newProfile()).toMatchObject({ eye: 'right', name: 'Right eye' });
+  });
+
+  it('persists the default eye; new profiles take it and its automatic name', async () => {
+    await setDefaultEye('left');
+    expect(eyeChosen.value).toBe(true);
+    expect(await getSetting<string>(DEFAULT_EYE_KEY, '')).toBe('left');
+    expect(newProfile()).toMatchObject({ eye: 'left', name: 'Left eye' });
+    expect(profile.value.eye).toBe('left');
+    expect(dirty.value).toBe(false);
+
+    defaultEye.value = 'right'; // a fresh start
+    eyeChosen.value = false;
+    expect(await loadDefaultEye()).toBe('left');
+    expect(defaultEye.value).toBe('left');
+    expect(eyeChosen.value).toBe(true);
+  });
+
+  it('ignores a missing or garbage stored eye', async () => {
+    expect(await loadDefaultEye()).toBeNull();
+    const { setSetting } = await import('../storage');
+    await setSetting(DEFAULT_EYE_KEY, 'both');
+    expect(await loadDefaultEye()).toBeNull();
+    expect(defaultEye.value).toBe('right');
+    expect(eyeChosen.value).toBe(false);
+  });
+
+  it('setCurrentEye: an automatic name follows the eye, one undo step, blank profile stays clean', () => {
+    setCurrentEye('left');
+    expect(profile.value).toMatchObject({ eye: 'left', name: 'Left eye' });
+    expect(dirty.value).toBe(false);
+    expect(canUndo.value).toBe(true);
+    undo();
+    expect(profile.value).toMatchObject({ eye: 'right', name: 'Right eye' });
+  });
+
+  it('setCurrentEye keeps a name the user typed', () => {
+    renameCurrent('Before surgery');
+    setCurrentEye('left');
+    expect(profile.value).toMatchObject({ eye: 'left', name: 'Before surgery' });
+    expect(dirty.value).toBe(true);
+  });
+
+  it('setCurrentEye also renames a dated check-up copy', async () => {
+    await saveCurrent();
+    await duplicateCurrentAsCheckup();
+    expect(profile.value.name).toMatch(/^Right eye — \d{4}-\d{2}-\d{2}$/);
+    setCurrentEye('left');
+    expect(profile.value.name).toMatch(/^Left eye — \d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('the first eye choice becomes the default; later ones change only the open profile', async () => {
+    setCurrentEye('left');
+    expect(defaultEye.value).toBe('left');
+    expect(eyeChosen.value).toBe(true);
+    await Promise.resolve();
+    setCurrentEye('right');
+    expect(profile.value.eye).toBe('right');
+    expect(defaultEye.value).toBe('left');
+    expect(await getSetting<string>(DEFAULT_EYE_KEY, '')).toBe('left');
+  });
+
+  it('choosing the eye the profile already has still records the first choice as the default', () => {
+    setCurrentEye('right');
+    expect(canUndo.value).toBe(false);
+    expect(eyeChosen.value).toBe(true);
+    expect(defaultEye.value).toBe('right');
+  });
+
+  it('the initial profile takes the saved default eye on startup when nothing was touched', async () => {
+    await setDefaultEye('left');
+    resetProfile();
+    _resetProfilesStateForTests();
+    expect(profile.value.eye).toBe('right');
+    expect(await restoreLastProfile()).toBe(false);
+    expect(profile.value).toMatchObject({ eye: 'left', name: 'Left eye' });
+    expect(dirty.value).toBe(false);
+    expect(canUndo.value).toBe(false);
+  });
+
+  it('a restored profile keeps its eye; with no saved default, new profiles follow it', async () => {
+    resetProfile(newProfile());
+    setCurrentEye('left');
+    await saveCurrent();
+    const { setSetting } = await import('../storage');
+    await setSetting(DEFAULT_EYE_KEY, null); // as before v0.2: no default eye stored
+    resetProfile();
+    _resetProfilesStateForTests();
+    expect(await restoreLastProfile()).toBe(true);
+    expect(profile.value.eye).toBe('left');
+    expect(defaultEye.value).toBe('left');
+    expect(eyeChosen.value).toBe(true);
   });
 });

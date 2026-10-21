@@ -17,6 +17,7 @@ import {
   type Shape,
 } from './types';
 import { defaultGlobals, emptyEffects, newId } from './defaults';
+import { FALLBACK_EYE, isEye } from './eye';
 
 export type ValidationResult =
   | { ok: true; profile: Profile; warnings: string[] }
@@ -351,9 +352,11 @@ export function validateProfile(input: unknown): ValidationResult {
   if (typeof raw['name'] === 'string') name = cap(ctx, raw['name'], MAX_NAME_LENGTH, 'name');
   else ctx.warnings.push(`name: missing; using "${DEFAULT_NAME}".`);
 
-  let eye: Eye = 'right';
-  if (raw['eye'] === 'left' || raw['eye'] === 'right') eye = raw['eye'];
-  else ctx.warnings.push('eye: missing or invalid; using "right".');
+  // Profiles saved before the eye could be chosen (or hand-edited files) may lack `eye`: they were
+  // all right-eye maps, so a missing or unknown value becomes FALLBACK_EYE ('right').
+  let eye: Eye = FALLBACK_EYE;
+  if (isEye(raw['eye'])) eye = raw['eye'];
+  else ctx.warnings.push(`eye: missing or invalid; using "${FALLBACK_EYE}".`);
 
   let createdAt: string;
   if (validIso(raw['createdAt'])) {

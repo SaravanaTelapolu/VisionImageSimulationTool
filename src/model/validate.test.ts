@@ -284,6 +284,17 @@ describe('validateProfile: defaults and cleanup', () => {
     }
   });
 
+  it('loads profiles saved before the eye choice (no eye) or with an unknown eye as right (v0.2)', () => {
+    const missing = ok(mutate((p) => delete p.eye));
+    expect(missing.profile.eye).toBe('right');
+    expect(missing.warnings).toContain('eye: missing or invalid; using "right".');
+    const bad = ok(mutate((p) => (p.eye = 'both')));
+    expect(bad.profile.eye).toBe('right');
+    const left = ok(mutate((p) => (p.eye = 'left')));
+    expect(left.profile.eye).toBe('left');
+    expect(left.warnings.some((w) => w.startsWith('eye'))).toBe(false);
+  });
+
   it('fills each missing globals field individually', () => {
     const r = ok(mutate((p) => (p.globals = { distortAngle: 90 })));
     expect(r.profile.globals).toEqual({ ...defaultGlobals(), distortAngle: 90 });

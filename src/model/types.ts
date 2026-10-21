@@ -103,6 +103,10 @@ export interface Profile {
   version: number;
   id: string;
   name: string;
+  /**
+   * The affected eye this map describes (chosen by the user since v0.2; the type is unchanged).
+   * Files saved without it load as 'right' (validate.ts, FALLBACK_EYE).
+   */
   eye: Eye;
   /** ISO 8601. */
   createdAt: string;

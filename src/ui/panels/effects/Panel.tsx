@@ -1,7 +1,7 @@
 import { findRegion, updateRegion } from '../../../model/ops';
-import type { Eye } from '../../../model/types';
 import { activeTab, applyEdit, endEdit, profile, selectedRegionId } from '../../../state/store';
-import { Segmented } from '../../controls/Segmented';
+import { setCurrentEye } from '../../../state/profiles';
+import { EyeRadioGroup } from '../../controls/EyeRadioGroup';
 import { Slider } from '../../controls/Slider';
 import './effects.css';
 import {
@@ -17,12 +17,7 @@ import {
   isFeatherEnabled,
   type NumericGlobalKey,
 } from './effectDefs';
-import { setEffect, setEye, setFeather, setGhostOffset, setGlobal, setViewingDistance } from './edits';
-
-const EYE_OPTIONS = [
-  { value: 'left', label: 'Left eye' },
-  { value: 'right', label: 'Right eye' },
-] as const;
+import { setEffect, setFeather, setGhostOffset, setGlobal, setViewingDistance } from './edits';
 
 function GlobalSlider({ k }: { k: NumericGlobalKey }) {
   const def = GLOBAL_DEFS[k];
@@ -72,12 +67,7 @@ function ProfileSettings() {
           onInput={(v) => applyEdit((q) => setViewingDistance(q, v), 'globals:viewingDistanceCm')}
           onCommit={endEdit}
         />
-        <Segmented<Eye>
-          label="Profile eye"
-          value={p.eye}
-          options={EYE_OPTIONS}
-          onChange={(eye) => applyEdit((q) => setEye(q, eye))}
-        />
+        <EyeRadioGroup name="eye-effects" value={p.eye} onChange={setCurrentEye} />
       </div>
     </details>
   );

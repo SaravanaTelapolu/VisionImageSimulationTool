@@ -15,10 +15,11 @@ import {
   undo,
   viewMode,
 } from '../state/store';
-import { defaultDistanceCm, restoreLastProfile, setDefaultDistance } from '../state/profiles';
+import { defaultDistanceCm, eyeChosen, restoreLastProfile, setCurrentEye, setDefaultDistance } from '../state/profiles';
 import { calibrationOpen, closeCalibration, compareMode, openCalibration, presentOpen, timelineOpen } from '../state/ui';
 import { InstallPrompt } from '../pwa';
 import { CalibrationGuide } from './calibration/CalibrationGuide';
+import { EyeRadioGroup } from './controls/EyeRadioGroup';
 import { PhotoPicker, TestImagePicker } from './PhotoPicker';
 import { PreviewNotice } from './preview/PreviewNotice';
 import { SideBySide } from './panels/compare/SideBySide';
@@ -135,6 +136,14 @@ export function App() {
                 <p class="hint" role="status">
                   {photoLoading.value ? 'Opening image…' : 'Choose a photo or take one with the camera.'}
                 </p>
+                <div class="empty-eye">
+                  <EyeRadioGroup
+                    name="eye-start"
+                    legend="Which eye do you want to simulate?"
+                    value={eyeChosen.value ? profile.value.eye : null}
+                    onChange={setCurrentEye}
+                  />
+                </div>
                 <div class="cta-row">
                   <PhotoPicker kind="photo" variant="cta" />
                   <PhotoPicker kind="camera" variant="cta" />

@@ -6,7 +6,7 @@ import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
 import { APPROXIMATION_LINE } from '../../../export';
 import { renderTick } from '../../../state/render';
 import { activeTab, image, profile } from '../../../state/store';
-import { Segmented, Slider } from '../../controls';
+import { EyeRadioGroup, Segmented, Slider } from '../../controls';
 import {
   JPEG_QUALITY_MAX,
   JPEG_QUALITY_MIN,
@@ -236,15 +236,7 @@ export function ExportPanel() {
               />
             </label>
           </div>
-          <Segmented
-            label="Eye"
-            value={fields.eye}
-            options={[
-              { value: 'left', label: 'Left' },
-              { value: 'right', label: 'Right' },
-            ]}
-            onChange={(v) => setField('eye', v)}
-          />
+          <EyeRadioGroup name="eye-export" legend="Eye" value={fields.eye} onChange={(v) => setField('eye', v)} />
           <label class="export-field">
             <span>Profile name</span>
             <input

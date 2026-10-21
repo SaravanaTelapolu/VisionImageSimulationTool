@@ -12,6 +12,7 @@ import {
   exportProfileById,
   importJsonFile,
   loadDefaultDistance,
+  loadDefaultEye,
   newProfile,
   notice,
   openProfile,
@@ -29,6 +30,7 @@ import { distanceLabel } from '../../../model/distance';
 import { eyeLabel } from '../../../model/eye';
 import { EyeRadioGroup } from '../../controls/EyeRadioGroup';
 import { DefaultDistanceSetting } from './DefaultDistance';
+import { DefaultEyeSetting } from './DefaultEye';
 import { formatProfileDate, notePreview, regionCountLabel } from './helpers';
 import './profiles.css';
 
@@ -58,6 +60,7 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
   useEffect(() => {
     void refreshList();
     void loadDefaultDistance();
+    void loadDefaultEye();
     return () => window.clearTimeout(timer.current);
   }, []);
 
@@ -249,7 +252,11 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
         )}
       </section>
 
-      <DefaultDistanceSetting />
+      <section class="pf-card" aria-label="Settings">
+        <h2 class="pf-h">Settings</h2>
+        <DefaultEyeSetting />
+        <DefaultDistanceSetting />
+      </section>
 
       <section class="pf-row pf-transfer" aria-label="Import and export">
         <label class="pf-btn pf-file">

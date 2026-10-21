@@ -369,3 +369,14 @@
   border-color: var(--accent, #ffd54a);
   font-weight: 700;
 }
+
+.pf-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pf-setting + .pf-setting {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
