@@ -11,6 +11,7 @@ import {
   exportCurrentJson,
   exportProfileById,
   importJsonFile,
+  loadDefaultDistance,
   newProfile,
   notice,
   openProfile,
@@ -23,6 +24,8 @@ import {
   storageError,
 } from '../../../state/profiles';
 import { image, profile } from '../../../state/store';
+import { distanceLabel } from '../../../model/distance';
+import { DefaultDistanceSetting } from './DefaultDistance';
 import { formatProfileDate, notePreview, regionCountLabel } from './helpers';
 import './profiles.css';
 
@@ -53,6 +56,7 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
 
   useEffect(() => {
     void refreshList();
+    void loadDefaultDistance();
     return () => window.clearTimeout(timer.current);
   }, []);
 
@@ -147,7 +151,8 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
           }}
         />
         <p class="pf-meta">
-          {eyeLabel(cur.eye)} · created {formatProfileDate(cur.createdAt)} · {regionCountLabel(cur.regions.length)}
+          {eyeLabel(cur.eye)} · {distanceLabel(cur.viewingDistanceCm)} · created {formatProfileDate(cur.createdAt)} ·{' '}
+          {regionCountLabel(cur.regions.length)}
         </p>
         <div class="pf-row">
           <button type="button" class="pf-btn pf-btn-primary" disabled={working} onClick={() => void saveCurrent()}>
@@ -206,7 +211,8 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
                     {isCurrent && <span class="pf-tag">Open now</span>}
                   </div>
                   <p class="pf-meta">
-                    {formatProfileDate(s.createdAt)} · {eyeLabel(s.eye)} · {regionCountLabel(s.regionCount)}
+                    {formatProfileDate(s.createdAt)} · {eyeLabel(s.eye)} · {distanceLabel(s.viewingDistanceCm)} ·{' '}
+                    {regionCountLabel(s.regionCount)}
                   </p>
                   {preview && <p class="pf-note">{preview}</p>}
                   <div class="pf-row">
@@ -240,6 +246,8 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
           </ul>
         )}
       </section>
+
+      <DefaultDistanceSetting />
 
       <section class="pf-row pf-transfer" aria-label="Import and export">
         <label class="pf-btn pf-file">

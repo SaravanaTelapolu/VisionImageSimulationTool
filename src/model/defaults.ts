@@ -1,3 +1,4 @@
+import { DEFAULT_VIEWING_DISTANCE_CM } from './distance';
 import { PROFILE_VERSION, type Effects, type Profile, type ProfileGlobals, type Region, type Shape } from './types';
 
 export function newId(prefix: string): string {
@@ -37,7 +38,11 @@ export function defaultEllipse(): Shape {
   return { type: 'ellipse', cx: 0, cy: 0, rx: 0.12, ry: 0.09, rotation: 0 };
 }
 
-export function newProfile(name = 'Right eye', now = new Date()): Profile {
+export function newProfile(
+  name = 'Right eye',
+  now = new Date(),
+  viewingDistanceCm = DEFAULT_VIEWING_DISTANCE_CM,
+): Profile {
   const iso = now.toISOString();
   return {
     version: PROFILE_VERSION,
@@ -46,7 +51,7 @@ export function newProfile(name = 'Right eye', now = new Date()): Profile {
     eye: 'right',
     createdAt: iso,
     updatedAt: iso,
-    viewingDistanceCm: 40,
+    viewingDistanceCm,
     note: '',
     globals: defaultGlobals(),
     regions: [],

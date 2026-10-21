@@ -364,3 +364,8 @@
     flex: none;
   }
 }
+
+.pf-preset[aria-pressed='true'] {
+  border-color: var(--accent, #ffd54a);
+  font-weight: 700;
+}

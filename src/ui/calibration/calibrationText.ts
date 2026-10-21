@@ -29,7 +29,7 @@ export function stepIndicator(stepIndex: number): string {
 }
 
 export const MIN_DISTANCE_CM = 10;
-export const MAX_DISTANCE_CM = 150;
+export const MAX_DISTANCE_CM = 600;
 export const DEFAULT_DISTANCE_CM = 40;
 
 /** Parse a distance typed by the user; null when not a usable number. */

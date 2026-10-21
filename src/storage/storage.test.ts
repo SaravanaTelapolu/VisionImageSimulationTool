@@ -73,7 +73,7 @@ describe('profiles', () => {
     const list = await listProfiles();
     expect(list.map((s) => s.name)).toEqual(['B', 'C', 'A']);
     expect(list[0]).toMatchObject({ id: b.id, eye: 'left', note: 'hello', regionCount: 2, createdAt: b.createdAt });
-    expect(Object.keys(list[0]!).sort()).toEqual(['createdAt', 'eye', 'id', 'name', 'note', 'regionCount', 'updatedAt']);
+    expect(Object.keys(list[0]!).sort()).toEqual(['createdAt', 'eye', 'id', 'name', 'note', 'regionCount', 'updatedAt', 'viewingDistanceCm']);
   });
 
   it('lists nothing when empty', async () => {

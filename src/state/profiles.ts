@@ -3,6 +3,7 @@
 // deletes, exports and imports profiles, and tracks whether the current one has unsaved changes.
 import { computed, signal } from '@preact/signals';
 import { newProfile as makeNewProfile } from '../model/defaults';
+import { DEFAULT_VIEWING_DISTANCE_CM, sanitizeDefaultDistance } from '../model/distance';
 import type { Profile } from '../model/types';
 import { shareOrDownload } from '../export/share';
 import {
@@ -26,6 +27,7 @@ import {
 import { activityCount, applyEdit, endEdit, image, loadPhoto, profile, resetProfile } from './store';
 
 export const LAST_PROFILE_KEY = 'lastProfileId';
+export const DEFAULT_DISTANCE_KEY = 'defaultViewingDistanceCm';
 
 // --- Signals ------------------------------------------------------------------------------
 
@@ -47,6 +49,12 @@ export const currentPhotoSaved = signal(false);
  */
 export const persistentStorage = signal<boolean | null>(null);
 let persistAsked = false;
+
+/**
+ * Viewing distance (cm) given to new profiles: the saved setting, 40 until it has loaded. Changed
+ * with setDefaultDistance(); loaded from storage by loadDefaultDistance() (restoreLastProfile does it).
+ */
+export const defaultDistanceCm = signal<number>(DEFAULT_VIEWING_DISTANCE_CM);
 
 /**
  * Fingerprint of the current profile as last saved/opened/created (updatedAt ignored), or null when
@@ -190,9 +198,28 @@ export async function openProfile(id: string, opts: { ifUntouchedSince?: number 
   return true;
 }
 
-/** Starts an empty profile (the current photo stays). Unsaved changes are discarded. */
+/** Reads the default viewing distance setting into defaultDistanceCm (40 when unset or unreadable). */
+export async function loadDefaultDistance(): Promise<number> {
+  const v = sanitizeDefaultDistance(await getSetting<unknown>(DEFAULT_DISTANCE_KEY, DEFAULT_VIEWING_DISTANCE_CM));
+  defaultDistanceCm.value = v;
+  return v;
+}
+
+/** Sets and stores the default viewing distance for new profiles (rounded, clamped to 10-600 cm). */
+export async function setDefaultDistance(cm: number): Promise<number> {
+  const v = sanitizeDefaultDistance(cm);
+  defaultDistanceCm.value = v;
+  try {
+    await setSetting(DEFAULT_DISTANCE_KEY, v);
+  } catch (e) {
+    fail(e);
+  }
+  return v;
+}
+
+/** Starts an empty profile at the default viewing distance (the current photo stays). Unsaved changes are discarded. */
 export function newProfile(name = 'Right eye'): Profile {
-  const p = makeNewProfile(name);
+  const p = makeNewProfile(name, new Date(), defaultDistanceCm.peek());
   resetProfile(p);
   baseline.value = profileFingerprint(p);
   currentPhotoSaved.value = false;
@@ -357,6 +384,26 @@ export async function restoreLastProfile(): Promise<boolean> {
   // The storage reads below are slow on a cold start; if the user edits or loads anything meanwhile,
   // the restore is dropped rather than overwriting their work.
   const since = activityCount();
+  const cm = await loadDefaultDistance(); // also keeps new profiles on the setting when one is restored
+  const restored = await restoreSaved(since);
+  if (!restored) applyDefaultDistanceIfPristine(cm, since);
+  return restored;
+}
+
+/**
+ * When nothing was restored and the user has not touched anything since the restore began (activityCount() === since), the blank starting
+ * profile takes the default viewing distance setting (which has only just loaded).
+ */
+function applyDefaultDistanceIfPristine(cm: number, since: number): void {
+  if (activityCount() !== since) return;
+  const cur = profile.peek();
+  if (cur.viewingDistanceCm === cm) return;
+  const p = { ...cur, viewingDistanceCm: cm };
+  resetProfile(p);
+  baseline.value = profileFingerprint(p);
+}
+
+async function restoreSaved(since: number): Promise<boolean> {
   const listed = await refreshList();
   if (!listed) return false;
   const id = await getSetting<string | null>(LAST_PROFILE_KEY, null);
@@ -375,4 +422,5 @@ export function _resetProfilesStateForTests(): void {
   baseline.value = profileFingerprint(profile.peek());
   persistentStorage.value = null;
   persistAsked = false;
+  defaultDistanceCm.value = DEFAULT_VIEWING_DISTANCE_CM;
 }
