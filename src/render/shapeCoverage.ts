@@ -1,6 +1,7 @@
 // Per-shape coverage samplers for the effect-map builder. Pure maths: no DOM or canvas.
 import { lengthToPixels, toPixel } from '../model/coords';
 import type { ImageFrame, Shape } from '../model/types';
+import { buildPathCoverage } from './pathCoverage';
 
 /** A greyscale mask (0..255, row-major, top row first), as decoded from a painted-mask PNG. */
 export interface MaskData {
@@ -154,42 +155,16 @@ function pathSampler(
   if (b.x0 > b.x1 || b.y0 > b.y1) return null;
 
   const featherWidth = clamp01(feather) * 0.5 * Math.min(maxX - minX, maxY - minY);
-  const hard = featherWidth < 1e-6;
-  const pixel = (g.sx + g.sy) / 2;
+  // Scanline fill + banded edge distances (see pathCoverage.ts). The raster is scratch memory valid until the
+  // next path sampler is created, which holds for the effect-map builder (one sampler at a time).
+  const raster = buildPathCoverage(xs, ys, n, b, g.sx, g.sy, featherWidth);
+  const cov = raster.cov;
+  const w = b.x1 - b.x0 + 1;
 
   return {
     ...b,
     sample(i, j) {
-      const px = (i + 0.5) * g.sx;
-      const py = (j + 0.5) * g.sy;
-      // Even-odd inside test.
-      let inside = false;
-      for (let a = 0, q = n - 1; a < n; q = a++) {
-        const xi = xs[a]!;
-        const yi = ys[a]!;
-        const xq = xs[q]!;
-        const yq = ys[q]!;
-        if (yi > py !== yq > py && px < ((xq - xi) * (py - yi)) / (yq - yi) + xi) inside = !inside;
-      }
-      if (!inside && !hard) return 0;
-      // Distance to the nearest edge.
-      let best = Infinity;
-      for (let a = 0, q = n - 1; a < n; q = a++) {
-        const xq = xs[q]!;
-        const yq = ys[q]!;
-        const ex = xs[a]! - xq;
-        const ey = ys[a]! - yq;
-        const len2 = ex * ex + ey * ey;
-        let t = len2 > 0 ? ((px - xq) * ex + (py - yq) * ey) / len2 : 0;
-        t = t < 0 ? 0 : t > 1 ? 1 : t;
-        const qx = xq + t * ex - px;
-        const qy = yq + t * ey - py;
-        const d2 = qx * qx + qy * qy;
-        if (d2 < best) best = d2;
-      }
-      const dist = Math.sqrt(best);
-      if (hard) return clamp01(0.5 + (inside ? dist : -dist) / pixel);
-      return smoothstep(0, featherWidth, dist);
+      return cov[(j - b.y0) * w + (i - b.x0)]!;
     },
   };
 }
