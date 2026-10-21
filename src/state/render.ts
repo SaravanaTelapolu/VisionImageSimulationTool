@@ -29,7 +29,7 @@ import { createRenderer, isWebGL2Supported, scaleRenderParams, type WebGLRendere
 import { mapSizeFor } from '../render/effectMaps';
 import { EXPORT_MAX_SIDE } from '../render/gl/math';
 import { createMapBuilder, type MapBuilder } from '../render/mapWorkerClient';
-import type { EffectMaps } from '../render/types';
+import type { EffectMaps, RenderParams } from '../render/types';
 import type { ProfileGlobals } from '../model/types';
 import {
   EXPORT_MAP_MAX_SIDE,
@@ -546,10 +546,19 @@ export interface RenderFullSizeResult {
   downscaled: boolean;
 }
 
-/** Renders the simulation on the full-size image and encodes it (PNG by default). */
-export async function renderFullSize(
-  opts: { type?: 'image/png' | 'image/jpeg'; quality?: number } = {},
-): Promise<RenderFullSizeResult> {
+export interface RenderFullSizeCanvasResult {
+  /** The rendered simulation as a 2D canvas (no encoding). */
+  canvas: HTMLCanvasElement;
+  width: number;
+  height: number;
+  /** True when the device could not render the full size and a smaller image was produced. */
+  downscaled: boolean;
+}
+
+/** Shared export path: current state, own masks, capped decode; `run` does the GPU export. */
+async function exportCurrent<T>(
+  run: (r: WebGLRenderer, image: TexImageSource, width: number, height: number, params: RenderParams) => Promise<T>,
+): Promise<{ result: T; width: number; height: number; downscaled: boolean }> {
   const img = image.peek();
   if (!img) throw new Error('No image is loaded.');
   const r = ensureRenderer();
@@ -563,10 +572,10 @@ export async function renderFullSize(
   const full = await decodeFullSize(img, exportLongSideCap());
   try {
     const params = scaleRenderParams(workParams, full.width / img.width, full.height / img.height);
-    const blob = await r.exportFullSize(full.source, full.width, full.height, params, opts.type, opts.quality);
+    const result = await run(r, full.source, full.width, full.height, params);
     const info = r.lastExport;
     return {
-      blob,
+      result,
       width: info?.width ?? full.width,
       height: info?.height ?? full.height,
       downscaled: (info?.downscaled ?? false) || (full.reduced && !!img.original),
@@ -574,6 +583,25 @@ export async function renderFullSize(
   } finally {
     full.close();
   }
+}
+
+/** Renders the simulation on the full-size image and encodes it (PNG by default). */
+export async function renderFullSize(
+  opts: { type?: 'image/png' | 'image/jpeg'; quality?: number } = {},
+): Promise<RenderFullSizeResult> {
+  const { result, ...rest } = await exportCurrent((r, src, w, h, params) =>
+    r.exportFullSize(src, w, h, params, opts.type, opts.quality),
+  );
+  return { blob: result, ...rest };
+}
+
+/**
+ * Renders the simulation on the full-size image and returns it as a 2D canvas, for composing
+ * (caption, side by side) without a PNG encode + decode round trip (M1).
+ */
+export async function renderFullSizeCanvas(): Promise<RenderFullSizeCanvasResult> {
+  const { result, ...rest } = await exportCurrent((r, src, w, h, params) => r.exportFullSizeCanvas(src, w, h, params));
+  return { canvas: result, ...rest };
 }
 
 /**

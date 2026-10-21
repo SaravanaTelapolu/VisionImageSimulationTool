@@ -84,8 +84,13 @@ export interface WebGLRenderer extends Renderer {
   readonly sourceInfo: SourceInfo | null;
   /** Largest image side this context can upload and draw (texture, renderbuffer and viewport limits). */
   readonly maxSide: number;
-  /** Details of the last exportFullSize() call. */
+  /** Details of the last exportFullSize() / exportFullSizeCanvas() call. */
   readonly lastExport: ExportInfo | null;
+  /**
+   * Like exportFullSize(), but returns the rendered pixels as a 2D canvas instead of encoding them,
+   * so callers that compose (caption, side by side) avoid a PNG encode + decode round trip.
+   */
+  exportFullSizeCanvas(image: TexImageSource, width: number, height: number, params: RenderParams): Promise<HTMLCanvasElement>;
   /** True when timed renders can be measured on the GPU without blocking. */
   readonly gpuTimerSupported: boolean;
   /** GPU time (ms) of the newest finished timed render, or null if none finished yet. Never blocks. */
@@ -215,48 +220,20 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
       }
     },
 
-    async exportFullSize(image, width, height, params, type = 'image/png', quality) {
-      if (disposed) throw new Error('Renderer disposed.');
-      const t0 = performance.now();
-      const out = document.createElement('canvas');
-      const gl = getContext(out);
-      let pipe: GLPipeline | null = null;
-      try {
-        pipe = new GLPipeline(gl);
-        const info = pipe.setSource(image, width, height, Math.min(pipe.maxSide, EXPORT_MAX_SIDE));
-        if (info.downscaled) {
-          console.info(
-            `[renderer] Export ${width}x${height} is larger than this device can render; exported at ${info.width}x${info.height}.`,
-          );
-        }
-        if (gl.drawingBufferWidth !== info.width || gl.drawingBufferHeight !== info.height) {
-          throw new Error('The export canvas could not be allocated at the requested size.');
-        }
-        pipe.finish();
-        const t1 = performance.now();
-        pipe.render(params);
-        pipe.finish();
-        const t2 = performance.now();
-        const blob = await canvasToBlob(out, type, quality);
-        const t3 = performance.now();
-        lastExport = {
-          width: info.width,
-          height: info.height,
-          requestedWidth: width,
-          requestedHeight: height,
-          downscaled: info.downscaled,
-          ms: t3 - t0,
-          setupMs: t1 - t0,
-          renderMs: t2 - t1,
-          encodeMs: t3 - t2,
-        };
-        return blob;
-      } finally {
-        pipe?.dispose();
-        releaseContext(gl);
-        out.width = 1;
-        out.height = 1;
-      }
+    exportFullSize(image, width, height, params, type = 'image/png', quality) {
+      return runExport(image, width, height, params, (out) => canvasToBlob(out, type, quality));
+    },
+
+    exportFullSizeCanvas(image, width, height, params) {
+      return runExport(image, width, height, params, async (out) => {
+        const copy = document.createElement('canvas');
+        copy.width = out.width;
+        copy.height = out.height;
+        const ctx = copy.getContext('2d');
+        if (!ctx) throw new Error('2D canvas is not available.');
+        ctx.drawImage(out, 0, 0);
+        return copy;
+      });
     },
 
     finish() {
@@ -284,5 +261,60 @@ export function createRenderer(target?: HTMLCanvasElement): WebGLRenderer {
       lastSource = null;
     },
   };
+
+  /**
+   * Renders `params` on `image` at full size in a separate context, hands the drawn canvas to
+   * `take` (encode or copy), records lastExport and releases the context.
+   */
+  async function runExport<T>(
+    image: TexImageSource,
+    width: number,
+    height: number,
+    params: RenderParams,
+    take: (out: HTMLCanvasElement) => Promise<T>,
+  ): Promise<T> {
+    if (disposed) throw new Error('Renderer disposed.');
+    const t0 = performance.now();
+    const out = document.createElement('canvas');
+    const gl = getContext(out);
+    let pipe: GLPipeline | null = null;
+    try {
+      pipe = new GLPipeline(gl);
+      const info = pipe.setSource(image, width, height, Math.min(pipe.maxSide, EXPORT_MAX_SIDE));
+      if (info.downscaled) {
+        console.info(
+          `[renderer] Export ${width}x${height} is larger than this device can render; exported at ${info.width}x${info.height}.`,
+        );
+      }
+      if (gl.drawingBufferWidth !== info.width || gl.drawingBufferHeight !== info.height) {
+        throw new Error('The export canvas could not be allocated at the requested size.');
+      }
+      pipe.finish();
+      const t1 = performance.now();
+      pipe.render(params);
+      pipe.finish();
+      const t2 = performance.now();
+      const result = await take(out);
+      const t3 = performance.now();
+      lastExport = {
+        width: info.width,
+        height: info.height,
+        requestedWidth: width,
+        requestedHeight: height,
+        downscaled: info.downscaled,
+        ms: t3 - t0,
+        setupMs: t1 - t0,
+        renderMs: t2 - t1,
+        encodeMs: t3 - t2,
+      };
+      return result;
+    } finally {
+      pipe?.dispose();
+      releaseContext(gl);
+      out.width = 1;
+      out.height = 1;
+    }
+  }
+
   return renderer;
 }
