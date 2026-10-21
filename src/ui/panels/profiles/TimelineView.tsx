@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { testImages, rasterizeTestImage, type TestImage } from '../../../assets/testImages';
 import { APPROXIMATION_LINE, wrapText } from '../../../export/caption';
@@ -11,6 +12,7 @@ import {
   timelineFileName,
   toggleId,
 } from './helpers';
+import { useDialog } from '../../dialogFocus';
 import './profiles.css';
 
 /** The picture every selected profile is applied to. */
@@ -133,6 +135,20 @@ export function composeTimelineImage(
   return canvas;
 }
 
+/** The enlarged picture over the timeline. A dialog of its own: Tab stays inside, focus returns to the tile. */
+function LargeView({ label, onClose, children }: { label: string; onClose: () => void; children: ComponentChildren }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useDialog(ref); // Escape is handled by the timeline (it closes this first)
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('button')?.focus();
+  }, []);
+  return (
+    <div ref={ref} class="tl-large" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={onClose}>
+      {children}
+    </div>
+  );
+}
+
 /** Full-screen side-by-side view of the same picture seen with several dated profiles. */
 export function TimelineView({ profiles, source, renderWithProfile, onClose }: TimelineViewProps) {
   const [selected, setSelected] = useState<string[]>(() => defaultTimelineSelection(profiles));
@@ -145,6 +161,10 @@ export function TimelineView({ profiles, source, renderWithProfile, onClose }: T
   const cache = useRef(new Map<string, Tile>());
   const rasters = useRef(new Map<string, TimelineSource>());
   const closeBtn = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Tab stays inside; focus returns to the control that opened the timeline. Escape is handled below
+  // because it first closes the enlarged picture.
+  useDialog(rootRef);
 
   const shown = useMemo(() => selectTimelineProfiles(profiles, selected), [profiles, selected]);
   const testImage: TestImage | undefined = testImages.find((t) => t.id === sourceId);
@@ -251,7 +271,7 @@ export function TimelineView({ profiles, source, renderWithProfile, onClose }: T
   };
 
   return (
-    <div class="tl" role="dialog" aria-modal="true" aria-label="Timeline">
+    <div ref={rootRef} class="tl" role="dialog" aria-modal="true" aria-label="Timeline" tabIndex={-1}>
       <header class="tl-top">
         <button ref={closeBtn} type="button" class="pf-btn" onClick={onClose}>
           Close
@@ -343,7 +363,7 @@ export function TimelineView({ profiles, source, renderWithProfile, onClose }: T
       <p class="tl-note">{APPROXIMATION_LINE}</p>
 
       {largeProfile && largeTile?.url && (
-        <div class="tl-large" role="dialog" aria-modal="true" aria-label={`${largeProfile.name} large`} onClick={() => setLarge(null)}>
+        <LargeView label={`${largeProfile.name} large`} onClose={() => setLarge(null)}>
           <img src={largeTile.url} alt={`${sourceLabel} as seen with ${largeProfile.name}`} />
           <p class="tl-caption">
             <strong>{formatProfileDate(largeProfile.createdAt)}</strong>
@@ -352,7 +372,7 @@ export function TimelineView({ profiles, source, renderWithProfile, onClose }: T
           <button type="button" class="pf-btn" onClick={() => setLarge(null)}>
             Back to timeline
           </button>
-        </div>
+        </LargeView>
       )}
     </div>
   );

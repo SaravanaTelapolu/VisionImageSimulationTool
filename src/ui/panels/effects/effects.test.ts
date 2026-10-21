@@ -41,10 +41,10 @@ describe('effect definitions', () => {
       expect(isEffectEnabled('blur', t)).toBe(true);
     }
   });
-  it('disables feather for whole-image regions only', () => {
+  it('disables feather for whole-image and brush regions', () => {
     expect(isFeatherEnabled('full')).toBe(false);
     expect(isFeatherEnabled('ellipse')).toBe(true);
-    expect(isFeatherEnabled('mask')).toBe(true);
+    expect(isFeatherEnabled('mask')).toBe(false);
   });
 });
 

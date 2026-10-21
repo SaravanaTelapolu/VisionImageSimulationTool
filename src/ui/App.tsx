@@ -25,7 +25,9 @@ import { SideBySide } from './panels/compare/SideBySide';
 import { PresentMode } from './present/PresentMode';
 import { Sheet } from './Sheet';
 import { TimelineHost } from './TimelineHost';
-import { TopBar } from './TopBar';
+import { QuickBar, TopBar } from './TopBar';
+import { announcement } from './announce';
+import { installCompareAutoSwitch } from './compareSwitch';
 import { RegionOverlay } from './edit/RegionOverlay';
 import { Viewport } from './viewport/Viewport';
 
@@ -90,6 +92,9 @@ export function App() {
 
   useEffect(() => initPreview(), []);
 
+  // Side by side cannot edit regions: opening Regions or Effects goes back to Single.
+  useEffect(() => installCompareAutoSwitch(), []);
+
   useEffect(() => {
     window.addEventListener('keydown', onShortcut);
     return () => window.removeEventListener('keydown', onShortcut);
@@ -103,52 +108,63 @@ export function App() {
 
   const hasImage = image.value !== null;
   const mode = compareMode.value;
+  // While a full-screen dialog is open the page behind it is inert: no focus, no taps, hidden from
+  // screen readers. The dialogs themselves also trap Tab and give focus back when they close.
+  const dialogOpen = calibrationOpen.value || timelineOpen.value || presentOpen.value;
 
   return (
     <div class="app">
-      <TopBar />
-      <div class="workspace">
-        <main class="stage">
-          {mode === 'side' ? (
-            <SideBySide />
-          ) : (
-            <Viewport overlay={(info) => <RegionOverlay info={info} />} />
-          )}
-          {hasImage && mode === 'single' && viewMode.value === 'original' && (
-            <div class="badge" role="status">
-              Original
-            </div>
-          )}
-          {!hasImage && (
-            <div class="empty">
-              <p class="hint">
-                {photoLoading.value ? 'Opening image…' : 'Choose a photo or take one with the camera.'}
-              </p>
-              <div class="cta-row">
-                <PhotoPicker kind="photo" variant="cta" />
-                <PhotoPicker kind="camera" variant="cta" />
+      <div class="app-main" inert={dialogOpen}>
+        <TopBar />
+        <div class="workspace">
+          <main class="stage">
+            {mode === 'side' ? (
+              <SideBySide />
+            ) : (
+              <Viewport overlay={(info) => <RegionOverlay info={info} />} />
+            )}
+            {hasImage && mode === 'single' && viewMode.value === 'original' && (
+              <div class="badge" role="status">
+                Original
               </div>
-              <div class="cta-row">
-                <button type="button" class="btn btn-cta btn-secondary" onClick={() => void loadTestImage('amsler')}>
-                  Try the Amsler grid
+            )}
+            {!hasImage && (
+              <div class="empty">
+                <p class="hint" role="status">
+                  {photoLoading.value ? 'Opening image…' : 'Choose a photo or take one with the camera.'}
+                </p>
+                <div class="cta-row">
+                  <PhotoPicker kind="photo" variant="cta" />
+                  <PhotoPicker kind="camera" variant="cta" />
+                </div>
+                <div class="cta-row">
+                  <button type="button" class="btn btn-cta btn-secondary" onClick={() => void loadTestImage('amsler')}>
+                    Try the Amsler grid
+                  </button>
+                  <TestImagePicker variant="cta" />
+                </div>
+                <button type="button" class="link-btn" onClick={openCalibration}>
+                  New here? Open the calibration guide
                 </button>
-                <TestImagePicker variant="cta" />
               </div>
-              <button type="button" class="link-btn" onClick={openCalibration}>
-                New here? Open the calibration guide
-              </button>
-            </div>
-          )}
-          <PreviewNotice />
-          {photoError.value && (
-            <p class="error" role="alert">
-              {photoError.value}
-            </p>
-          )}
-        </main>
-        <Sheet />
+            )}
+            <QuickBar />
+            <PreviewNotice />
+            {announcement.value && (
+              <p class="toast" role="status">
+                {announcement.value}
+              </p>
+            )}
+            {photoError.value && (
+              <p class="error" role="alert">
+                {photoError.value}
+              </p>
+            )}
+          </main>
+          <Sheet />
+        </div>
+        <footer class="footer">My own approximation — not a clinical measurement.</footer>
       </div>
-      <footer class="footer">My own approximation — not a clinical measurement.</footer>
       <Calibration />
       {timelineOpen.value && <TimelineHost />}
       {presentOpen.value && <PresentMode />}

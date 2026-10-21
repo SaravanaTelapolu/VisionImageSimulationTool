@@ -8,7 +8,7 @@ import {
   EFFECT_DEFS,
   EFFECT_GROUPS,
   FEATHER_DEF,
-  FEATHER_FULL_NOTE,
+  featherNote,
   GHOST_DEF,
   GLOBAL_DEFS,
   SIZE_CHANGE_NOTE,
@@ -128,7 +128,7 @@ export function EffectsPanel() {
         key={`${rid}:feather`}
         value={region.feather}
         disabled={!isFeatherEnabled(shape)}
-        help={isFeatherEnabled(shape) ? FEATHER_DEF.help : FEATHER_FULL_NOTE}
+        help={isFeatherEnabled(shape) ? FEATHER_DEF.help : featherNote(shape)}
         onInput={(v) => applyEdit((q) => setFeather(q, rid, v), `effect:${rid}:feather`)}
         onCommit={endEdit}
       />

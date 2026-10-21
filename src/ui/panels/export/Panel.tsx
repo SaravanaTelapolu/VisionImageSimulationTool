@@ -1,7 +1,8 @@
 // Export panel (W3-3): choose what to save, format, orientation and caption, preview the
-// side-by-side image, then share or download everything with one button.
+// side-by-side image, then prepare the files and share or download them (two steps, so the Android
+// share sheet gets a fresh tap).
 import { effect } from '@preact/signals';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
 import { APPROXIMATION_LINE } from '../../../export';
 import { renderTick } from '../../../state/render';
 import { activeTab, image, profile } from '../../../state/store';
@@ -14,20 +15,14 @@ import {
   disabledReason,
   loadExportOptions,
   planExportFiles,
-  resultMessage,
   saveExportOptions,
   type CaptionFields,
   type ExportOptions,
 } from './options';
-import { runExportJob } from './run';
+import { INITIAL_FLOW, exportFlowReducer, primaryLabel } from './exportFlow';
+import { canShareFiles, downloadFiles, prepareExport, shareNow } from './run';
 import { buildThumbnail } from './thumbnail';
 import './export.css';
-
-type Status =
-  | { kind: 'idle' }
-  | { kind: 'busy'; text: string }
-  | { kind: 'done'; text: string; notice: string }
-  | { kind: 'error'; text: string };
 
 const THUMB_DEBOUNCE_MS = 250;
 
@@ -48,7 +43,7 @@ function Check(props: { label: string; checked: boolean; disabled?: boolean; onC
 export function ExportPanel() {
   const [opts, setOpts] = useState<ExportOptions>(() => loadExportOptions());
   const [edits, setEdits] = useState<Partial<CaptionFields>>({});
-  const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const [flow, dispatch] = useReducer(exportFlowReducer, INITIAL_FLOW);
   const [thumbState, setThumbState] = useState<'idle' | 'ready' | 'unavailable'>('idle');
   const thumbRef = useRef<HTMLCanvasElement>(null);
 
@@ -56,7 +51,7 @@ export function ExportPanel() {
   const prof = profile.value;
   // Caption fields follow the profile until the user edits them.
   const fields: CaptionFields = { ...captionFieldsFromProfile(prof), ...edits };
-  const busy = status.kind === 'busy';
+  const busy = flow.phase === 'preparing' || flow.phase === 'sharing';
   const reason = disabledReason(hasImage, opts);
   const plan = planExportFiles(opts, fields);
   const captionLines = captionLinesFromFields(fields);
@@ -119,23 +114,50 @@ export function ExportPanel() {
     };
   }, [hasImage, busy, opts.orientation, opts.labels, opts.caption, captionKey]);
 
-  const go = () => {
-    setStatus({ kind: 'busy', text: 'Rendering…' });
-    runExportJob(opts, fields, (text) => setStatus({ kind: 'busy', text })).then(
-      (r) =>
-        setStatus({
-          kind: 'done',
-          text: resultMessage(r.outcome, r.fileCount),
-          notice: r.downscaled
-            ? `Saved at ${r.width} × ${r.height} px: your phone's graphics chip could not render the full photo size.`
-            : '',
-        }),
+  // Files that were already prepared no longer match once anything they depend on changes.
+  useEffect(() => {
+    dispatch({ type: 'invalidate' });
+  }, [opts, edits, prof, image.value]);
+
+  const prepare = () => {
+    dispatch({ type: 'prepare' });
+    const job = flow.job + 1;
+    prepareExport(opts, fields, (text) => dispatch({ type: 'progress', job, text })).then(
+      (prepared) => dispatch({ type: 'prepared', job, prepared }),
       (err: unknown) => {
         console.warn('[export] failed', err);
-        setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Export failed.' });
+        dispatch({ type: 'prepare-failed', job, text: err instanceof Error ? err.message : 'Export failed.' });
       },
     );
   };
+
+  // Called straight from the tap: shareNow() starts navigator.share before anything is awaited.
+  const share = () => {
+    const prepared = flow.prepared;
+    if (!prepared) return;
+    const pending = shareNow(prepared.shareFiles, 'Vision simulation');
+    dispatch({ type: 'share-start' });
+    pending.then(
+      (outcome) => dispatch({ type: 'share-done', outcome }),
+      (err: unknown) => {
+        console.warn('[export] share failed', err);
+        dispatch({ type: 'share-failed', text: 'Sharing did not work on this device. Use "Download instead".' });
+      },
+    );
+  };
+
+  const download = () => {
+    if (flow.prepared) dispatch({ type: 'downloaded', count: downloadFiles(flow.prepared.files) });
+  };
+
+  const prepared = flow.prepared;
+  const canShare = prepared !== null && canShareFiles(prepared.shareFiles);
+  const message = flow.message;
+  const liveText = flow.phase === 'preparing' ? flow.progress : message && message.tone === 'ok' ? message.text : '';
+  const downscaledNotice =
+    prepared?.downscaled && flow.phase !== 'idle'
+      ? `Saved at ${prepared.width} × ${prepared.height} px: your phone's graphics chip could not render the full photo size.`
+      : '';
 
   return (
     <div class="export-panel">
@@ -257,28 +279,62 @@ export function ExportPanel() {
         </div>
       )}
 
-      <button type="button" class="btn btn-cta export-btn" disabled={reason !== '' || busy} onClick={go}>
-        {busy ? status.text : 'Share / Save'}
-      </button>
-      {reason !== '' && <p class="export-help">{reason}</p>}
-      {reason === '' && !busy && plan.length > 0 && (
-        <p class="export-help">
-          {plan.length === 1 ? '1 file' : `${plan.length} files`}: {plan.map((p) => p.name).join(', ')}
-        </p>
-      )}
-      {status.kind === 'done' && (
-        <>
-          <p class="export-status" role="status">
-            {status.text}
+      <div class="export-actions">
+        {flow.phase === 'ready' || flow.phase === 'sharing' ? (
+          <>
+            <button
+              type="button"
+              class="btn btn-cta export-btn"
+              disabled={flow.phase === 'sharing'}
+              onClick={canShare ? share : download}
+            >
+              {primaryLabel(flow, canShare)}
+            </button>
+            {canShare && (
+              <button
+                type="button"
+                class="btn btn-cta btn-secondary export-btn"
+                disabled={flow.phase === 'sharing'}
+                onClick={download}
+              >
+                Download instead
+              </button>
+            )}
+          </>
+        ) : (
+          <button
+            type="button"
+            class="btn btn-cta export-btn"
+            disabled={reason !== '' || busy}
+            aria-busy={flow.phase === 'preparing'}
+            onClick={prepare}
+          >
+            {primaryLabel(flow, canShare)}
+          </button>
+        )}
+        {/* Always in the page, so screen readers announce progress and results as they change. */}
+        <div class="export-status" role="status">
+          {liveText}
+        </div>
+        {message?.tone === 'error' && (
+          <p class="export-status export-error" role="alert">
+            {message.text}
           </p>
-          {status.notice && <p class="export-notice">{status.notice}</p>}
-        </>
-      )}
-      {status.kind === 'error' && (
-        <p class="export-status export-error" role="status">
-          {status.text}
-        </p>
-      )}
+        )}
+        {reason !== '' && <p class="export-help">{reason}</p>}
+        {reason === '' && flow.phase === 'idle' && plan.length > 0 && (
+          <p class="export-help">
+            Step 1 of 2: prepare {plan.length === 1 ? '1 file' : `${plan.length} files`}: {plan.map((p) => p.name).join(', ')}
+          </p>
+        )}
+        {prepared && flow.phase !== 'idle' && (
+          <p class="export-help" title={prepared.files.map((f) => f.name).join(', ')}>
+            Ready: {prepared.files.length === 1 ? '1 file' : `${prepared.files.length} files`}.{' '}
+            {canShare ? 'Tap Share to send them.' : 'Your browser cannot open a share sheet, so Download saves them.'}
+          </p>
+        )}
+        {downscaledNotice && <p class="export-notice">{downscaledNotice}</p>}
+      </div>
     </div>
   );
 }

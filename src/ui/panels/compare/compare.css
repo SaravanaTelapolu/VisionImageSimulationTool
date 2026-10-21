@@ -166,18 +166,22 @@
   pointer-events: none;
 }
 
+/* The container never catches pointers: only the knob and a narrow strip along the line do, so taps
+   elsewhere on the photo still select and edit regions. */
 .wipe-handle {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 50%;
   left: -22px;
   width: 44px;
+  height: 44px;
+  margin-top: -22px;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
   cursor: ew-resize;
   touch-action: none;
+  z-index: 1;
 }
 
 .wipe-handle:focus-visible {
@@ -189,7 +193,20 @@
   outline-offset: 2px;
 }
 
+/* 16 px wide hit strip (the visible line is a 3 px bar drawn inside it). */
 .wipe-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -8px;
+  width: 16px;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.wipe-line::before {
+  content: '';
   position: absolute;
   top: 0;
   bottom: 0;

@@ -254,6 +254,15 @@ describe('hitTest', () => {
     expect(hitTest([{ ...full, visible: false }], centre, frame)).toBeNull();
   });
 
+  it('treats a mask like full: a shape drawn on it wins, bare image reaches the mask', () => {
+    const mask = region({ type: 'mask', dataUrl: '', x: -0.625, y: -0.5, width: 1.25, height: 1 }, { id: 'mask' });
+    expect(hitTest([small, mask], centre, frame)).toBe('small');
+    expect(hitTest([mask, small], centre, frame)).toBe('small');
+    expect(hitTest([mask], { x: 100, y: 100 }, frame)).toBe('mask');
+    expect(hitTest([mask], { x: 5000, y: 5000 }, frame)).toBeNull();
+    expect(hitTestAll([mask, full, small], centre, frame).map((h) => h.id)).toEqual(['small', 'full', 'mask']);
+  });
+
   it('lists every hit topmost first, full last', () => {
     const hits = hitTestAll([big, full, small], centre, frame);
     expect(hits.map((h) => h.id)).toEqual(['small', 'big', 'full']);
@@ -287,6 +296,12 @@ describe('pickTapTarget', () => {
   it('ignores full while a real shape is under the tap', () => {
     expect(pickTapTarget([a, full], 'a')).toBe('a');
     expect(pickTapTarget([a, full], 'f')).toBe('a');
+  });
+  it('treats a mask like full when picking', () => {
+    const mask = { id: 'm', type: 'mask' as const };
+    expect(pickTapTarget([a, mask], 'm')).toBe('a');
+    expect(pickTapTarget([mask], null)).toBe('m');
+    expect(pickTapTarget([mask], 'm')).toBeNull();
   });
   it('selects full on bare image and toggles it off', () => {
     expect(pickTapTarget([full], null)).toBe('f');

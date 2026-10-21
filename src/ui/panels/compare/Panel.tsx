@@ -13,7 +13,7 @@ const MODE_LABELS: Record<CompareMode, string> = {
 const MODE_HELP: Record<CompareMode, string> = {
   single: 'One view at a time. Use the flip button at the top to switch between original and simulated.',
   wipe: 'Drag the divider across the photo: original on the left, simulated on the right.',
-  side: 'Original and simulated together. Switch back to Single to edit regions.',
+  side: 'Original and simulated together. Opening Regions or Effects switches back to Single so you can edit.',
 };
 
 const MODE_OPTIONS = COMPARE_MODES.map((value) => ({ value, label: MODE_LABELS[value] }));

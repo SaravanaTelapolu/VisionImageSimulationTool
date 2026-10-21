@@ -20,6 +20,7 @@ import {
   parseDistanceCm,
   stepIndicator,
 } from './calibrationText';
+import { useDialog } from '../dialogFocus';
 import './calibration.css';
 
 export interface CalibrationGuideProps {
@@ -97,36 +98,8 @@ export function CalibrationGuide(props: CalibrationGuideProps) {
     headingRef.current?.focus();
   }, [state.step]);
 
-  // Escape closes; Tab is kept inside the dialog.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeRef.current();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const root = rootRef.current;
-      if (!root) return;
-      const items = Array.from(
-        root.querySelectorAll<HTMLElement>('button, input, textarea'),
-      ).filter((el) => !(el as HTMLButtonElement).disabled);
-      const firstEl = items[0];
-      const lastEl = items[items.length - 1];
-      if (!firstEl || !lastEl) return;
-      const active = document.activeElement;
-      const outside = !root.contains(active);
-      if (e.shiftKey && (active === firstEl || active === headingRef.current || outside)) {
-        e.preventDefault();
-        lastEl.focus();
-      } else if (!e.shiftKey && (active === lastEl || outside)) {
-        e.preventDefault();
-        firstEl.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
+  // Escape closes; Tab stays inside; focus returns to whatever opened the guide.
+  useDialog(rootRef, { onEscape: () => closeRef.current() });
 
   const id = stepId(state);
   const affected = eyeName(eye);

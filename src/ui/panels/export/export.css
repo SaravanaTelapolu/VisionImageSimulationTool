@@ -114,3 +114,26 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* The step buttons stay at the bottom of the sheet while the options scroll, so the thumb finds them. */
+.export-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 -12px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.export-actions .export-status:empty {
+  display: none;
+}
+
+/* Cancels the sheet's bottom padding so the sticky buttons end flush with the sheet's edge. */
+.export-panel {
+  margin-bottom: -12px;
+}

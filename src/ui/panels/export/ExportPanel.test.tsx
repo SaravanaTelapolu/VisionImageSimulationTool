@@ -15,7 +15,7 @@ const mount = () =>
   });
 
 const shareButton = (): HTMLButtonElement =>
-  Array.from(root.querySelectorAll('button')).find((b) => b.textContent === 'Share / Save') as HTMLButtonElement;
+  Array.from(root.querySelectorAll('button')).find((b) => b.textContent === 'Prepare images') as HTMLButtonElement;
 
 beforeEach(() => {
   root = document.createElement('div');

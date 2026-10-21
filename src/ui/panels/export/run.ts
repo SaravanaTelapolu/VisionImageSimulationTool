@@ -1,15 +1,18 @@
-// The export job: renders what the options ask for and hands every file to the share sheet at once.
-import { canvasToBlob, composeExport, shareOrDownload } from '../../../export';
+// The export job, in two steps so Android's share sheet works: "prepare" renders every file (this can
+// take seconds), then "share" runs straight from a fresh tap, because navigator.share needs one.
+import { canvasToBlob, composeExport } from '../../../export';
 import type { ShareFile } from '../../../export';
 import { getOriginalCanvas, renderFullSize } from '../../../state/render';
-import { captionLinesFromFields, planExportFiles, type CaptionFields, type ExportOptions, type ShareOutcome } from './options';
+import { captionLinesFromFields, planExportFiles, type CaptionFields, type ExportOptions } from './options';
 
 /** Long side of each panel in the side-by-side image (keeps the canvas inside phone limits). */
 export const SIDE_BY_SIDE_MAX_SIDE = 2048;
 
-export interface ExportJobResult {
-  outcome: ShareOutcome;
-  fileCount: number;
+/** Everything the Share and Download buttons need, rendered ahead of the tap. */
+export interface PreparedExport {
+  files: ShareFile[];
+  /** The same files as File objects, built ahead so the tap handler has nothing to wait for. */
+  shareFiles: File[];
   /** True when the device could not render the full size and a smaller image was produced. */
   downscaled: boolean;
   /** Pixel size of the simulated render. */
@@ -51,14 +54,14 @@ export function scaledCopy(src: HTMLCanvasElement, maxSide: number): HTMLCanvasE
 }
 
 /**
- * Renders every chosen file, then shares or downloads them in a single call.
+ * Step 1: renders every chosen file. Nothing is shared or saved yet.
  * `onProgress` receives a short plain-language step ("Rendering…").
  */
-export async function runExportJob(
+export async function prepareExport(
   opts: ExportOptions,
   fields: CaptionFields,
   onProgress: (text: string) => void = () => undefined,
-): Promise<ExportJobResult> {
+): Promise<PreparedExport> {
   const today = new Date();
   const plan = planExportFiles(opts, fields, today);
   if (plan.length === 0) throw new Error('Choose at least one thing to save.');
@@ -107,7 +110,68 @@ export async function runExportJob(
     files.push({ blob: await canvasToBlob(composed, type, quality), name: nameOf('side-by-side') });
   }
 
-  onProgress('Sharing…');
-  const outcome = await shareOrDownload(files, 'Vision simulation');
-  return { outcome, fileCount: files.length, downscaled: sim.downscaled, width: sim.width, height: sim.height };
+  const shareFiles = files.map((f) => new File([f.blob], f.name, { type: f.blob.type }));
+  return { files, shareFiles, downscaled: sim.downscaled, width: sim.width, height: sim.height };
+}
+
+// --- Step 2: share or download, straight from a tap ---------------------------------------------
+
+type ShareNavigator = Pick<Navigator, 'share' | 'canShare'>;
+
+const currentNavigator = (): Partial<ShareNavigator> => (typeof navigator === 'undefined' ? {} : navigator);
+
+/** True when this browser can hand these files to a share sheet (Android Chrome, iOS Safari). */
+export function canShareFiles(shareFiles: File[], nav: Partial<ShareNavigator> = currentNavigator()): boolean {
+  if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') return false;
+  try {
+    return nav.canShare({ files: shareFiles });
+  } catch {
+    return false;
+  }
+}
+
+function isAbort(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { name?: unknown }).name === 'AbortError';
+}
+
+/**
+ * Opens the share sheet. navigator.share is called synchronously, before anything is awaited, so it
+ * still counts as part of the user's tap. Resolves 'cancelled' when the sheet is dismissed; any other
+ * failure rejects (the caller offers "Download instead").
+ */
+export function shareNow(
+  shareFiles: File[],
+  title: string,
+  nav: Partial<ShareNavigator> = currentNavigator(),
+): Promise<'shared' | 'cancelled'> {
+  let pending: Promise<void>;
+  try {
+    if (typeof nav.share !== 'function') throw new Error('Sharing is not available in this browser.');
+    pending = nav.share({ files: shareFiles, title });
+  } catch (e) {
+    return Promise.reject(e);
+  }
+  return pending.then(
+    () => 'shared' as const,
+    (e: unknown) => {
+      if (isAbort(e)) return 'cancelled' as const;
+      throw e;
+    },
+  );
+}
+
+/** Saves every file through the browser's download mechanism. Returns how many were started. */
+export function downloadFiles(files: ShareFile[]): number {
+  for (const f of files) {
+    const url = URL.createObjectURL(f.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = f.name;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  return files.length;
 }

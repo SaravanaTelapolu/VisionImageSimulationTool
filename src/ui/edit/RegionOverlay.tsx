@@ -8,6 +8,7 @@ import '../../state/masks'; // starts the mask decode/cache sync
 import type { ViewportInfo } from '../viewport/context';
 import { BrushLayer } from './brush';
 import { FreehandLayer, PathEditor } from './freehand';
+import { ToolBanner } from './freehand/ToolBanner';
 import {
   dragRadius,
   ellipseAxes,
@@ -321,7 +322,15 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
       )}
       <BrushLayer info={info} />
       <FreehandLayer info={info} />
-      {placing === 'ellipse' && <PlacingBanner info={info} />}
+      {placing === 'ellipse' && (
+        <ToolBanner
+          info={info}
+          text="Tap where the spot is"
+          buttonLabel="Cancel"
+          buttonAriaLabel="Cancel placing"
+          onButton={cancelPlacing}
+        />
+      )}
     </g>
   );
 }
@@ -465,70 +474,6 @@ function EllipseHandlesView({
       <Handle at={h.rx} hitR={radiusHit(rxPx)} dotR={dotR} strokeW={strokeW} fill={ACCENT} label="Change the ellipse width" cursor="ew-resize" onPointerDown={begin('rx')} />
       <Handle at={h.ry} hitR={radiusHit(ryPx)} dotR={dotR} strokeW={strokeW} fill={ACCENT} label="Change the ellipse height" cursor="ns-resize" onPointerDown={begin('ry')} />
       <Handle at={h.center} hitR={full} dotR={dotR} strokeW={strokeW} fill={WHITE} label="Move the ellipse" cursor="move" onPointerDown={begin('move')} />
-    </g>
-  );
-}
-
-// --- Placement banner ---------------------------------------------------------------------
-
-function PlacingBanner({ info }: { info: ViewportInfo }) {
-  const { px, view, scale, box } = info;
-  const visW = box.width / scale;
-  const w = Math.min(px(340), visW - px(16));
-  const h = px(56);
-  const x = -view.tx / scale + (visW - w) / 2;
-  const y = -view.ty / scale + px(8);
-  const btnW = px(92);
-  const btnH = px(44);
-  const btnX = x + w - btnW - px(6);
-  const btnY = y + (h - btnH) / 2;
-  const stop = (e: Event) => e.stopPropagation();
-  const cancel = () => cancelPlacing();
-  return (
-    <g role="status" style={{ pointerEvents: 'all' }} onPointerDown={stop}>
-      <rect x={x} y={y} width={w} height={h} rx={px(10)} fill="#14141a" stroke={ACCENT} stroke-width={px(2)} />
-      <text
-        x={x + px(14)}
-        y={y + h / 2}
-        dominant-baseline="central"
-        fill={WHITE}
-        font-size={px(16)}
-        font-weight="600"
-        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
-        pointer-events="none"
-        style={{ userSelect: 'none' }}
-      >
-        Tap where the spot is
-      </text>
-      <g
-        role="button"
-        tabIndex={0}
-        aria-label="Cancel placing"
-        style={{ cursor: 'pointer', touchAction: 'none' }}
-        onClick={cancel}
-        onKeyDown={(e: KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            cancel();
-          }
-        }}
-      >
-        <rect x={btnX} y={btnY} width={btnW} height={btnH} rx={px(8)} fill={ACCENT} stroke={DARK} stroke-width={px(2)} />
-        <text
-          x={btnX + btnW / 2}
-          y={btnY + btnH / 2}
-          text-anchor="middle"
-          dominant-baseline="central"
-          fill="#000"
-          font-size={px(16)}
-          font-weight="700"
-          font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
-          pointer-events="none"
-          style={{ userSelect: 'none' }}
-        >
-          Cancel
-        </text>
-      </g>
     </g>
   );
 }
