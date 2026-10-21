@@ -25,7 +25,14 @@
 import { effect, signal, untracked } from '@preact/signals';
 import { centredFrame } from '../model/coords';
 import type { ImageFrame, Profile } from '../model/types';
-import { createRenderer, isWebGL2Supported, scaleRenderParams, type WebGLRenderer } from '../render/createRenderer';
+import {
+  allocateCanvas,
+  createRenderer,
+  isWebGL2Supported,
+  scaleRenderParams,
+  type WebGLRenderer,
+} from '../render/createRenderer';
+import { MAX_CANVAS_SIDE } from '../render/gl/tiles';
 import { mapSizeFor } from '../render/effectMaps';
 import { EXPORT_MAX_SIDE } from '../render/gl/math';
 import { createMapBuilder, type MapBuilder } from '../render/mapWorkerClient';
@@ -473,6 +480,9 @@ interface DecodedImage {
   height: number;
   /** True when this is smaller than the original file (capped, or the working-image fallback). */
   reduced: boolean;
+  /** Pixel size of the original file when known (else this image's size). */
+  originalWidth: number;
+  originalHeight: number;
   close(): void;
 }
 
@@ -485,8 +495,21 @@ function exportLongSideCap(): number {
   return Math.min(EXPORT_MAX_SIDE, r && r.maxSide > 0 ? r.maxSide : EXPORT_MAX_SIDE);
 }
 
-function bitmapImage(bmp: ImageBitmap, reduced: boolean): DecodedImage {
-  return { source: bmp, width: bmp.width, height: bmp.height, reduced, close: () => bmp.close() };
+/** Long-side limit of exports: 4096 px (or the GPU limit), or the 2D canvas limit at full resolution. */
+function exportCap(fullResolution: boolean): number {
+  return fullResolution ? MAX_CANVAS_SIDE : exportLongSideCap();
+}
+
+function bitmapImage(bmp: ImageBitmap, reduced: boolean, original?: { width: number; height: number }): DecodedImage {
+  return {
+    source: bmp,
+    width: bmp.width,
+    height: bmp.height,
+    reduced,
+    originalWidth: original?.width ?? bmp.width,
+    originalHeight: original?.height ?? bmp.height,
+    close: () => bmp.close(),
+  };
 }
 
 /**
@@ -507,7 +530,7 @@ async function decodeFullSize(img: PhotoState, maxLongSide = Number.POSITIVE_INF
             resizeHeight: fit.height,
             resizeQuality: 'high',
           });
-          if (bmp.width === fit.width && bmp.height === fit.height) return bitmapImage(bmp, true);
+          if (bmp.width === fit.width && bmp.height === fit.height) return bitmapImage(bmp, true, known);
           bmp.close();
         } catch {
           // resize options unsupported: decode at full size below
@@ -525,6 +548,8 @@ async function decodeFullSize(img: PhotoState, maxLongSide = Number.POSITIVE_INF
         width: img.width,
         height: img.height,
         reduced: true,
+        originalWidth: known?.width ?? img.width,
+        originalHeight: known?.height ?? img.height,
         close: () => undefined,
       };
     }
@@ -534,31 +559,46 @@ async function decodeFullSize(img: PhotoState, maxLongSide = Number.POSITIVE_INF
     width: img.width,
     height: img.height,
     reduced: false,
+    originalWidth: img.width,
+    originalHeight: img.height,
     close: () => undefined,
   };
 }
 
-export interface RenderFullSizeResult {
-  blob: Blob;
+/** Size details shared by the export results. */
+export interface ExportSizeInfo {
   width: number;
   height: number;
-  /** True when the device could not render the full size and a smaller image was produced. */
+  /** True when a smaller image than the original photo was produced. */
   downscaled: boolean;
+  /** Pixel size of the original photo (what a full-resolution export would produce). */
+  originalWidth: number;
+  originalHeight: number;
+  /** Set when "Full resolution" was asked for but the device could not do it (why, in plain words). */
+  fallback?: string;
+  /** Number of tiles of a tiled full-resolution render (0 when rendered in one piece). */
+  tiles: number;
 }
 
-export interface RenderFullSizeCanvasResult {
+export interface RenderFullSizeResult extends ExportSizeInfo {
+  blob: Blob;
+}
+
+export interface RenderFullSizeCanvasResult extends ExportSizeInfo {
   /** The rendered simulation as a 2D canvas (no encoding). */
   canvas: HTMLCanvasElement;
-  width: number;
-  height: number;
-  /** True when the device could not render the full size and a smaller image was produced. */
-  downscaled: boolean;
+}
+
+export interface ExportSizeOptions {
+  /** Keep the photo's full size above 4096 px by rendering in tiles (Export panel "Full resolution"). */
+  fullResolution?: boolean;
 }
 
 /** Shared export path: current state, own masks, capped decode; `run` does the GPU export. */
 async function exportCurrent<T>(
   run: (r: WebGLRenderer, image: TexImageSource, width: number, height: number, params: RenderParams) => Promise<T>,
-): Promise<{ result: T; width: number; height: number; downscaled: boolean }> {
+  fullResolution = false,
+): Promise<{ result: T } & ExportSizeInfo> {
   const img = image.peek();
   if (!img) throw new Error('No image is loaded.');
   const r = ensureRenderer();
@@ -569,7 +609,7 @@ async function exportCurrent<T>(
   const masks = await decodeMasksFor(prof);
   const maps = buildMapsForFrame(prof.regions, workFrame, masks, EXPORT_MAP_MAX_SIDE);
   const workParams = buildRenderParams(prof, workFrame, maps);
-  const full = await decodeFullSize(img, exportLongSideCap());
+  const full = await decodeFullSize(img, exportCap(fullResolution));
   try {
     const params = scaleRenderParams(workParams, full.width / img.width, full.height / img.height);
     const result = await run(r, full.source, full.width, full.height, params);
@@ -579,6 +619,10 @@ async function exportCurrent<T>(
       width: info?.width ?? full.width,
       height: info?.height ?? full.height,
       downscaled: (info?.downscaled ?? false) || (full.reduced && !!img.original),
+      originalWidth: full.originalWidth,
+      originalHeight: full.originalHeight,
+      tiles: info?.tiles ?? 0,
+      ...(info?.fallback ? { fallback: info.fallback } : {}),
     };
   } finally {
     full.close();
@@ -587,10 +631,11 @@ async function exportCurrent<T>(
 
 /** Renders the simulation on the full-size image and encodes it (PNG by default). */
 export async function renderFullSize(
-  opts: { type?: 'image/png' | 'image/jpeg'; quality?: number } = {},
+  opts: { type?: 'image/png' | 'image/jpeg'; quality?: number } & ExportSizeOptions = {},
 ): Promise<RenderFullSizeResult> {
-  const { result, ...rest } = await exportCurrent((r, src, w, h, params) =>
-    r.exportFullSize(src, w, h, params, opts.type, opts.quality),
+  const { result, ...rest } = await exportCurrent(
+    (r, src, w, h, params) => r.exportFullSizeWith(src, w, h, params, opts),
+    !!opts.fullResolution,
   );
   return { blob: result, ...rest };
 }
@@ -599,22 +644,39 @@ export async function renderFullSize(
  * Renders the simulation on the full-size image and returns it as a 2D canvas, for composing
  * (caption, side by side) without a PNG encode + decode round trip (M1).
  */
-export async function renderFullSizeCanvas(): Promise<RenderFullSizeCanvasResult> {
-  const { result, ...rest } = await exportCurrent((r, src, w, h, params) => r.exportFullSizeCanvas(src, w, h, params));
+export async function renderFullSizeCanvas(opts: ExportSizeOptions = {}): Promise<RenderFullSizeCanvasResult> {
+  const fullResolution = !!opts.fullResolution;
+  const { result, ...rest } = await exportCurrent(
+    (r, src, w, h, params) => r.exportFullSizeCanvas(src, w, h, params, { fullResolution }),
+    fullResolution,
+  );
   return { canvas: result, ...rest };
 }
 
 /**
  * The untouched image, at most `maxLongSide` and never larger than the simulated export would be
- * on this device (L11: no full camera-resolution canvas).
+ * on this device (L11: no full camera-resolution canvas). With `fullResolution` it keeps the
+ * photo's full size when the device can hold a canvas that large, else the usual cap.
  */
-export async function getOriginalCanvas(maxLongSide?: number): Promise<HTMLCanvasElement> {
+export async function getOriginalCanvas(maxLongSide?: number, opts: ExportSizeOptions = {}): Promise<HTMLCanvasElement> {
   const img = image.peek();
   if (!img) throw new Error('No image is loaded.');
-  const cap = Math.min(maxLongSide ?? Number.POSITIVE_INFINITY, exportLongSideCap());
+  const cap = Math.min(maxLongSide ?? Number.POSITIVE_INFINITY, exportCap(!!opts.fullResolution));
   const full = await decodeFullSize(img, cap);
   try {
     const size = previewSizeFor(full.width, full.height, cap);
+    if (Math.max(size.width, size.height) > exportLongSideCap()) {
+      const big = allocateCanvas(size.width, size.height);
+      const ctx = big?.getContext('2d');
+      if (big && ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(full.source as CanvasImageSource, 0, 0, size.width, size.height);
+        return big;
+      }
+      const fit = previewSizeFor(size.width, size.height, exportLongSideCap());
+      return drawToCanvas(full.source as CanvasImageSource, fit.width, fit.height);
+    }
     return drawToCanvas(full.source as CanvasImageSource, size.width, size.height);
   } finally {
     full.close();

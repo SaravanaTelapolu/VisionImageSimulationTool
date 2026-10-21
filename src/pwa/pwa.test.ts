@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BACKGROUND_COLOR, manifestConfig, PRECACHE_GLOBS, THEME_COLOR } from './manifest';
+import { BACKGROUND_COLOR, manifestConfig, PRECACHE_GLOBS, PRECACHE_IGNORES, THEME_COLOR } from './manifest';
 import { captureInstallPrompt, installEvent, promptInstall, type BeforeInstallPromptEvent } from './install';
 import { needRefresh, setUpdater, updateApp } from './signals';
 
@@ -35,6 +35,12 @@ describe('manifestConfig', () => {
   it('precaches the required asset types', () => {
     const g = PRECACHE_GLOBS.join(' ');
     for (const ext of ['js', 'css', 'html', 'svg', 'png', 'woff2']) expect(g).toContain(ext);
+  });
+
+  it('precaches the help page but not its large screenshots and animations', () => {
+    const help = Object.keys(import.meta.glob('../../public/help.html', { query: '?url' }));
+    expect(help).toEqual(['../../public/help.html']);
+    expect(PRECACHE_IGNORES).toContain('help/media/**');
   });
 });
 

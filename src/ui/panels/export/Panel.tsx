@@ -6,7 +6,7 @@ import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
 import { APPROXIMATION_LINE } from '../../../export';
 import { renderTick } from '../../../state/render';
 import { activeTab, image, profile } from '../../../state/store';
-import { Segmented, Slider } from '../../controls';
+import { EyeRadioGroup, Segmented, Slider } from '../../controls';
 import {
   JPEG_QUALITY_MAX,
   JPEG_QUALITY_MIN,
@@ -15,6 +15,7 @@ import {
   disabledReason,
   loadExportOptions,
   planExportFiles,
+  reducedNotice,
   saveExportOptions,
   type CaptionFields,
   type ExportOptions,
@@ -154,10 +155,7 @@ export function ExportPanel() {
   const canShare = prepared !== null && canShareFiles(prepared.shareFiles);
   const message = flow.message;
   const liveText = flow.phase === 'preparing' ? flow.progress : message && message.tone === 'ok' ? message.text : '';
-  const downscaledNotice =
-    prepared?.downscaled && flow.phase !== 'idle'
-      ? `Saved at ${prepared.width} × ${prepared.height} px: your phone's graphics chip could not render the full photo size.`
-      : '';
+  const downscaledNotice = prepared && flow.phase !== 'idle' ? reducedNotice(prepared, opts.size) : '';
 
   return (
     <div class="export-panel">
@@ -190,6 +188,21 @@ export function ExportPanel() {
           onInput={(v) => setOpt('jpegQuality', v)}
         />
       )}
+
+      <Segmented
+        label="Export size"
+        value={opts.size}
+        options={[
+          { value: 'limited', label: 'Up to 4096 px (default)' },
+          { value: 'full', label: 'Full resolution' },
+        ]}
+        onChange={(v) => setOpt('size', v)}
+      />
+      <p class="export-help">
+        {opts.size === 'full'
+          ? 'Keeps large photos at their full size. Slower and uses more memory; if the device cannot manage, a smaller image is saved and you are told.'
+          : 'Photos larger than 4096 px are made smaller. The side-by-side image is always at most 2048 px per photo.'}
+      </p>
 
       <Segmented
         label="Side-by-side layout"
@@ -236,15 +249,7 @@ export function ExportPanel() {
               />
             </label>
           </div>
-          <Segmented
-            label="Eye"
-            value={fields.eye}
-            options={[
-              { value: 'left', label: 'Left' },
-              { value: 'right', label: 'Right' },
-            ]}
-            onChange={(v) => setField('eye', v)}
-          />
+          <EyeRadioGroup name="eye-export" legend="Eye" value={fields.eye} onChange={(v) => setField('eye', v)} />
           <label class="export-field">
             <span>Profile name</span>
             <input

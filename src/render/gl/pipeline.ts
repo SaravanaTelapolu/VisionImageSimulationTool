@@ -4,6 +4,7 @@ import { MAX_SIZE_CHANGE, MAX_SIZE_CHANGE_LENSES } from '../../model/types';
 import type { EffectMaps, RenderParams } from '../types';
 import { BLUR_FRAG, FILL_COMPOSE_FRAG, FILL_WEIGHT_FRAG, FULLSCREEN_VERT } from '../shaders/common';
 import { EFFECTS_FRAG, PYRAMID_LEVEL_COUNT } from '../shaders/effects';
+import { BLUR_LEVELS_REF, FILL_BASE_LEVEL, FILL_TOP_LEVEL } from './math';
 import {
   GLProgram,
   chooseTargetFormat,
@@ -32,6 +33,7 @@ import {
 const UNIT_FILL = PYRAMID_LEVEL_COUNT;
 const UNIT_MAP_A = PYRAMID_LEVEL_COUNT + 1;
 const UNIT_MAP_B = PYRAMID_LEVEL_COUNT + 2;
+const UNIT_MAP_C = PYRAMID_LEVEL_COUNT + 3;
 
 export interface SourceInfo {
   /** Size of the uploaded texture (and of the canvas). */
@@ -41,6 +43,18 @@ export interface SourceInfo {
   declaredWidth: number;
   declaredHeight: number;
   downscaled: boolean;
+}
+
+/**
+ * Where an uploaded source sits in a larger image (tiled export): its top-left corner (x, y) in
+ * the full image's pixels and the full image's size. Effect maps, the fixation point, lenses and
+ * the shared fill are all addressed in full-image coordinates; blur sigmas follow the full image.
+ */
+export interface TileFrame {
+  x: number;
+  y: number;
+  fullWidth: number;
+  fullHeight: number;
 }
 
 interface FillTargets {
@@ -68,10 +82,16 @@ export class GLPipeline {
   private source: Target | null = null; // texture only; fbo unused but harmless
   private levels: Target[] = [];
   private info: SourceInfo | null = null;
+  private tile: TileFrame | null = null;
+  /** Missing-area fill built elsewhere (whole image, tiled export); used instead of our own. */
+  private externalFill: WebGLTexture | null = null;
+  /** Pyramid levels from `from` up, built elsewhere for the whole image (tiled export). */
+  private sharedLevels: { from: number; tex: WebGLTexture[] } | null = null;
 
   private mapA: WebGLTexture;
   private mapB: WebGLTexture;
-  private lastMaps: { a: Uint8Array; b: Uint8Array; w: number; h: number } | null = null;
+  private mapC: WebGLTexture;
+  private lastMaps: { a: Uint8Array; b: Uint8Array; c: Uint8Array; w: number; h: number } | null = null;
   private hasFillIn = false;
   private fill: FillTargets | null = null;
   private fillDirty = true;
@@ -98,8 +118,10 @@ export class GLPipeline {
 
     this.mapA = createTexture(gl);
     this.mapB = createTexture(gl);
+    this.mapC = createTexture(gl);
     this.uploadMap(this.mapA, 1, 1, new Uint8Array(4));
     this.uploadMap(this.mapB, 1, 1, new Uint8Array(4));
+    this.uploadMap(this.mapC, 1, 1, new Uint8Array(4));
   }
 
   get sourceInfo(): SourceInfo | null {
@@ -110,9 +132,10 @@ export class GLPipeline {
    * Uploads the source (downscaling through a 2D canvas when it exceeds `maxSide`) and rebuilds
    * the blur pyramid. Resizes the context's canvas to the texture size.
    */
-  setSource(image: TexImageSource, width: number, height: number, maxSide = this.maxSide): SourceInfo {
+  setSource(image: TexImageSource, width: number, height: number, maxSide = this.maxSide, tile?: TileFrame): SourceInfo {
     const gl = this.gl;
     const fit = fitToMaxSide(width, height, Math.min(maxSide, this.maxSide));
+    if (tile && fit.downscaled) throw new Error('A tile must fit the GPU without downscaling.');
     const natural = intrinsicSize(image);
     const direct = !fit.downscaled && natural?.width === width && natural.height === height;
     const upload: TexImageSource = direct ? image : resampleToCanvas(image, fit.width, fit.height);
@@ -135,6 +158,7 @@ export class GLPipeline {
     if (canvas.width !== fit.width) canvas.width = fit.width;
     if (canvas.height !== fit.height) canvas.height = fit.height;
 
+    this.tile = tile ? { ...tile } : null;
     this.buildPyramid();
     this.fillDirty = true;
     return this.info;
@@ -143,9 +167,12 @@ export class GLPipeline {
   private buildPyramid(): void {
     const src = this.source;
     if (!src) return;
-    const plan = planPyramid(src.width, src.height);
+    const t = this.tile;
+    const plan = planPyramid(src.width, src.height, BLUR_LEVELS_REF, t ? { width: t.fullWidth, height: t.fullHeight } : undefined);
     this.levels = [src];
-    for (let k = 1; k < plan.length; k++) {
+    // With shared whole-image levels, only the finer levels are built for this source.
+    const count = this.sharedLevels ? Math.min(plan.length, this.sharedLevels.from) : plan.length;
+    for (let k = 1; k < count; k++) {
       const p = plan[k];
       const prevPlan = plan[k - 1];
       const input = this.levels[k - 1];
@@ -207,27 +234,84 @@ export class GLPipeline {
   /** Uploads effect maps when the arrays (by identity) or the size changed. */
   private updateMaps(maps: EffectMaps): void {
     const last = this.lastMaps;
-    if (last && last.a === maps.a && last.b === maps.b && last.w === maps.width && last.h === maps.height) return;
+    if (
+      last &&
+      last.a === maps.a &&
+      last.b === maps.b &&
+      last.c === maps.c &&
+      last.w === maps.width &&
+      last.h === maps.height
+    ) {
+      return;
+    }
     const n = maps.width * maps.height * 4;
     const valid =
-      maps.width > 0 && maps.height > 0 && maps.a.length >= n && maps.b.length >= n;
+      maps.width > 0 && maps.height > 0 && maps.a.length >= n && maps.b.length >= n && maps.c?.length >= n;
     if (valid) {
       this.uploadMap(this.mapA, maps.width, maps.height, maps.a.subarray(0, n));
       this.uploadMap(this.mapB, maps.width, maps.height, maps.b.subarray(0, n));
+      this.uploadMap(this.mapC, maps.width, maps.height, maps.c.subarray(0, n));
       this.hasFillIn = channelHasAny(maps.b.subarray(0, n), 1);
     } else {
       console.warn('[renderer] Invalid effect maps; rendering without effects.', maps.width, maps.height);
       this.uploadMap(this.mapA, 1, 1, new Uint8Array(4));
       this.uploadMap(this.mapB, 1, 1, new Uint8Array(4));
+      this.uploadMap(this.mapC, 1, 1, new Uint8Array(4));
       this.hasFillIn = false;
     }
-    this.lastMaps = { a: maps.a, b: maps.b, w: maps.width, h: maps.height };
+    this.lastMaps = { a: maps.a, b: maps.b, c: maps.c, w: maps.width, h: maps.height };
     this.fillDirty = true;
+  }
+
+  /**
+   * Uses `tex` (a fill built by takeFill() on the whole image, in the same context) instead of
+   * building one from this source. Pass null to go back to building our own.
+   */
+  setExternalFill(tex: WebGLTexture | null): void {
+    this.externalFill = tex;
+  }
+
+  /**
+   * Uses `textures` (levels from..from + n - 1, built by takeLevels() on the whole image in the same
+   * context) instead of building those levels; they are read in whole-image coordinates. Takes
+   * effect from the next setSource(). Pass null to build every level again.
+   */
+  setSharedLevels(from: number, textures: WebGLTexture[] | null): void {
+    this.sharedLevels = textures && from < PYRAMID_LEVEL_COUNT ? { from: Math.max(1, from), tex: textures } : null;
+  }
+
+  /**
+   * Hands over pyramid levels `from` and up of the current source: the caller owns the returned
+   * targets (deleteTarget). Build the fill (takeFill) first; it reads these levels.
+   */
+  takeLevels(from: number): Target[] {
+    const k = Math.max(1, from);
+    if (k >= this.levels.length) return [];
+    const taken = this.levels.slice(k);
+    this.levels = this.levels.slice(0, k);
+    return taken;
+  }
+
+  /**
+   * Builds the missing-area fill for `maps` on the current source and hands it over: the caller
+   * owns the returned target (deleteTarget) and may use it after this pipeline is disposed.
+   * Null when the maps have no missing area.
+   */
+  takeFill(maps: EffectMaps): Target | null {
+    this.updateMaps(maps);
+    this.fillDirty = true;
+    this.updateFill();
+    const fill = this.fill;
+    if (!fill || !this.hasFillIn) return null;
+    for (const t of [fill.temp, ...fill.f]) deleteTarget(this.gl, t);
+    this.fill = null;
+    this.fillDirty = true;
+    return fill.weight;
   }
 
   /** Builds the missing-area fill texture (low resolution) from the pyramid and map B. */
   private updateFill(): void {
-    if (!this.fillDirty) return;
+    if (!this.fillDirty || this.externalFill) return;
     this.fillDirty = false;
     const src = this.source;
     if (!src || !this.hasFillIn) return;
@@ -242,8 +326,8 @@ export class GLPipeline {
       this.fill = { weight: mk(), temp: mk(), f: [mk(), mk(), mk()] };
     }
     const fill = this.fill;
-    const base = this.levels[Math.min(3, this.levels.length - 1)] ?? src;
-    const top = this.levels[this.levels.length - 1] ?? src;
+    const base = this.levels[Math.min(FILL_BASE_LEVEL, this.levels.length - 1)] ?? src;
+    const top = this.levels[Math.min(FILL_TOP_LEVEL, this.levels.length - 1)] ?? src;
 
     // Premultiplied colour * validity weight.
     const wp = this.fillWeightProg;
@@ -308,7 +392,10 @@ export class GLPipeline {
 
     const W = src.width;
     const H = src.height;
-    const short = Math.min(W, H);
+    const t = this.tile;
+    const fullW = t ? t.fullWidth : W;
+    const fullH = t ? t.fullHeight : H;
+    const short = Math.min(fullW, fullH);
     const sx = W / info.declaredWidth;
     const sy = H / info.declaredHeight;
     const g = params.globals;
@@ -316,24 +403,33 @@ export class GLPipeline {
     const p = this.fxProg;
     p.use();
     gl.bindVertexArray(this.vao);
+    const shared = this.sharedLevels;
     for (let i = 0; i < PYRAMID_LEVEL_COUNT; i++) {
-      const lvl = this.levels[i] ?? this.levels[this.levels.length - 1] ?? src;
+      const own = this.levels[i];
+      const tex = own?.tex ?? (shared ? shared.tex[i - shared.from] : undefined) ?? this.levels[this.levels.length - 1]?.tex ?? src.tex;
       p.set1i(`uL${i}`, i);
       gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, lvl.tex);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
     }
-    const hasFill = !params.bypass && this.hasFillIn && !!this.fill;
+    p.set1i('uSharedFrom', shared ? shared.from : PYRAMID_LEVEL_COUNT);
+    const fillTex = this.externalFill ?? this.fill?.weight.tex ?? null;
+    const hasFill = !params.bypass && this.hasFillIn && !!fillTex;
     p.set1i('uFill', UNIT_FILL);
     gl.activeTexture(gl.TEXTURE0 + UNIT_FILL);
-    gl.bindTexture(gl.TEXTURE_2D, hasFill && this.fill ? this.fill.weight.tex : src.tex);
+    gl.bindTexture(gl.TEXTURE_2D, hasFill && fillTex ? fillTex : src.tex);
     p.set1i('uMapA', UNIT_MAP_A);
     gl.activeTexture(gl.TEXTURE0 + UNIT_MAP_A);
     gl.bindTexture(gl.TEXTURE_2D, this.mapA);
     p.set1i('uMapB', UNIT_MAP_B);
     gl.activeTexture(gl.TEXTURE0 + UNIT_MAP_B);
     gl.bindTexture(gl.TEXTURE_2D, this.mapB);
+    p.set1i('uMapC', UNIT_MAP_C);
+    gl.activeTexture(gl.TEXTURE0 + UNIT_MAP_C);
+    gl.bindTexture(gl.TEXTURE_2D, this.mapC);
 
     p.set2f('uSize', W, H);
+    p.set2f('uOrigin', t ? t.x : 0, t ? t.y : 0);
+    p.set2f('uFull', fullW, fullH);
     p.set1i('uFlipY', 1);
     p.set1i('uBypass', params.bypass ? 1 : 0);
     p.set1i('uHasFill', hasFill ? 1 : 0);
@@ -343,7 +439,6 @@ export class GLPipeline {
     p.set1f('uWaveLen', Math.max(finite(g.distortWaveSize, 0.05), 1e-4) * short);
     p.set1f('uDistAmp', Math.max(0, finite(g.distortMaxAmplitude, 0)) * short);
     p.set2f('uGhost', finite(g.ghostOffset[0], 0) * short, finite(g.ghostOffset[1], 0) * short);
-    p.set1f('uShade', Math.min(Math.max(finite(g.darkSpotShade, 0), 0), 1));
 
     let count = 0;
     const sr = Math.sqrt(sx * sy);
@@ -387,6 +482,7 @@ export class GLPipeline {
     deleteTarget(gl, this.source);
     this.source = null;
     this.info = null;
+    this.tile = null;
     this.freeFill();
   }
 
@@ -395,6 +491,7 @@ export class GLPipeline {
     this.freeSource();
     gl.deleteTexture(this.mapA);
     gl.deleteTexture(this.mapB);
+    gl.deleteTexture(this.mapC);
     this.blurProg.dispose();
     this.fillWeightProg.dispose();
     this.fillComposeProg.dispose();

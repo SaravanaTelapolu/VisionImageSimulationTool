@@ -3,7 +3,12 @@
 Everything the overnight build decided without you. Nothing here blocked the build.
 Tick or answer inline; the next session reads this file.
 
-## Where things stand (2026-10-21 07:07 IST)
+## Where things stand (2026-10-21, v1.0)
+
+- **v1.0 released.** All v0.2 review items are merged (D05 per-region dark-spot shade, Q3 default viewing distance, Q5 full-resolution export, eye choice, blur up to 100), plus a step-by-step **Help page** (`public/help.html`, linked from the ⋯ menu and the start screen) with animated GIFs, and a README with illustrations. `main` is tagged `v1.0` and deploys the live site.
+- The GIFs are recorded from the real app by `npm run help:capture` (needs ffmpeg); re-run it whenever the UI changes.
+
+### Earlier status (2026-10-21 07:07 IST, v0.1)
 
 - **The app is built.** Every feature in the plan (F1–F9) is on the local branch `develop`. Phases 0–7 are done.
 - **Checks:** 592 unit tests, a production build and 8 end-to-end tests (Edge, desktop and phone size) all pass.
@@ -16,10 +21,34 @@ Tick or answer inline; the next session reads this file.
 
 ## Needs your action
 
-- [ ] **Push and deploy.** Work is committed locally on branch `develop` only (not pushed). To publish: push `develop`, merge to `main`, then GitHub → Settings → Pages → Source: "GitHub Actions". The repo must be public for free Pages hosting (photos never go in the repo).
+- [x] **Push.** Done 2026-10-21: `develop` merged into `main`, tagged `v0.1` ("Initial Build"), and `main`, `develop` and the tag pushed to GitHub.
+- [x] **Deploy.** Done for v0.1: the repository is public and the site is live at https://saravanatelapolu.github.io/VisionImageSimulationTool/. Earlier note, kept for reference: the repository was **private**. GitHub Pages for a private repo needs a paid GitHub plan, so the "Deploy to GitHub Pages" workflow will fail until one of these is done:
+  - make the repo public — the code holds no photos, but the plan docs describe your eye condition; or
+  - use a free host that deploys private repos (for example Cloudflare Pages or Netlify), building with `npm run build` and publishing `dist/`; or
+  - a GitHub Pro plan.
+  Then: GitHub → Settings → Pages → Source: "GitHub Actions".
 - [ ] **Test on your phone** once deployed: each "Done when" line in docs/Vision-Simulator-Plan.md. Check ⋯ → Performance while dragging a slider (target under 50 ms), the Share button to WhatsApp, and Install app → airplane mode.
 - [ ] **Clean up agent worktrees** when you're happy: they live in `.claude/worktrees/` (git-ignored) with branches `worktree-agent-*`. All of their work is merged into `develop`.
 - [ ] The backup scheduled task "vision-sim-auto-resume" was disabled. Delete it from the app's Scheduled list if you don't need it.
+
+## Your review (2026-10-21)
+
+| Item | Your answer | Action |
+| --- | --- | --- |
+| D02 | Vite 6 is fine for now | Unchanged |
+| D03 | Push now for safety; more pushes are fine | Done (v0.1) |
+| D04 | "You are a better judge" | Kept: blur is defined at a 768 px shorter side and scaled, so preview and export match |
+| D05 | Per-region dark-spot shade preferred | Done (v0.2): each region has its own "Dark spot shade" slider next to Dark spot (Effects → Spots). Where spots overlap, the stronger spot's shade wins (darker on a tie). Old profiles keep their look. |
+| D06 | Parked until you test | Unchanged |
+| D01, D07–D27 | OK | Unchanged |
+| Q1 | Android phone; iPhone is an optional roadmap item | Added to docs/roadmap.md |
+| Q2 | All effects is a good start | Unchanged |
+| Q3 | Editable is fine; near vision first, far vision later; want to change the default | Done (v0.2): Profiles → Settings → "Default viewing distance": Near (reading) 40 cm, Computer 70 cm, Far 300 cm, or a custom value (10–600 cm) |
+| Q4 | Current default is good | Unchanged |
+| Q5 | Make it configurable, current default | Done (v0.2): Export → Export size: "Up to 4096 px (default)" or "Full resolution" (rendered in tiles, no visible seams). If the device cannot hold the full image, a smaller one is saved and the panel says so. |
+| Q6 | Current default is good | Unchanged |
+| Eye | Don't hard-code the right eye | Done (v0.2): Left / Right picker on the start screen, in Profiles, Effects → Profile settings and the export caption; "Default eye for new profiles" in Profiles → Settings. The automatic name ("Left eye") follows the eye unless you renamed the profile. |
+| Blur100 | Blur should go further than 40 | Done (v0.2): Blur goes to 100 (extra blur levels at 70 and 100, so there is no jump). Existing profiles look the same. |
 
 ## Decisions made (change any you disagree with)
 
@@ -28,8 +57,8 @@ Tick or answer inline; the next session reads this file.
 | D1 | Stack = option 3 (TypeScript, Vite, Preact, WebGL2, IndexedDB, PWA) | Your choice |
 | D2 | Vite 6 / Vitest 3, not Vite 7 | This PC has Node 18.20.1; Vite 7 needs Node 20+. CI uses Node 20. |
 | D3 | All work on local branch `develop`; nothing pushed | Pushing publishes to GitHub; left for you |
-| D4 | Blur strength (0–40 px) is defined at a 768 px shorter side and scaled for other sizes | Same look on preview and full-size export |
-| D5 | Dark-spot shade (grey ↔ black) is one setting per profile, not per region | Keeps shaders simple, like wave size and ghost offset in the plan |
+| D4 | Blur strength (0–100 px since v0.2; was 0–40) is defined at a 768 px shorter side and scaled for other sizes | Same look on preview and full-size export |
+| D5 | ~~Dark-spot shade is one setting per profile~~ Changed in v0.2: per region (your D05 answer) | A third effect map carries each spot's shade |
 | D6 | Distortion: per-region strength; wave size, direction and max amplitude (default 0.8% of shorter side, see D12) per profile | Matches the plan's "set once per profile" note |
 | D7 | Size change applies to ellipse regions only, up to 8 | Plan's uniform-based design |
 | D8 | Effect maps rasterised in TypeScript at ≤ 512 px and upscaled on the GPU | Fast, testable, maps are smooth anyway |
@@ -37,7 +66,7 @@ Tick or answer inline; the next session reads this file.
 | D10 | Undo keeps 100 steps; a continuous slider drag is one step | Plan asks for ≥ 50 |
 | D11 | +y is down in profile coordinates | Screen convention |
 | D12 | Default max distortion lowered to 0.8% of the shorter side | At 2% the renderer agent found 100% distortion folds lines into a mess |
-| D13 | Full-size export above 4096 px (or the GPU limit) is downscaled, not tiled | Simpler; phone photos are usually around 4000 px. See Q5 |
+| D13 | Full-size export above 4096 px (or the GPU limit) is downscaled by default; v0.2 adds "Full resolution" (tiled) | See Q5 |
 | D14 | "Spot" asks you to tap the photo where it goes; without a photo it lands on the crosshair | Faster than dragging from the centre |
 | D15 | Profiles get a 5th tab ("Profiles"); the timeline opens from the Compare and Profiles tabs | Easier to find than a menu; still fits at 360 px |
 | D16 | Effect maps are built in a Web Worker | Desktop showed frames close to 30 ms; a phone would miss the 50 ms target |
@@ -95,3 +124,4 @@ Choices the agents made, which you may want to change:
 - **Accessibility (W4-2):** ellipse handles can't be moved with the keyboard yet (the crosshair can). Failed shares don't fall back to a download automatically; use "Download instead".
 - **State fixes (W5-3):** a photo in HEIC format that the browser can't open now shows a clear message with the iPhone setting to switch to JPEG.
 - **Calibration (W1-G):** viewing distance is accepted from 10 to 150 cm. The guide has 5 steps; the last one is tips.
+- **Eye choice (v0.2):** the first eye you pick (start screen, Profiles or Effects tab) also becomes the default for new profiles; after that the default changes only in Profiles → Settings ("Default eye for new profiles"). The name "Left eye" / "Right eye" follows the eye only while it is the automatic name for the old eye (a check-up date suffix "— yyyy-mm-dd" is kept and still counts as automatic); a name you typed never changes. Old saved profiles without an eye load as Right. The start screen always shows "Which eye do you want to simulate?", unanswered until an eye is known.

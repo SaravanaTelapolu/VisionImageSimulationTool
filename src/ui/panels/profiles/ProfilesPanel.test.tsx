@@ -3,7 +3,17 @@ import 'fake-indexeddb/auto';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { _resetProfilesStateForTests, persistentStorage, profileList, saveCurrent } from '../../../state/profiles';
+import {
+  DEFAULT_DISTANCE_KEY,
+  DEFAULT_EYE_KEY,
+  _resetProfilesStateForTests,
+  defaultDistanceCm,
+  defaultEye,
+  persistentStorage,
+  profileList,
+  saveCurrent,
+} from '../../../state/profiles';
+import { getSetting } from '../../../storage';
 import { applyEdit, profile, resetProfile } from '../../../state/store';
 import { defaultEllipse, newRegion } from '../../../model/defaults';
 import { _resetForTests } from '../../../storage/db';
@@ -106,5 +116,96 @@ describe('ProfilesPanel', () => {
       persistentStorage.value = null;
     });
     expect(host.querySelector('.pf-storage-hint')).toBeNull();
+  });
+});
+
+describe('ProfilesPanel default viewing distance setting', () => {
+  it('shows presets, saves a chosen one, and labels profiles Near / Far', async () => {
+    act(() => render(<ProfilesPanel />, host));
+    await flush();
+    expect(host.textContent).toContain('Default viewing distance for new profiles');
+    expect(button('Near (reading) 40 cm').getAttribute('aria-pressed')).toBe('true');
+    expect(host.textContent).toContain('Near · 40 cm');
+
+    act(() => button('Far 300 cm').click());
+    await flush();
+    expect(defaultDistanceCm.value).toBe(300);
+    expect(await getSetting<number>(DEFAULT_DISTANCE_KEY, -1)).toBe(300);
+    expect(button('Far 300 cm').getAttribute('aria-pressed')).toBe('true');
+
+    act(() => button('New profile').click());
+    await flush();
+    expect(profile.value.viewingDistanceCm).toBe(300);
+    act(() => button('Save').click());
+    await flush();
+    expect(host.textContent).toContain('Far · 300 cm');
+  });
+
+  it('accepts a custom distance up to 600 cm and rejects more', async () => {
+    act(() => render(<ProfilesPanel />, host));
+    await flush();
+    const input = host.querySelector<HTMLInputElement>('#pf-dd-custom')!;
+    act(() => {
+      input.value = '450';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await flush();
+    expect(defaultDistanceCm.value).toBe(450);
+    act(() => {
+      input.value = '700';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await flush();
+    expect(defaultDistanceCm.value).toBe(450);
+    expect(host.textContent).toContain('between 10 and 600 cm');
+  });
+});
+
+describe('ProfilesPanel eye choice (v0.2)', () => {
+  const radio = (name: string, value: string): HTMLInputElement => {
+    const r = host.querySelector<HTMLInputElement>(`input[type=radio][name=${name}][value=${value}]`);
+    if (!r) throw new Error(`no radio ${name}=${value}`);
+    return r;
+  };
+
+  it('picks the eye of the open profile; the automatic name follows, a typed name stays', async () => {
+    act(() => render(<ProfilesPanel />, host));
+    await flush();
+    expect(host.textContent).toContain('Affected eye');
+    expect(radio('eye-profile', 'right').checked).toBe(true);
+
+    act(() => radio('eye-profile', 'left').click());
+    await flush();
+    expect(profile.value).toMatchObject({ eye: 'left', name: 'Left eye' });
+    expect(host.querySelector<HTMLInputElement>('#pf-name')?.value).toBe('Left eye');
+    expect(radio('eye-profile', 'left').checked).toBe(true);
+
+    const name = host.querySelector<HTMLInputElement>('#pf-name')!;
+    act(() => {
+      name.value = 'Before surgery';
+      name.dispatchEvent(new Event('blur'));
+    });
+    await flush();
+    act(() => radio('eye-profile', 'right').click());
+    await flush();
+    expect(profile.value).toMatchObject({ eye: 'right', name: 'Before surgery' });
+  });
+
+  it('sets the default eye for new profiles in Settings', async () => {
+    act(() => render(<ProfilesPanel />, host));
+    await flush();
+    expect(host.textContent).toContain('Default eye for new profiles');
+    expect(radio('eye-default', 'right').checked).toBe(true);
+
+    act(() => radio('eye-default', 'left').click());
+    await flush();
+    expect(defaultEye.value).toBe('left');
+    expect(await getSetting<string>(DEFAULT_EYE_KEY, '')).toBe('left');
+    expect(profile.value.eye).toBe('right'); // the open profile is not changed
+
+    act(() => button('New profile').click());
+    await flush();
+    expect(profile.value).toMatchObject({ eye: 'left', name: 'Left eye' });
+    expect(radio('eye-profile', 'left').checked).toBe(true);
   });
 });

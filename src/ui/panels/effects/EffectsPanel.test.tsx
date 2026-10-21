@@ -77,7 +77,7 @@ describe('EffectsPanel', () => {
     }
     const blur = sliderByLabel('Blur');
     expect(blur.min).toBe('0');
-    expect(blur.max).toBe('40');
+    expect(blur.max).toBe('100');
     expect(blur.getAttribute('aria-valuetext')).toBe('0.0 px');
   });
 
@@ -104,15 +104,33 @@ describe('EffectsPanel', () => {
     expect(sliderByLabel('Blur').disabled).toBe(false);
   });
 
+  it('has a per-region dark-spot shade next to Dark spot, off while Dark spot is 0 (D05)', () => {
+    mount();
+    const shade = sliderByLabel('Dark spot shade');
+    expect(shade.disabled).toBe(true);
+    expect(root.textContent).toContain('Turn up Dark spot');
+    expect(shade.closest('.fx-group')?.querySelector('.fx-group-title')?.textContent).toBe('Spots');
+    expect(root.querySelector('.fx-details')?.textContent).not.toContain('Dark spot shade');
+    drag(sliderByLabel('Dark spot'), [0.5]);
+    expect(sliderByLabel('Dark spot shade').disabled).toBe(false);
+    drag(sliderByLabel('Dark spot shade'), [0.3, 0.6]);
+    expect(profile.value.regions[0]?.darkSpotShade).toBe(0.6);
+    expect(profile.value.globals.darkSpotShade).toBe(0);
+    act(() => undo());
+    expect(profile.value.regions[0]?.darkSpotShade).toBe(0);
+  });
+
   it('edits profile settings with globals keys', () => {
     mount();
     drag(sliderByLabel('Wave direction'), [45, 90]);
     expect(profile.value.globals.distortAngle).toBe(90);
     drag(sliderByLabel('Viewing distance'), [60]);
     expect(profile.value.viewingDistanceCm).toBe(60);
-    const left = Array.from(root.querySelectorAll<HTMLButtonElement>('[role=radio]')).find((b) => b.textContent === 'Left eye');
+    const left = root.querySelector<HTMLInputElement>('input[type=radio][name=eye-effects][value=left]');
+    expect(left?.checked).toBe(false);
     act(() => left?.click());
     expect(profile.value.eye).toBe('left');
+    expect(root.querySelector<HTMLInputElement>('input[name=eye-effects][value=left]')?.checked).toBe(true);
   });
 
   it('reset button sets an effect back to 0', () => {

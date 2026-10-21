@@ -30,8 +30,43 @@ beforeEach(() => {
   composeSpy.mockReset().mockImplementation(canvas);
   renderSpy
     .mockReset()
-    .mockImplementation(async () => ({ canvas: canvas(), width: 4, height: 4, downscaled: false }));
+    .mockImplementation(async () => ({
+      canvas: canvas(),
+      width: 4,
+      height: 4,
+      downscaled: false,
+      originalWidth: 4,
+      originalHeight: 4,
+      tiles: 0,
+    }));
   originalSpy.mockReset().mockImplementation(async () => canvas());
+});
+
+describe('prepareExport export size (Q5)', () => {
+  it('asks for a full-resolution render and original only with Full resolution', async () => {
+    await prepareExport(opts({ simulated: true, original: true, sideBySide: false }), fields);
+    expect(renderSpy).toHaveBeenLastCalledWith({ fullResolution: false });
+    expect(originalSpy).toHaveBeenLastCalledWith(undefined, { fullResolution: false });
+    await prepareExport(opts({ simulated: true, original: true, sideBySide: false, size: 'full' }), fields);
+    expect(renderSpy).toHaveBeenLastCalledWith({ fullResolution: true });
+    expect(originalSpy).toHaveBeenLastCalledWith(undefined, { fullResolution: true });
+  });
+
+  it('passes on the size facts and a fallback reason', async () => {
+    renderSpy.mockImplementation(async () => ({
+      canvas: canvas(),
+      width: 4,
+      height: 3,
+      downscaled: true,
+      originalWidth: 8,
+      originalHeight: 6,
+      tiles: 0,
+      fallback: 'This device could not hold an image that large.',
+    }));
+    const out = await prepareExport(opts({ size: 'full', sideBySide: false }), fields);
+    expect(out).toMatchObject({ width: 4, height: 3, downscaled: true, originalWidth: 8, originalHeight: 6 });
+    expect(out.fallback).toContain('could not hold');
+  });
 });
 
 describe('prepareExport approximation note', () => {

@@ -1,7 +1,7 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-21T07:07+05:30
-BUILD_STATUS: COMPLETE
+HEARTBEAT: 2026-10-21T09:30+05:30
+BUILD_STATUS: COMPLETE (v1.0)
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
 
@@ -19,12 +19,13 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 6. Never stop to ask Saravana: make an assumption and add it to `docs/morning-review.md`.
 7. Commit after each merge to `develop` (never push), then update the progress log, this file's HEARTBEAT, and "Current state" below.
 
-## Current state
+## Current state (v1.0 released, 2026-10-21)
 
-- Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: every task in the plan (W0–W5). App complete on `develop`; checks green (typecheck, 592 unit, build, 8 e2e).
-- Running: nothing.
-- Next (Saravana): push `develop`, merge to `main`, enable GitHub Pages; test on the phone; answer docs/morning-review.md. Future Claude sessions: take follow-ups from morning-review.md and docs/code-review-findings.md (Low items left), one task per session.
+- `main` = tag `v1.0` (v0.1 before it), live at https://saravanatelapolu.github.io/VisionImageSimulationTool/ (deploys on push to main); Help page at `/help.html`. `develop` = `main`.
+- v0.2 items all merged: D05 per-region dark-spot shade, Q3 default viewing distance, Q5 full-resolution tiled export, Eye choice (Left/Right + defaultEye), Blur100.
+- Help page: `public/help.html` (static, hand-written, precached; its media in `public/help/media/` is not precached). The GIFs and screenshots are recorded from the production build by `scripts/help-capture/capture.spec.ts` and converted by `make-gifs.mjs` (`npm run help:capture`; needs ffmpeg and Playwright's ffmpeg: `npx playwright install ffmpeg`). Re-run after UI changes and check the clips.
+- Agent worktrees in `.claude/worktrees/` are all merged; they can be removed.
+- Next ideas: docs/roadmap.md (phone testing, iPhone, far vision).
 
 ## Known gotchas
 

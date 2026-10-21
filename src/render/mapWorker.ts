@@ -55,7 +55,7 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof (WorkerGlobalSco
   const state = createMapWorkerState();
   scope.onmessage = (e) => {
     const res = processMapRequest(e.data, state);
-    if ('maps' in res) scope.postMessage(res, [res.maps.a.buffer, res.maps.b.buffer]);
+    if ('maps' in res) scope.postMessage(res, [res.maps.a.buffer, res.maps.b.buffer, res.maps.c.buffer]);
     else scope.postMessage(res);
   };
 }

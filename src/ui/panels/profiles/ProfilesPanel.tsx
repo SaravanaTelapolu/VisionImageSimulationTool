@@ -11,6 +11,8 @@ import {
   exportCurrentJson,
   exportProfileById,
   importJsonFile,
+  loadDefaultDistance,
+  loadDefaultEye,
   newProfile,
   notice,
   openProfile,
@@ -20,9 +22,15 @@ import {
   renameCurrent,
   saveCurrent,
   savePhotoWithCurrent,
+  setCurrentEye,
   storageError,
 } from '../../../state/profiles';
 import { image, profile } from '../../../state/store';
+import { distanceLabel } from '../../../model/distance';
+import { eyeLabel } from '../../../model/eye';
+import { EyeRadioGroup } from '../../controls/EyeRadioGroup';
+import { DefaultDistanceSetting } from './DefaultDistance';
+import { DefaultEyeSetting } from './DefaultEye';
 import { formatProfileDate, notePreview, regionCountLabel } from './helpers';
 import './profiles.css';
 
@@ -34,8 +42,6 @@ export interface ProfilesPanelProps {
 type Pending = { kind: 'delete' | 'open' | 'new'; id: string } | null;
 
 const CONFIRM_MS = 5000;
-
-const eyeLabel = (eye: string): string => (eye === 'left' ? 'Left eye' : 'Right eye');
 
 /** One-line note on how safe the saved profiles are, from the browser's persistent-storage answer. */
 export function storageHintText(persistent: boolean | null): string {
@@ -53,6 +59,8 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
 
   useEffect(() => {
     void refreshList();
+    void loadDefaultDistance();
+    void loadDefaultEye();
     return () => window.clearTimeout(timer.current);
   }, []);
 
@@ -146,8 +154,10 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
             if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
           }}
         />
+        <EyeRadioGroup name="eye-profile" value={cur.eye} onChange={setCurrentEye} />
         <p class="pf-meta">
-          {eyeLabel(cur.eye)} · created {formatProfileDate(cur.createdAt)} · {regionCountLabel(cur.regions.length)}
+          {eyeLabel(cur.eye)} · {distanceLabel(cur.viewingDistanceCm)} · created {formatProfileDate(cur.createdAt)} ·{' '}
+          {regionCountLabel(cur.regions.length)}
         </p>
         <div class="pf-row">
           <button type="button" class="pf-btn pf-btn-primary" disabled={working} onClick={() => void saveCurrent()}>
@@ -206,7 +216,8 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
                     {isCurrent && <span class="pf-tag">Open now</span>}
                   </div>
                   <p class="pf-meta">
-                    {formatProfileDate(s.createdAt)} · {eyeLabel(s.eye)} · {regionCountLabel(s.regionCount)}
+                    {formatProfileDate(s.createdAt)} · {eyeLabel(s.eye)} · {distanceLabel(s.viewingDistanceCm)} ·{' '}
+                    {regionCountLabel(s.regionCount)}
                   </p>
                   {preview && <p class="pf-note">{preview}</p>}
                   <div class="pf-row">
@@ -239,6 +250,12 @@ export function ProfilesPanel({ onOpenTimeline }: ProfilesPanelProps) {
             })}
           </ul>
         )}
+      </section>
+
+      <section class="pf-card" aria-label="Settings">
+        <h2 class="pf-h">Settings</h2>
+        <DefaultEyeSetting />
+        <DefaultDistanceSetting />
       </section>
 
       <section class="pf-row pf-transfer" aria-label="Import and export">

@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vision Simulator Help</title>
+<meta name="description" content="Step-by-step help for Vision Simulator: show your doctor what one eye sees, on any photo, privately on your own device.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #000;
+    --surface: #141414;
+    --surface-2: #1f1f1f;
+    --line: #3a3a3a;
+    --text: #f5f5f5;
+    --muted: #c8c8c8;
+    --accent: #ffd54a;
+    --accent-text: #000;
+    --link: #ffd54a;
+    --note-bg: #2a2410;
+    --radius: 12px;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #fafafa;
+      --surface: #fff;
+      --surface-2: #f0f0f0;
+      --line: #cfcfcf;
+      --text: #111;
+      --muted: #3d3d3d;
+      --accent: #ffd54a;
+      --accent-text: #000;
+      --link: #6b4e00;
+      --note-bg: #fff6d6;
+      color-scheme: light;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  a { color: var(--link); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  img { max-width: 100%; height: auto; display: block; }
+  kbd {
+    font: 600 0.85em ui-monospace, Consolas, monospace;
+    background: var(--surface-2); border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 6px; padding: 1px 6px;
+  }
+  .ui {
+    display: inline-block; font-weight: 700; white-space: nowrap;
+    background: var(--accent); color: var(--accent-text);
+    border-radius: 6px; padding: 0 7px; font-size: 0.92em; line-height: 1.5;
+  }
+  .ui.plain { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+
+  /* Top bar */
+  .top {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 16px; min-height: 60px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .top .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; margin-right: auto; color: var(--text); text-decoration: none; }
+  .top .brand img { width: 30px; height: 30px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 18px; border-radius: 10px;
+    background: var(--accent); color: var(--accent-text); font-weight: 800; text-decoration: none; white-space: nowrap;
+  }
+  @media (max-width: 420px) { .top .long { display: none; } }
+
+  /* Layout */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 64px; display: grid; gap: 40px; }
+  @media (min-width: 980px) {
+    .wrap { grid-template-columns: 250px minmax(0, 1fr); }
+    nav.toc { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; }
+  }
+  nav.toc { padding-top: 24px; }
+  nav.toc h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc a {
+    display: flex; align-items: center; min-height: 44px; padding: 4px 12px;
+    border-radius: 8px; color: var(--text); text-decoration: none; font-weight: 600;
+  }
+  nav.toc a:hover { background: var(--surface-2); }
+  .toc-m { display: none; }
+  @media (max-width: 979px) {
+    nav.toc { display: none; }
+    .toc-m { display: block; margin: 20px 0 0; }
+    .toc-m ol { list-style: none; margin: 0; padding: 0 8px 8px; }
+    .toc-m a { display: flex; align-items: center; min-height: 44px; padding: 0 8px; color: var(--text); font-weight: 600; text-decoration: none; }
+  }
+
+  main { min-width: 0; }
+  h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.15; margin: 28px 0 12px; }
+  h2 { font-size: clamp(24px, 4.5vw, 32px); line-height: 1.2; margin: 0 0 12px; }
+  h3 { font-size: 21px; margin: 28px 0 8px; }
+  .lead { font-size: 19px; color: var(--muted); max-width: 62ch; }
+  p, li { max-width: 70ch; }
+
+  .note {
+    border-left: 5px solid var(--accent); background: var(--note-bg);
+    padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; margin: 16px 0;
+  }
+  .note strong:first-child { display: block; }
+
+  section.topic {
+    border-top: 1px solid var(--line); padding-top: 36px; margin-top: 40px;
+  }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-text); font-weight: 900; margin-right: 10px; vertical-align: 3px;
+    font-size: 20px;
+  }
+  .pair { display: grid; gap: 24px; align-items: start; }
+  @media (min-width: 760px) { .pair { grid-template-columns: minmax(0, 1fr) 300px; } }
+  figure { margin: 0; }
+  figure.clip img {
+    width: 100%; max-width: 300px; margin: 0 auto;
+    border-radius: 14px; border: 1px solid var(--line); background: #111;
+  }
+  figure.wide img { border-radius: 12px; border: 1px solid var(--line); }
+  figcaption { font-size: 14px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 12px 0; }
+  ol.steps > li {
+    counter-increment: s; position: relative; padding: 4px 0 12px 48px; min-height: 40px;
+  }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 2px;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid var(--accent); color: var(--text); font-weight: 800;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+
+  .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin: 16px 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .card h4 { margin: 0 0 4px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); }
+  .card .tag { font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 16px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: .05em; }
+  .table-scroll { overflow-x: auto; }
+
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin: 10px 0; }
+  summary { cursor: pointer; padding: 12px 16px; min-height: 44px; font-weight: 700; }
+  details > div { padding: 0 16px 12px; }
+
+  .hero-shot { margin: 24px 0 8px; }
+  .quick { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); counter-reset: q; padding: 0; list-style: none; }
+  .quick li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; counter-increment: q; }
+  .quick li::before { content: counter(q); display: inline-flex; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-weight: 900; align-items: center; justify-content: center; margin-bottom: 6px; }
+  .quick b:first-of-type { display: block; }
+
+  footer.page { color: var(--muted); font-size: 15px; border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px; }
+  .totop { display: inline-block; margin-top: 16px; font-size: 15px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./"><img src="icons/favicon.svg" alt="" width="30" height="30"><span><span class="long">Vision Simulator · </span>Help</span></a>
+  <a class="btn" href="./">Open the app</a>
+</header>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#quick-start">Quick start</a></li>
+      <li><a href="#photo">1. Open a photo</a></li>
+      <li><a href="#spot">2. Mark a spot</a></li>
+      <li><a href="#effects">3. Choose effects</a></li>
+      <li><a href="#freehand">4. Freehand outline</a></li>
+      <li><a href="#brush">5. Brush</a></li>
+      <li><a href="#regions">6. Manage regions</a></li>
+      <li><a href="#calibrate">7. Calibrate with your eye</a></li>
+      <li><a href="#compare">8. Compare &amp; present</a></li>
+      <li><a href="#export">9. Save &amp; share images</a></li>
+      <li><a href="#profiles">10. Profiles &amp; check-ups</a></li>
+      <li><a href="#settings">11. Settings &amp; extras</a></li>
+      <li><a href="#install">12. Install &amp; offline</a></li>
+      <li><a href="#doctor">Tips for the appointment</a></li>
+      <li><a href="#faq">Questions &amp; problems</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <h1>Show your doctor what your eye sees</h1>
+    <p class="lead">Vision Simulator recreates, on any photo, what one affected eye sees: blur, dark or missing patches, wavy lines and more. You build the picture yourself, step by step, and show or send it to your doctor.</p>
+
+    <div class="note">
+      <strong>Your own approximation, not a clinical measurement.</strong>
+      The app helps you <em>show</em> what you see. It does not test, measure or diagnose anything. Every saved image carries this note.
+    </div>
+    <div class="note">
+      <strong>Private by design.</strong>
+      Everything happens on your phone or computer. No account, no upload, no tracking. Photos stay on your device unless you share them yourself.
+    </div>
+
+    <figure class="wide hero-shot">
+      <img src="help/media/desktop-side-by-side.png" alt="The app on a computer: a street scene shown twice, the original on the left and the simulated view with a blurred dark patch on the right." width="1280" height="800" loading="lazy">
+      <figcaption>Original (left) and simulated view (right), side by side.</figcaption>
+    </figure>
+
+    <details class="toc-m">
+      <summary>Contents</summary>
+      <nav aria-label="Contents">
+      <ol>
+      <li><a href="#quick-start">Quick start</a></li>
+      <li><a href="#photo">1. Open a photo</a></li>
+      <li><a href="#spot">2. Mark a spot</a></li>
+      <li><a href="#effects">3. Choose effects</a></li>
+      <li><a href="#freehand">4. Freehand outline</a></li>
+      <li><a href="#brush">5. Brush</a></li>
+      <li><a href="#regions">6. Manage regions</a></li>
+      <li><a href="#calibrate">7. Calibrate with your eye</a></li>
+      <li><a href="#compare">8. Compare &amp; present</a></li>
+      <li><a href="#export">9. Save &amp; share images</a></li>
+      <li><a href="#profiles">10. Profiles &amp; check-ups</a></li>
+      <li><a href="#settings">11. Settings &amp; extras</a></li>
+      <li><a href="#install">12. Install &amp; offline</a></li>
+      <li><a href="#doctor">Tips for the appointment</a></li>
+      <li><a href="#faq">Questions &amp; problems</a></li>
+    </ol>
+      </nav>
+    </details>
+
+    <section id="quick-start" class="topic">
+      <h2>Quick start: five minutes</h2>
+      <ol class="quick">
+        <li><b>Open a photo</b>Choose a photo, take one, or try the Amsler grid.</li>
+        <li><b>Add a spot</b><span class="ui plain">Regions</span> → <span class="ui">+ Spot</span>, then tap where your vision is affected.</li>
+        <li><b>Pick effects</b><span class="ui plain">Effects</span>: move the sliders until it looks like what you see.</li>
+        <li><b>Check it</b>Cover your good eye and compare. Tap <b>Flip</b> to switch between original and simulated.</li>
+        <li><b>Share it</b><span class="ui plain">Export</span> → <span class="ui">Prepare images</span> → <span class="ui">Share</span> or <span class="ui">Download</span>.</li>
+      </ol>
+      <p>Not sure what you see? Start with the <a href="#calibrate">calibration guide</a>: it walks you through it, one eye at a time.</p>
+    </section>
+
+    <section id="photo" class="topic">
+      <h2><span class="num">1</span>Open a photo</h2>
+      <div class="pair">
+        <div>
+          <p>Use a picture you know well, so that differences stand out. A page of text, a familiar face or a view from your window all work.</p>
+          <ol class="steps">
+            <li>Tap <span class="ui">Choose photo</span> to pick one from your gallery or files, or <span class="ui">Camera</span> to take one now. The same two buttons sit at the top right of the screen at any time.</li>
+            <li>Or tap <span class="ui plain">Test image</span> and pick a built-in picture (no photo needed).</li>
+            <li>The photo appears with a small <b>crosshair</b> in the middle. The crosshair is your <b>fixation point</b>: the spot your eye looks straight at. Every region you add is placed relative to it.</li>
+          </ol>
+          <h3>Built-in test images</h3>
+          <div class="cards">
+            <div class="card"><h4>Amsler grid</h4><p>A square grid with a centre dot. Best for gaps and wavy lines; eye doctors use the same grid.</p></div>
+            <div class="card"><h4>Reading text</h4><p>Sentences from large to small print, each labelled with its size.</p></div>
+            <div class="card"><h4>Friendly face</h4><p>A simple face, for showing how faces look.</p></div>
+            <div class="card"><h4>Street scene</h4><p>Buildings, a tree, a lamp post and a street sign.</p></div>
+            <div class="card"><h4>High-contrast pattern</h4><p>Checkerboard and a star of wedges with strong edges.</p></div>
+          </div>
+          <h3>Move around the picture</h3>
+          <ul>
+            <li><b>Zoom:</b> pinch with two fingers (phone), or use the mouse wheel (computer).</li>
+            <li><b>Pan:</b> drag with two fingers (phone), or drag with the mouse (computer).</li>
+            <li><b>Reset:</b> double-tap or double-click.</li>
+            <li><b>Move the crosshair:</b> drag it, or select it and use the arrow keys (hold <kbd>Shift</kbd> for bigger steps).</li>
+          </ul>
+        </div>
+        <figure class="clip">
+          <img src="help/media/01-start.gif" alt="Animation: the start screen, choosing a test image, and the street scene appearing with the crosshair in the middle." width="360" height="838" loading="lazy">
+          <figcaption>Opening a test image.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="spot" class="topic">
+      <h2><span class="num">2</span>Mark the affected area with a spot</h2>
+      <div class="pair">
+        <div>
+          <p>A <b>region</b> is an area of the picture where your vision is different. The quickest region is a <b>spot</b> (an oval).</p>
+          <ol class="steps">
+            <li>Open the <span class="ui plain">Regions</span> tab and tap <span class="ui">+ Spot (ellipse)</span>.</li>
+            <li>Tap the picture where your vision is affected. The spot appears there, with a yellow outline.</li>
+            <li>Shape it with the dots:
+              <ul>
+                <li><b>White dot (middle):</b> drag to move the spot.</li>
+                <li><b>Yellow dots:</b> drag to make it wider or taller.</li>
+                <li><b>Blue dot:</b> drag around to rotate it.</li>
+              </ul>
+            </li>
+            <li>Tap <span class="ui">Edit effects →</span> (or the <span class="ui plain">Effects</span> tab) to decide what happens inside the spot.</li>
+          </ol>
+          <p><span class="ui">+ Whole image</span> adds a region that covers everything, for problems that affect the whole view (for example an overall haze or dimness).</p>
+          <div class="note"><strong>Tip</strong>A new spot shows nothing until it has an effect. Add a little blur first, so you can see where it is while you shape it.</div>
+        </div>
+        <figure class="clip">
+          <img src="help/media/02-spot.gif" alt="Animation: adding a spot on a page of text, then dragging its dots to move, resize and rotate it." width="360" height="838" loading="lazy">
+          <figcaption>Add a spot, then move, resize and rotate it.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="effects" class="topic">
+      <h2><span class="num">3</span>Choose the effects</h2>
+      <div class="pair">
+        <div>
+          <p>Each region has its own effects. Select the region (tap it in the <span class="ui plain">Regions</span> list), open <span class="ui plain">Effects</span>, and move the sliders. The picture changes as you slide.</p>
+          <ol class="steps">
+            <li>Start with the effect that matters most to you, for example <b>Blur</b> or <b>Dark spot</b>.</li>
+            <li>Move its slider until it looks like what your eye sees. Small steps are easier to judge.</li>
+            <li>Add other effects if needed. Effects can be combined.</li>
+            <li>Tap the <b>Flip</b> button (the two arrows under the picture) to switch between the original and the simulated view. The label <b>Original</b> shows while you look at the unchanged photo.</li>
+          </ol>
+          <p>The current value is shown above each slider. The small <b>0</b> button at its right end resets that effect. On a computer you can also click a slider and use the arrow keys for fine steps.</p>
+        </div>
+        <figure class="clip">
+          <img src="help/media/03-effects.gif" alt="Animation: the Effects tab, sliding Blur, Dark spot and Distortion up, and flipping between original and simulated." width="360" height="838" loading="lazy">
+          <figcaption>Blur, dark spot and distortion, then Flip.</figcaption>
+        </figure>
+      </div>
+
+      <h3>What each effect does</h3>
+      <div class="table-scroll">
+      <table>
+        <thead><tr><th>Effect</th><th>What you see</th><th>Use it when…</th></tr></thead>
+        <tbody>
+          <tr><td><b>Blur</b> (0–100)</td><td>Things look out of focus, like a smudged lens.</td><td>Detail is hard to make out.</td></tr>
+          <tr><td><b>Double image</b></td><td>A faint ghost copy next to the real picture.</td><td>You see edges twice. Set where the ghost sits under <i>Profile settings</i>.</td></tr>
+          <tr><td><b>Dark spot</b></td><td>A dark or grey patch where nothing can be seen.</td><td>Part of the view is blocked by a shadow. Use <b>Dark spot shade</b> (right below it) to choose black or grey for this region.</td></tr>
+          <tr><td><b>Missing area</b></td><td>A gap that the brain fills in with the surroundings, so no dark patch shows.</td><td>Things vanish but you don't see a dark patch, e.g. letters missing from a word.</td></tr>
+          <tr><td><b>Distortion</b></td><td>Straight lines look wavy or bent.</td><td>The Amsler grid lines look curved.</td></tr>
+          <tr><td><b>Size change</b></td><td>Objects look smaller (minus) or bigger (plus) inside the spot.</td><td>One eye sees things a different size. Works on spots (ovals) only.</td></tr>
+          <tr><td><b>Contrast loss</b></td><td>A washed-out, foggy look.</td><td>Things look faded, as if through mist.</td></tr>
+          <tr><td><b>Dimming</b></td><td>Everything looks darker.</td><td>The area looks like it's in shadow.</td></tr>
+          <tr><td><b>Colour fade</b></td><td>Colours look weaker and greyer.</td><td>Colours look less bright with that eye.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <figure class="wide">
+        <img src="help/media/desktop-editing.png" alt="The app on a computer: a street scene with a large oval spot that is blurred and dark; the Effects panel on the right shows the Blur and Dark spot sliders raised." width="1280" height="800" loading="lazy">
+        <figcaption>On a computer the tools sit on the right; on a phone they are in the panel below the picture.</figcaption>
+      </figure>
+      <h3>Soft edge (feather)</h3>
+      <p>Real vision problems rarely have a sharp border. <b>Soft edge</b> fades the effect out towards the edge of the region: 0% is a hard edge, 100% fades across the whole region.</p>
+      <h3>Profile settings (all regions)</h3>
+      <p>Under <b>Profile settings</b> at the bottom of the Effects tab are settings shared by every region:</p>
+      <ul>
+        <li><b>Distortion wave size</b>, <b>Wave direction</b> and <b>Max distortion</b>: how the waviness looks.</li>
+        <li><b>Ghost offset</b> (sideways and up/down): where the double image sits.</li>
+        <li><b>Viewing distance</b>: how far your eye is from the screen (see <a href="#calibrate">calibration</a>).</li>
+      </ul>
+    </section>
+
+    <section id="freehand" class="topic">
+      <h2><span class="num">4</span>Freehand outline</h2>
+      <div class="pair">
+        <div>
+          <p>When the affected area isn't an oval, draw its outline.</p>
+          <ol class="steps">
+            <li>In <span class="ui plain">Regions</span>, tap <span class="ui">Freehand</span>. The banner says <i>Draw around the area</i>.</li>
+            <li>With one finger (or the mouse), draw around the area in one go and let go. The outline closes itself.</li>
+            <li>To adjust it: drag inside the shape to move it, or drag the white dots to reshape it.</li>
+            <li>Open <span class="ui plain">Effects</span> and choose what happens inside the outline.</li>
+          </ol>
+          <p>Changed your mind while drawing? Tap <span class="ui plain">Cancel</span> in the banner.</p>
+        </div>
+        <figure class="clip">
+          <img src="help/media/04-freehand.gif" alt="Animation: drawing a wavy closed outline on the Amsler grid, then raising Distortion so the grid lines inside bend." width="360" height="838" loading="lazy">
+          <figcaption>Draw an outline, then add distortion.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="brush" class="topic">
+      <h2><span class="num">5</span>Brush: paint patchy areas</h2>
+      <div class="pair">
+        <div>
+          <p>For scattered or patchy areas, paint them.</p>
+          <ol class="steps">
+            <li>In <span class="ui plain">Regions</span>, tap <span class="ui">Brush</span>. The banner says <i>Paint with one finger</i>.</li>
+            <li>Choose <b>Paint</b>, set the <b>Brush size</b> and <b>Softness</b>, and paint over the picture.</li>
+            <li>Painted too much? Choose <b>Erase</b> and paint over it again.</li>
+            <li>Tap <span class="ui">Done</span>, then pick the effects in <span class="ui plain">Effects</span>.</li>
+          </ol>
+          <p>A coloured tint shows where a brush region applies while you edit it. To paint more later, select the brush region and tap <b>Paint or erase</b>.</p>
+        </div>
+        <figure class="clip">
+          <img src="help/media/05-brush.gif" alt="Animation: painting three patches on the street scene, tapping Done and turning up an effect." width="360" height="838" loading="lazy">
+          <figcaption>Paint patches, then choose the effect.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="regions" class="topic">
+      <h2><span class="num">6</span>Manage regions</h2>
+      <p>Every region is listed in the <span class="ui plain">Regions</span> tab. Tap a region to select it (its outline turns yellow). Each row has buttons to:</p>
+      <div class="cards">
+        <div class="card"><h4>Rename</h4><p>The pencil. Give regions names you will recognise, e.g. "Centre blur".</p></div>
+        <div class="card"><h4>Show / hide</h4><p>The eye. Hide a region to see the picture without it, without deleting it.</p></div>
+        <div class="card"><h4>Duplicate</h4><p>Copies a region with its effects.</p></div>
+        <div class="card"><h4>Move up / down</h4><p>Changes the order when regions overlap.</p></div>
+        <div class="card"><h4>Delete</h4><p>The bin. You can still bring it back with Undo.</p></div>
+      </div>
+      <p><b>Undo</b> and <b>Redo</b> sit under the picture, next to Flip. On a computer, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes and <kbd>Ctrl</kbd>+<kbd>Y</kbd> (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) redoes.</p>
+    </section>
+
+    <section id="calibrate" class="topic">
+      <h2><span class="num">7</span>Calibrate with your own eye</h2>
+      <div class="pair">
+        <div>
+          <p>The calibration guide helps you notice what your affected eye sees and copy it into the simulation. Open it from the <b>⋯</b> menu (top right) → <span class="ui plain">Calibration guide</span>, or from the <span class="ui plain">Compare</span> tab.</p>
+          <ol class="steps">
+            <li><b>Set up.</b> Pick a test image (the Amsler grid is best for gaps and waviness) and enter your viewing distance: how far your eye is from the screen. Sit in good, even light and hold the phone steady.</li>
+            <li><b>Look with your affected eye.</b> Cover your good eye (don't press on it), stare at the centre dot and notice what looks wrong: blurred, dark, missing, wavy, smaller or larger, faded, doubled. Write it down in the box if you like.</li>
+            <li><b>Switch eyes and match.</b> Now cover the affected eye and look at the simulation with the good eye. Tap <span class="ui">Start adjusting</span> and change regions and effects until the simulation matches what you noted.</li>
+            <li><b>Check with Flip.</b> Flip between original and simulated, and look again with the affected eye. Keep adjusting until the two feel alike.</li>
+            <li><b>Tips for next time.</b> Use the same distance and the same test image each time, so later check-ups compare fairly.</li>
+          </ol>
+          <div class="note"><strong>Measuring the distance</strong>Hold a string or tape measure from the screen to your eye, or measure from the screen to your cheekbone and add about 2 cm. Reading distance is usually about 40 cm.</div>
+          <p>Keep sessions short. Judging with one eye covered is tiring; rest and look again another day if you're unsure.</p>
+        </div>
+        <figure class="clip">
+          <img src="help/media/07-calibration.gif" alt="Animation: opening the calibration guide from the menu and stepping through its five steps." width="360" height="838" loading="lazy">
+          <figcaption>The five steps of the calibration guide.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="compare" class="topic">
+      <h2><span class="num">8</span>Compare and present</h2>
+      <div class="pair">
+        <div>
+          <p>The <span class="ui plain">Compare</span> tab has three ways to look at the result:</p>
+          <ul>
+            <li><b>Single:</b> one view at a time; use <b>Flip</b> to switch.</li>
+            <li><b>Wipe:</b> drag the divider across the photo. Original on the left, simulated on the right.</li>
+            <li><b>Side by side:</b> both at once. (Opening Regions or Effects switches back to Single so you can edit.)</li>
+          </ul>
+          <h3>Present full screen</h3>
+          <ol class="steps">
+            <li>Tap <span class="ui">Present full screen</span>. Everything else disappears and the screen stays on.</li>
+            <li>Tap the picture to switch between original and simulated, or choose <b>Wipe</b> to drag between them.</li>
+            <li>Tap <b>Exit</b> when done.</li>
+          </ol>
+          <p>This is the easiest way to show the doctor your phone during the appointment.</p>
+        </div>
+        <figure class="clip">
+          <img src="help/media/06-compare.gif" alt="Animation: the Compare tab, dragging the wipe divider, switching to side by side and opening full-screen present mode." width="360" height="838" loading="lazy">
+          <figcaption>Wipe, side by side and present mode.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="export" class="topic">
+      <h2><span class="num">9</span>Save and share images</h2>
+      <div class="pair">
+        <div>
+          <p>Send the result to your doctor before the appointment, or keep it for your records.</p>
+          <ol class="steps">
+            <li>Open the <span class="ui plain">Export</span> tab.</li>
+            <li>Under <b>What to save</b>, tick <b>Simulated</b>, <b>Original</b> and/or <b>Side by side</b>.</li>
+            <li>Check the caption: date, viewing distance, eye, profile name and an optional note are printed under the image.</li>
+            <li>Tap <span class="ui">Prepare images</span>. A preview of the side-by-side image is shown.</li>
+            <li>Tap <span class="ui">Share</span> to send them with WhatsApp, email and so on, or <span class="ui plain">Download</span> to save them.</li>
+          </ol>
+          <h3>Options</h3>
+          <ul>
+            <li><b>Format:</b> PNG (best quality, the default) or JPEG (smaller files, with a quality slider).</li>
+            <li><b>Export size:</b> <i>Up to 4096 px</i> (default) makes very large photos smaller; <i>Full resolution</i> keeps them full size but is slower. If the device can't manage it, a smaller image is saved and you are told.</li>
+            <li><b>Side-by-side layout:</b> Auto, Horizontal or Vertical; with or without "Original" / "Simulated" labels.</li>
+            <li><b>Caption under the image:</b> can be switched off. The line <i>"My own approximation — not a clinical measurement"</i> is always added.</li>
+          </ul>
+        </div>
+        <figure class="clip">
+          <img src="help/media/08-export.gif" alt="Animation: the Export tab, tapping Prepare images, then Download." width="360" height="838" loading="lazy">
+          <figcaption>Prepare, then share or download.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="profiles" class="topic">
+      <h2><span class="num">10</span>Profiles and check-ups over time</h2>
+      <div class="pair">
+        <div>
+          <p>A <b>profile</b> is your eye map: the regions and effects for one eye, with its viewing distance. Save it so you can come back to it, and save a new check-up each time things change.</p>
+          <ol class="steps">
+            <li>Open the <span class="ui plain">Profiles</span> tab.</li>
+            <li>Choose the affected eye: <b>Left</b> or <b>Right</b>. The profile name follows the eye ("Left eye") unless you rename it.</li>
+            <li>Tap <span class="ui">Save</span>. It is kept on this device only.</li>
+            <li>At a later check-up, tap <b>New check-up (duplicate)</b>: a dated copy you can adjust, so the earlier one stays as it was.</li>
+            <li>Tap <b>Compare over time</b> (or Compare → <b>Timeline</b>) to see your saved check-ups side by side, by date.</li>
+          </ol>
+          <h3>Also in Profiles</h3>
+          <ul>
+            <li><b>Saved profiles:</b> open, duplicate, export or delete any saved profile.</li>
+            <li><b>Save photo with this profile:</b> photos are only kept if you choose to.</li>
+            <li><b>Export this profile / Export all / Import JSON:</b> move your profiles between your phone and computer as a small file (no photos inside unless saved with them).</li>
+            <li><b>New profile:</b> start again from an empty map (asks before discarding unsaved changes).</li>
+          </ul>
+        </div>
+        <figure class="clip">
+          <img src="help/media/09-profiles.gif" alt="Animation: the Profiles tab, choosing the eye, saving, making a new check-up and opening the timeline." width="360" height="838" loading="lazy">
+          <figcaption>Choose the eye, save, and track check-ups.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="settings" class="topic">
+      <h2><span class="num">11</span>Settings and extras</h2>
+      <div class="cards">
+        <div class="card"><span class="tag">⋯ menu</span><h4>Text size</h4><p><b>A−</b> / <b>A+</b> make all text in the app smaller or larger.</p></div>
+        <div class="card"><span class="tag">⋯ menu</span><h4>Test image</h4><p>Load a built-in test image at any time.</p></div>
+        <div class="card"><span class="tag">⋯ menu</span><h4>Help</h4><p>Opens this page.</p></div>
+        <div class="card"><span class="tag">⋯ menu</span><h4>Performance</h4><p>How long each preview frame takes. Under 50 ms feels smooth.</p></div>
+        <div class="card"><span class="tag">Profiles → Settings</span><h4>Default eye</h4><p>The eye new profiles start with.</p></div>
+        <div class="card"><span class="tag">Profiles → Settings</span><h4>Default viewing distance</h4><p>Near (reading) 40 cm, Computer 70 cm, Far 300 cm, or your own value.</p></div>
+      </div>
+    </section>
+
+    <section id="install" class="topic">
+      <h2><span class="num">12</span>Install the app and use it offline</h2>
+      <p>Vision Simulator is a web app: it opens in your browser, and can be installed like a normal app.</p>
+      <ul>
+        <li><b>Android (Chrome):</b> tap <b>Install app</b> when it is offered, or open the browser menu (⋮) → <b>Install app</b> / <b>Add to Home screen</b>.</li>
+        <li><b>Computer (Chrome or Edge):</b> click the install icon in the address bar, or the browser menu → <b>Install Vision Simulator</b>.</li>
+        <li><b>iPhone (Safari):</b> Share → <b>Add to Home Screen</b>. iPhone support is best effort.</li>
+      </ul>
+      <p>After the first visit the app works without internet. When the message <i>Ready to work offline</i> appears, everything has been stored. When an update is available, the app asks before reloading.</p>
+    </section>
+
+    <section id="doctor" class="topic">
+      <h2>Tips for the appointment</h2>
+      <ul>
+        <li>Make the simulation at the distance you normally read or use the phone, and keep that distance the same each time.</li>
+        <li>Use the Amsler grid for the check-up and a familiar photo to show everyday impact (reading, faces).</li>
+        <li>Send the side-by-side image before the visit, and bring the phone with <b>Present full screen</b> ready.</li>
+        <li>Save a <b>New check-up</b> each time; the timeline shows the doctor how things changed.</li>
+        <li>Write what you noticed in the note: it is printed on the exported image.</li>
+      </ul>
+    </section>
+
+    <section id="faq" class="topic">
+      <h2>Questions and problems</h2>
+      <details>
+        <summary>Is my photo uploaded anywhere?</summary>
+        <div><p>No. All processing happens on your device; the app has no server and sends nothing. Photos leave the device only when you share or download an image yourself.</p></div>
+      </details>
+      <details>
+        <summary>The picture doesn't change when I move a slider</summary>
+        <div><p>Make sure a region is selected (Regions tab) and that it is visible (the eye button). Check that you are not looking at the <b>Original</b> (tap Flip). If a message says the live simulation isn't running, your browser may have WebGL switched off; try an up-to-date Chrome or Edge.</p></div>
+      </details>
+      <details>
+        <summary>Will my saved profiles stay?</summary>
+        <div><p>They are kept in your browser's storage on this device. Clearing the browser's site data removes them, so use <b>Export all</b> in Profiles now and then to keep a backup file.</p></div>
+      </details>
+      <details>
+        <summary>Why does the simulation depend on viewing distance?</summary>
+        <div><p>The same blur looks stronger on a small screen held far away than on a large screen close by. The viewing distance is printed on exported images so the doctor knows how they were made.</p></div>
+      </details>
+      <details>
+        <summary>Size change is greyed out</summary>
+        <div><p>Size change works on spots (ovals) only, not on freehand, brush or whole-image regions.</p></div>
+      </details>
+      <details>
+        <summary>Saving or sharing is slow, or the image is smaller than expected</summary>
+        <div><p>Very large photos take longer, especially with <b>Full resolution</b>. If the device runs out of memory, a smaller image is saved and the app tells you. Choosing <i>Up to 4096 px</i> is faster.</p></div>
+      </details>
+      <details>
+        <summary>Can it diagnose my eye condition?</summary>
+        <div><p>No. It is a communication aid only: your own approximation of what you see. Always follow your eye doctor's advice and tests.</p></div>
+      </details>
+    </section>
+
+    <footer class="page">
+      <p>Vision Simulator is free and open source. <a href="https://github.com/SaravanaTelapolu/VisionImageSimulationTool">Source code on GitHub</a>.</p>
+      <p>My own approximation — not a clinical measurement.</p>
+      <a class="totop" href="#">Back to top ↑</a>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

@@ -1,4 +1,6 @@
-import { PROFILE_VERSION, type Effects, type Profile, type ProfileGlobals, type Region, type Shape } from './types';
+import { DEFAULT_VIEWING_DISTANCE_CM } from './distance';
+import { FALLBACK_EYE, autoProfileName } from './eye';
+import { PROFILE_VERSION, type Effects, type Eye, type Profile, type ProfileGlobals, type Region, type Shape } from './types';
 
 export function newId(prefix: string): string {
   const rand = Math.random().toString(36).slice(2, 8);
@@ -30,23 +32,29 @@ export function defaultGlobals(): ProfileGlobals {
 }
 
 export function newRegion(shape: Shape, name = 'Region'): Region {
-  return { id: newId('r'), name, visible: true, shape, feather: 0.3, effects: emptyEffects() };
+  return { id: newId('r'), name, visible: true, shape, feather: 0.3, effects: emptyEffects(), darkSpotShade: 0 };
 }
 
 export function defaultEllipse(): Shape {
   return { type: 'ellipse', cx: 0, cy: 0, rx: 0.12, ry: 0.09, rotation: 0 };
 }
 
-export function newProfile(name = 'Right eye', now = new Date()): Profile {
+/** A blank profile. `name` defaults to the automatic name for `eye` ("Left eye" / "Right eye"). */
+export function newProfile(
+  name?: string,
+  now = new Date(),
+  viewingDistanceCm = DEFAULT_VIEWING_DISTANCE_CM,
+  eye: Eye = FALLBACK_EYE,
+): Profile {
   const iso = now.toISOString();
   return {
     version: PROFILE_VERSION,
     id: newId('p'),
-    name,
-    eye: 'right',
+    name: name ?? autoProfileName(eye),
+    eye,
     createdAt: iso,
     updatedAt: iso,
-    viewingDistanceCm: 40,
+    viewingDistanceCm,
     note: '',
     globals: defaultGlobals(),
     regions: [],

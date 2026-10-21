@@ -17,6 +17,7 @@ import {
   type Shape,
 } from './types';
 import { defaultGlobals, emptyEffects, newId } from './defaults';
+import { FALLBACK_EYE, isEye } from './eye';
 
 export type ValidationResult =
   | { ok: true; profile: Profile; warnings: string[] }
@@ -30,14 +31,13 @@ export const MAX_REGIONS_PER_PROFILE = 200;
 export const MAX_PATH_POINTS = 5000;
 /** Maximum length, in characters, of a brush-mask data URL (about 2 MB). */
 export const MAX_MASK_DATA_URL_LENGTH = 2 * 1024 * 1024;
-export const MIN_VIEWING_DISTANCE_CM = 10;
-export const MAX_VIEWING_DISTANCE_CM = 150;
+import { DEFAULT_VIEWING_DISTANCE_CM, MAX_VIEWING_DISTANCE_CM, MIN_VIEWING_DISTANCE_CM } from './distance';
+export { MAX_VIEWING_DISTANCE_CM, MIN_VIEWING_DISTANCE_CM };
 export const MAX_NAME_LENGTH = 200;
 export const MAX_NOTE_LENGTH = 10000;
 const DEFAULT_NAME = 'Untitled profile';
 const DEFAULT_REGION_NAME = 'Region';
 const DEFAULT_FEATHER = 0.3;
-const DEFAULT_VIEWING_DISTANCE_CM = 40;
 
 const EFFECT_RANGES: Record<EffectKey, [number, number]> = {
   blur: [0, MAX_BLUR_PX],
@@ -263,7 +263,28 @@ function validateShape(ctx: Ctx, raw: unknown, label: string): Shape | undefined
   }
 }
 
-function validateRegion(ctx: Ctx, raw: unknown, index: number, seenIds: Set<string>): Region | undefined {
+/**
+ * A region's dark-spot shade (D05, v0.2). Regions saved before it existed have none: they take the
+ * profile's old profile-wide globals.darkSpotShade, so they look exactly as before (no warning:
+ * this is the normal upgrade path, not damage).
+ */
+function regionShade(ctx: Ctx, raw: Obj, fallback: number, label: string): number {
+  const v = raw['darkSpotShade'];
+  if (v === undefined) return fallback;
+  if (!isNum(v)) {
+    ctx.warnings.push(`${label}.darkSpotShade: not a finite number; using ${round(fallback)}.`);
+    return fallback;
+  }
+  return clamp(ctx, v, 0, 1, `${label}.darkSpotShade`);
+}
+
+function validateRegion(
+  ctx: Ctx,
+  raw: unknown,
+  index: number,
+  seenIds: Set<string>,
+  fallbackShade: number,
+): Region | undefined {
   const label = `regions[${index}]`;
   if (!isObj(raw)) {
     ctx.errors.push(`${label}: must be an object.`);
@@ -292,9 +313,10 @@ function validateRegion(ctx: Ctx, raw: unknown, index: number, seenIds: Set<stri
   const feather = optNum(ctx, raw, 'feather', DEFAULT_FEATHER, 0, 1, `${label}.feather`);
   const shape = validateShape(ctx, raw['shape'], `${label}.shape`);
   const effects = validateEffects(ctx, raw['effects'], `${label}.effects`);
+  const darkSpotShade = regionShade(ctx, raw, fallbackShade, label);
 
   if (id === undefined || shape === undefined) return undefined;
-  return { id, name, visible, shape, feather, effects };
+  return { id, name, visible, shape, feather, effects, darkSpotShade };
 }
 
 function validateGlobals(ctx: Ctx, raw: unknown): ProfileGlobals {
@@ -352,9 +374,11 @@ export function validateProfile(input: unknown): ValidationResult {
   if (typeof raw['name'] === 'string') name = cap(ctx, raw['name'], MAX_NAME_LENGTH, 'name');
   else ctx.warnings.push(`name: missing; using "${DEFAULT_NAME}".`);
 
-  let eye: Eye = 'right';
-  if (raw['eye'] === 'left' || raw['eye'] === 'right') eye = raw['eye'];
-  else ctx.warnings.push('eye: missing or invalid; using "right".');
+  // Profiles saved before the eye could be chosen (or hand-edited files) may lack `eye`: they were
+  // all right-eye maps, so a missing or unknown value becomes FALLBACK_EYE ('right').
+  let eye: Eye = FALLBACK_EYE;
+  if (isEye(raw['eye'])) eye = raw['eye'];
+  else ctx.warnings.push(`eye: missing or invalid; using "${FALLBACK_EYE}".`);
 
   let createdAt: string;
   if (validIso(raw['createdAt'])) {
@@ -396,7 +420,7 @@ export function validateProfile(input: unknown): ValidationResult {
   } else {
     const seen = new Set<string>();
     rawRegions.forEach((r, i) => {
-      const region = validateRegion(ctx, r, i, seen);
+      const region = validateRegion(ctx, r, i, seen, globals.darkSpotShade);
       if (region) regions.push(region);
     });
   }
@@ -417,6 +441,22 @@ export function validateProfile(input: unknown): ValidationResult {
       globals,
       regions,
     },
+  };
+}
+
+/**
+ * Fills fields added after a profile was saved (trusted data from this app's own storage, so no
+ * full validation): today only Region.darkSpotShade (D05), taken from the deprecated
+ * globals.darkSpotShade. Returns the same object when nothing is missing.
+ */
+export function upgradeStoredProfile(profile: Profile): Profile {
+  const regions = profile.regions;
+  if (!Array.isArray(regions) || regions.every((r) => isNum(r.darkSpotShade))) return profile;
+  const g = profile.globals?.darkSpotShade;
+  const fallback = isNum(g) ? Math.min(1, Math.max(0, g)) : 0;
+  return {
+    ...profile,
+    regions: regions.map((r) => (isNum(r.darkSpotShade) ? r : { ...r, darkSpotShade: fallback })),
   };
 }
 

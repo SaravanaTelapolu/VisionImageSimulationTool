@@ -1,6 +1,7 @@
 // Saved profiles ("eye maps") in IndexedDB.
 
 import { duplicateProfile } from '../model/ops';
+import { upgradeStoredProfile } from '../model/validate';
 import type { Eye, Profile } from '../model/types';
 import { withDb } from './db';
 import { ProfileNotFoundError } from './errors';
@@ -14,6 +15,7 @@ export interface ProfileSummary {
   updatedAt: string;
   note: string;
   regionCount: number;
+  viewingDistanceCm: number;
 }
 
 export function summarizeProfile(p: Profile): ProfileSummary {
@@ -25,6 +27,7 @@ export function summarizeProfile(p: Profile): ProfileSummary {
     updatedAt: p.updatedAt,
     note: p.note,
     regionCount: p.regions.length,
+    viewingDistanceCm: p.viewingDistanceCm,
   };
 }
 
@@ -35,7 +38,8 @@ export async function listProfiles(): Promise<ProfileSummary[]> {
 }
 
 export async function getProfile(id: string): Promise<Profile | undefined> {
-  return withDb((db) => db.get('profiles', id));
+  const p = await withDb((db) => db.get('profiles', id));
+  return p && upgradeStoredProfile(p);
 }
 
 /** Saves (insert or replace) a profile with updatedAt set to `now`. Returns what was stored. */

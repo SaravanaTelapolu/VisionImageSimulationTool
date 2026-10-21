@@ -15,17 +15,18 @@ import {
   undo,
   viewMode,
 } from '../state/store';
-import { restoreLastProfile } from '../state/profiles';
+import { defaultDistanceCm, eyeChosen, restoreLastProfile, setCurrentEye, setDefaultDistance } from '../state/profiles';
 import { calibrationOpen, closeCalibration, compareMode, openCalibration, presentOpen, timelineOpen } from '../state/ui';
 import { InstallPrompt } from '../pwa';
 import { CalibrationGuide } from './calibration/CalibrationGuide';
+import { EyeRadioGroup } from './controls/EyeRadioGroup';
 import { PhotoPicker, TestImagePicker } from './PhotoPicker';
 import { PreviewNotice } from './preview/PreviewNotice';
 import { SideBySide } from './panels/compare/SideBySide';
 import { PresentMode } from './present/PresentMode';
 import { Sheet } from './Sheet';
 import { TimelineHost } from './TimelineHost';
-import { QuickBar, TopBar } from './TopBar';
+import { HELP_URL, QuickBar, TopBar } from './TopBar';
 import { announcement } from './announce';
 import { installCompareAutoSwitch } from './compareSwitch';
 import { RegionOverlay } from './edit/RegionOverlay';
@@ -66,6 +67,8 @@ function Calibration() {
       onDistanceChange={(cm) =>
         applyEdit((q) => (q.viewingDistanceCm === cm ? q : { ...q, viewingDistanceCm: cm }), 'calibration-distance')
       }
+      defaultDistanceCm={defaultDistanceCm.value}
+      onMakeDefaultDistance={(cm) => void setDefaultDistance(cm)}
       onFlip={flipView}
       onChooseTestImage={(kind) => {
         if (kind === 'amsler') void loadTestImage('amsler');
@@ -133,6 +136,14 @@ export function App() {
                 <p class="hint" role="status">
                   {photoLoading.value ? 'Opening image…' : 'Choose a photo or take one with the camera.'}
                 </p>
+                <div class="empty-eye">
+                  <EyeRadioGroup
+                    name="eye-start"
+                    legend="Which eye do you want to simulate?"
+                    value={eyeChosen.value ? profile.value.eye : null}
+                    onChange={setCurrentEye}
+                  />
+                </div>
                 <div class="cta-row">
                   <PhotoPicker kind="photo" variant="cta" />
                   <PhotoPicker kind="camera" variant="cta" />
@@ -146,6 +157,9 @@ export function App() {
                 <button type="button" class="link-btn" onClick={openCalibration}>
                   New here? Open the calibration guide
                 </button>
+                <a class="link-btn" href={HELP_URL} target="_blank" rel="noopener">
+                  How to use the app (Help)
+                </a>
               </div>
             )}
             <QuickBar />

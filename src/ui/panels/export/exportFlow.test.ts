@@ -14,6 +14,8 @@ const prepared = (n = 2): PreparedExport => ({
   files: Array.from({ length: n }, (_, i) => ({ blob: new Blob(['x']), name: `f${i}.png` })),
   shareFiles: [],
   downscaled: false,
+  originalWidth: 4,
+  originalHeight: 4,
   width: 10,
   height: 10,
 });

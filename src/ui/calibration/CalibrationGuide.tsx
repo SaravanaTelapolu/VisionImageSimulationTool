@@ -28,6 +28,9 @@ export interface CalibrationGuideProps {
   eye: Eye;
   viewingDistanceCm: number;
   onDistanceChange: (cm: number) => void;
+  /** The default distance for new profiles; with onMakeDefaultDistance, shows "Make this my default". */
+  defaultDistanceCm?: number;
+  onMakeDefaultDistance?: (cm: number) => void;
   /** Toggle between original and simulated views. */
   onFlip: () => void;
   /** The user picked the built-in Amsler grid or "a familiar photo" as the test image. */
@@ -181,6 +184,16 @@ export function CalibrationGuide(props: CalibrationGuideProps) {
           <p id="cal-distance-tip" class="cal-muted">
             {DISTANCE_TIP}
           </p>
+          {props.onMakeDefaultDistance && (
+            <button
+              type="button"
+              class="cal-btn cal-btn-secondary"
+              disabled={distanceInvalid || props.defaultDistanceCm === viewingDistanceCm}
+              onClick={() => props.onMakeDefaultDistance?.(viewingDistanceCm)}
+            >
+              {props.defaultDistanceCm === viewingDistanceCm ? 'This is your default' : 'Make this my default'}
+            </button>
+          )}
         </>
       );
       break;

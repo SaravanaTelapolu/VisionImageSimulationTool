@@ -19,6 +19,7 @@ TypeScript (strict) · Vite 6 · Preact + @preact/signals · WebGL2 shaders · I
 - `src/state/` signals: `store.ts` (profile, image, undo), `render.ts` (live preview loop + export/timeline render API), `edit.ts`, `masks.ts`, `profiles.ts`, `ui.ts`
 - `src/ui/` components: viewport, edit tools (ellipse, freehand, brush), panels (regions, effects, compare, export, profiles), calibration, present mode, controls
 - `src/storage/` IndexedDB + JSON import/export · `src/export/` compose, caption, share · `src/assets/` test images · `src/image/` photo loading · `src/pwa/` service worker + install prompt
+- `public/help.html` user Help page (static; keep it in step with UI changes); its GIFs/screenshots in `public/help/media/` are recorded by `scripts/help-capture/` (`npm run help:capture`, needs ffmpeg)
 - `tests/e2e/` Playwright smoke tests; `dev/render-harness.html` is a WebGL effects harness (`npm run dev`, then /dev/render-harness.html)
 
 ## Rules

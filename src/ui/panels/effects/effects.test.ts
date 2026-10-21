@@ -4,6 +4,7 @@ import { addRegion } from '../../../model/ops';
 import { MAX_BLUR_PX, MAX_SIZE_CHANGE, type EffectKey, type ShapeType } from '../../../model/types';
 import { EFFECT_DEFS, EFFECT_GROUPS, EFFECT_ORDER, isEffectEnabled, isFeatherEnabled } from './effectDefs';
 import { setEffect, setEye, setFeather, setGhostOffset, setGlobal, setViewingDistance } from './edits';
+import { setDarkSpotShade } from './edits';
 
 const ALL_KEYS: EffectKey[] = [
   'blur',
@@ -51,10 +52,19 @@ describe('effect definitions', () => {
 describe('edits', () => {
   it('sets an effect immutably and clamps to range', () => {
     const { region, profile } = sample();
-    const next = setEffect(profile, region.id, 'blur', 99);
+    const next = setEffect(profile, region.id, 'blur', 999);
     expect(next.regions[0]?.effects.blur).toBe(MAX_BLUR_PX);
     expect(profile.regions[0]?.effects.blur).toBe(0);
     expect(setEffect(profile, region.id, 'sizeChange', -5).regions[0]?.effects.sizeChange).toBe(-MAX_SIZE_CHANGE);
+  });
+  it("sets a region's own dark-spot shade, clamped, leaving globals alone (D05)", () => {
+    const { region, profile } = sample();
+    const next = setDarkSpotShade(profile, region.id, 0.4);
+    expect(next.regions[0]?.darkSpotShade).toBe(0.4);
+    expect(next.globals).toBe(profile.globals);
+    expect(setDarkSpotShade(profile, region.id, 7).regions[0]?.darkSpotShade).toBe(1);
+    expect(setDarkSpotShade(profile, region.id, region.darkSpotShade)).toBe(profile);
+    expect(setDarkSpotShade(profile, 'nope', 0.5)).toBe(profile);
   });
   it('returns the same profile for no-ops and unknown regions', () => {
     const { region, profile } = sample();
@@ -69,11 +79,10 @@ describe('edits', () => {
     expect(setGlobal(profile, 'distortWaveSize', 0.5).globals.distortWaveSize).toBe(0.2);
     expect(setGlobal(profile, 'distortAngle', 90).globals.distortAngle).toBe(90);
     expect(setGlobal(profile, 'distortMaxAmplitude', 0.04).globals.distortMaxAmplitude).toBe(0.04);
-    expect(setGlobal(profile, 'darkSpotShade', 0.5).globals.darkSpotShade).toBe(0.5);
     const g = setGhostOffset(setGhostOffset(profile, 0, 0.03), 1, -0.9);
     expect(g.globals.ghostOffset).toEqual([0.03, -0.05]);
     expect(profile.globals.ghostOffset).toEqual([0.01, 0]);
-    expect(setViewingDistance(profile, 500).viewingDistanceCm).toBe(150);
+    expect(setViewingDistance(profile, 900).viewingDistanceCm).toBe(600);
     expect(setViewingDistance(profile, 3).viewingDistanceCm).toBe(10);
     expect(setEye(profile, 'left').eye).toBe('left');
   });
