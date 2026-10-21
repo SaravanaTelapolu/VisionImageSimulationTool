@@ -1,6 +1,6 @@
 # Handoff — how to continue the build from any Claude session or account
 
-HEARTBEAT: 2026-10-21T06:53+05:30
+HEARTBEAT: 2026-10-21T06:56+05:30
 BUILD_STATUS: IN_PROGRESS
 
 The orchestrator rewrites the two lines above after every merge or step. `BUILD_STATUS` becomes `COMPLETE` when wave 4 is merged.
@@ -22,8 +22,8 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 ## Current state
 
 - Branch: `develop` (local only, not pushed). `main` has only the initial commit.
-- Done: W0–W4 and W5-3. Every feature in F1–F9 is implemented; accessibility pass done.
-- Running: W5-1 freehand speed, W5-2 render fixes (Opus), W5-4 e2e update — each in its own worktree.
+- Done: W0–W4, W5-1, W5-2, W5-3. All review High/Medium findings fixed.
+- Running: W5-4 e2e update + small wiring (worktree).
 - Next: merge W5-1, W5-2, W5-4 → run `npm run e2e` on develop → final docs (README, morning review) → BUILD_STATUS: COMPLETE → delete the in-session cron and disable the scheduled task vision-sim-auto-resume.
 
 ## Known gotchas

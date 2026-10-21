@@ -31,7 +31,7 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | W4-3 | Playwright smoke (Edge locally, chromium in CI) | Sonnet | done | merged 07198be; 3/3 pass on desktop + mobile projects (swiftshader WebGL) |
 | W4-4 | Opus code review → docs/code-review-findings.md | Opus | done | merged ec94301: 0 critical, 3 high, 5 medium, 11 low |
 | W5-1 | Review H2: fast freehand coverage | Sonnet | done | merged; 200-pt outline ~1 s → 24–28 ms (feather 0.3), 6–9 ms (no feather) |
-| W5-2 | Review H1, H3, M5, L4, L8–L11: render fixes | Opus | running | worktree, started 02:23 |
+| W5-2 | Review H1, H3, M5, L4, L8–L11: render fixes | Opus | done | merged fc14d17; verified in browser; preview sized to screen (cap 2048), 0.6–2.2 ms/frame on desktop GPU |
 | W5-3 | Review M2–M4, L1, L3, L5, L6: state/storage/export fixes | Sonnet | done | merged d7a78ca; L3 simulated-only wiring moved to W5-4 |
 | W5-4 | Update e2e for new UI; L3 wiring in export run; storage-persistence hint | Sonnet | running | worktree, started 06:40 |
 
@@ -49,6 +49,8 @@ Status values: `todo` · `running` · `done` (merged into `develop`) · `blocked
 | 7 Offline and polish | PWA + accessibility done; e2e update and render fixes running |
 
 ## Log (newest first)
+
+- 2026-10-21 06:56 IST — Merged W5-1 (freehand ~40× faster) and W5-2 (render fixes). 587 tests, build green. Only W5-4 (e2e update) remains.
 
 - 2026-10-21 06:40 IST — Merged W4-2 (a11y/UX) and W5-3 (state/storage fixes). 565 tests, build green. Launched W5-4 (e2e update for the two-step share + small wiring). W5-1 and W5-2 still running.
 

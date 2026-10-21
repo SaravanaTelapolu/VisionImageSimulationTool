@@ -37,6 +37,8 @@ Tick or answer inline; the next session reads this file.
 | D23 | Imports are limited (5 MB file, 200 regions, 500 profiles per bundle) | Protects the app from huge or corrupt files |
 | D24 | The app asks the browser to keep your data after your first save (not at startup) | Browsers grant this more readily after real use |
 | D25 | Every export except "Original" carries the approximation note, even with the caption off | Honesty requirement |
+| D26 | The live preview is rendered at the size it is shown on screen (up to 2048 px), and the original in Flip/Wipe/Side by side uses the same source | So the simulated image is never softer than the original outside the affected areas |
+| D27 | Overlapping size-change spots blend instead of multiplying | Avoids extreme warping where two spots overlap |
 
 ## Questions (answer when convenient; the build continues on the assumption shown)
 
@@ -47,6 +49,7 @@ Tick or answer inline; the next session reads this file.
 | Q3 | Standard viewing distance for comparable snapshots? | 40 cm default, editable |
 | Q4 | Preferred export: PNG or JPEG, captions on or off? | PNG, caption on, side-by-side optional |
 | Q5 | Should exports keep the full resolution of very large photos (> 4096 px) by tiling? | No: downscaled to 4096 px |
+| Q6 | On a low-end phone, should the live preview use a lower resolution cap (e.g. 1280 px) for speed? | No: capped at 2048 px or the screen size, whichever is smaller. Check the ⋯ → Performance number on your phone; if it is often above 50 ms, say so |
 
 ## Overnight incidents
 
