@@ -27,7 +27,7 @@ Plan: [feature-rect-spot-option-B.md](feature-rect-spot-option-B.md). Decisions 
 | P6 | Code review of committed P1+P2 (main..HEAD, src/model, src/render, effectDefs) — report only | none (read-only) | Sonnet agent | running (23:15) |
 | P7 | Audit: other `'ellipse'` special cases outside P3's files — report only | none (read-only) | Sonnet agent | running (23:15) |
 | P8 | Perf check: map build time for several large rotated rects vs ellipses (scratch script, not committed) | scratchpad only | Sonnet agent | running (23:15) |
-| P9 | Release-notes draft v1.1.0 | docs/release-notes-v1.1.0.md | Sonnet agent | running (23:15) |
+| P9 | Release-notes draft v1.1.0 | docs/release-notes-v1.1.0.md | Sonnet agent | done (draft) |
 | P5 | Integrate: typecheck, all unit tests, build, e2e, browser check, help:capture (if ffmpeg), progress log, morning-review, commit | docs/*, CLAUDE.md | orchestrator | pending |
 
 ## Log
