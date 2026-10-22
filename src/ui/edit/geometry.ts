@@ -2,11 +2,23 @@
 // says "units" (fixation-relative, shorter side = 1). No DOM, no signals.
 
 import { fromPixel, lengthToPixels, toPixel } from '../../model/coords';
-import type { EllipseShape, ImageFrame, Region, Shape, Vec2 } from '../../model/types';
+import type { EllipseShape, ImageFrame, RectShape, Region, Shape, Vec2 } from '../../model/types';
 
-/** Smallest ellipse radius a drag can produce, in shorter-side units. */
+/**
+ * Shapes with a centre, two half-axes (rx, ry) and a rotation: the oval and the rectangle spot. They
+ * share the handle maths below (for a rectangle rx / ry are the half-width / half-height, so the
+ * width / height handles sit at the edge midpoints).
+ */
+export type CentredShape = EllipseShape | RectShape;
+
+/** True for shapes the centred-shape handles can edit (ellipse, rect). */
+export function isCentredShape(shape: Shape): shape is CentredShape {
+  return shape.type === 'ellipse' || shape.type === 'rect';
+}
+
+/** Smallest ellipse radius (or rectangle half-side) a drag can produce, in shorter-side units. */
 export const MIN_RADIUS = 0.01;
-/** Largest ellipse radius a drag can produce, in shorter-side units (keeps handles reachable). */
+/** Largest ellipse radius (or rectangle half-side) a drag can produce, in shorter-side units (keeps handles reachable). */
 export const MAX_RADIUS = 2;
 /** Rotation snaps to multiples of this many degrees... */
 export const ROTATION_SNAP_STEP = 15;
@@ -37,7 +49,7 @@ export function ellipseAxes(rotationDeg: number): { u: Vec2; v: Vec2 } {
 }
 
 /** Handle positions in image pixels. `rotateOffset` is the gap (image px) between the top edge and the rotation handle. */
-export function ellipseHandles(shape: EllipseShape, frame: ImageFrame, rotateOffset: number): EllipseHandles {
+export function ellipseHandles(shape: CentredShape, frame: ImageFrame, rotateOffset: number): EllipseHandles {
   const c = toPixel(frame, { x: shape.cx, y: shape.cy });
   const rx = lengthToPixels(frame, shape.rx);
   const ry = lengthToPixels(frame, shape.ry);
@@ -55,7 +67,7 @@ function clamp(v: number, lo: number, hi: number): number {
 }
 
 /** Moves the centre to `centrePx` (image pixels), kept inside the image so the shape cannot be lost. */
-export function moveEllipse(shape: EllipseShape, centrePx: Vec2, frame: ImageFrame): EllipseShape {
+export function moveEllipse<T extends CentredShape>(shape: T, centrePx: Vec2, frame: ImageFrame): T {
   const c = { x: clamp(centrePx.x, 0, frame.width), y: clamp(centrePx.y, 0, frame.height) };
   const u = fromPixel(frame, c);
   return { ...shape, cx: u.x, cy: u.y };
@@ -66,13 +78,13 @@ export function moveEllipse(shape: EllipseShape, centrePx: Vec2, frame: ImageFra
  * along that axis, plus `grabOffset` (image px: handle distance minus pointer distance at grab time)
  * so the handle does not jump under the finger. Clamped to MIN_RADIUS..MAX_RADIUS.
  */
-export function dragRadius(
-  shape: EllipseShape,
+export function dragRadius<T extends CentredShape>(
+  shape: T,
   axis: EllipseAxis,
   pointerPx: Vec2,
   frame: ImageFrame,
   grabOffset = 0,
-): EllipseShape {
+): T {
   const c = toPixel(frame, { x: shape.cx, y: shape.cy });
   const { u, v } = ellipseAxes(shape.rotation);
   const a = axis === 'x' ? u : v;
@@ -86,7 +98,7 @@ export function dragRadius(
  * Pass as `grabOffset` to dragRadius, computed once when the drag starts: the radius (image px)
  * minus how far along the axis the pointer is.
  */
-export function radiusGrabOffset(shape: EllipseShape, axis: EllipseAxis, pointerPx: Vec2, frame: ImageFrame): number {
+export function radiusGrabOffset(shape: CentredShape, axis: EllipseAxis, pointerPx: Vec2, frame: ImageFrame): number {
   const c = toPixel(frame, { x: shape.cx, y: shape.cy });
   const { u, v } = ellipseAxes(shape.rotation);
   const a = axis === 'x' ? u : v;
@@ -109,7 +121,7 @@ export function snapAngle(deg: number, step = ROTATION_SNAP_STEP, tolerance = RO
 }
 
 /** Rotation (degrees, -180..180) that puts the rotation handle under the pointer; snaps to 15 degrees when within 3. */
-export function rotationFromPointer(shape: EllipseShape, pointerPx: Vec2, frame: ImageFrame): number {
+export function rotationFromPointer(shape: CentredShape, pointerPx: Vec2, frame: ImageFrame): number {
   const c = toPixel(frame, { x: shape.cx, y: shape.cy });
   const dx = pointerPx.x - c.x;
   const dy = pointerPx.y - c.y;
@@ -119,9 +131,9 @@ export function rotationFromPointer(shape: EllipseShape, pointerPx: Vec2, frame:
   return normaliseAngle(snapAngle(normaliseAngle(raw)));
 }
 
-/** Translates an ellipse by a delta in shorter-side units. Other shapes are returned unchanged. */
-export function translateEllipse(shape: Shape, dx: number, dy: number): Shape {
-  if (shape.type !== 'ellipse') return shape;
+/** Translates an ellipse or rectangle by a delta in shorter-side units. Other shapes are returned unchanged. */
+export function translateEllipse<T extends Shape>(shape: T, dx: number, dy: number): T {
+  if (!isCentredShape(shape)) return shape;
   return { ...shape, cx: shape.cx + dx, cy: shape.cy + dy };
 }
 
@@ -146,6 +158,18 @@ export function pointInEllipse(shape: EllipseShape, p: Vec2, frame: ImageFrame, 
   return a * a + b * b <= 1;
 }
 
+/** True when `p` (image px) is inside the rectangle. Half-sides smaller than `minHalfPx` count as that big. */
+export function pointInRect(shape: RectShape, p: Vec2, frame: ImageFrame, minHalfPx = 0): boolean {
+  const c = toPixel(frame, { x: shape.cx, y: shape.cy });
+  const hx = Math.max(lengthToPixels(frame, shape.rx), minHalfPx);
+  const hy = Math.max(lengthToPixels(frame, shape.ry), minHalfPx);
+  if (hx <= 0 || hy <= 0) return false;
+  const { u, v } = ellipseAxes(shape.rotation);
+  const dx = p.x - c.x;
+  const dy = p.y - c.y;
+  return Math.abs(dx * u.x + dy * u.y) <= hx && Math.abs(dx * v.x + dy * v.y) <= hy;
+}
+
 /** Even-odd ray-casting test; `points` are in shorter-side units. */
 export function pointInPath(points: [number, number][], p: Vec2, frame: ImageFrame): boolean {
   if (points.length < 3) return false;
@@ -163,7 +187,7 @@ export function pointInPath(points: [number, number][], p: Vec2, frame: ImageFra
  * Every visible region under `p` (image px), topmost (last in the list) first. `full` and `mask`
  * regions cover (or can cover) most of the image, so they are listed last, after every shape that
  * really contains the point; a tap on bare image still reaches them.
- * `minRadiusPx` makes tiny ellipses easier to tap.
+ * `minRadiusPx` makes tiny ellipses and rectangles easier to tap.
  */
 export function hitTestAll(regions: readonly Region[], p: Vec2, frame: ImageFrame, minRadiusPx = 0): RegionHit[] {
   const hits: RegionHit[] = [];
@@ -176,6 +200,9 @@ export function hitTestAll(regions: readonly Region[], p: Vec2, frame: ImageFram
     switch (s.type) {
       case 'ellipse':
         hit = pointInEllipse(s, p, frame, minRadiusPx);
+        break;
+      case 'rect':
+        hit = pointInRect(s, p, frame, minRadiusPx);
         break;
       case 'path':
         hit = pointInPath(s.points, p, frame);

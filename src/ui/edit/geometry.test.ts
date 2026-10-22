@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { centredFrame, lengthToPixels } from '../../model/coords';
 import { newRegion } from '../../model/defaults';
-import type { EllipseShape, Region } from '../../model/types';
+import type { EllipseShape, RectShape, Region } from '../../model/types';
 import {
   MIN_RADIUS,
   dragRadius,
@@ -13,6 +13,7 @@ import {
   pickTapTarget,
   pointInEllipse,
   pointInPath,
+  pointInRect,
   radiusGrabOffset,
   rotationFromPointer,
   snapAngle,
@@ -24,6 +25,10 @@ const frame = centredFrame(1000, 800);
 
 function ell(over: Partial<EllipseShape> = {}): EllipseShape {
   return { type: 'ellipse', cx: 0, cy: 0, rx: 0.25, ry: 0.125, rotation: 0, ...over };
+}
+
+function rect(over: Partial<RectShape> = {}): RectShape {
+  return { type: 'rect', cx: 0, cy: 0, rx: 0.25, ry: 0.125, rotation: 0, ...over };
 }
 
 function region(shape: Region['shape'], over: Partial<Region> = {}): Region {
@@ -272,6 +277,79 @@ describe('hitTest', () => {
   it('makes tiny ellipses tappable with minRadiusPx', () => {
     const tiny = region(ell({ rx: 0.005, ry: 0.005 }), { id: 'tiny' });
     expect(hitTest([tiny], { x: 515, y: 400 }, frame)).toBeNull();
+    expect(hitTest([tiny], { x: 515, y: 400 }, frame, 22)).toBe('tiny');
+  });
+});
+
+describe('rectangle spots', () => {
+  it('puts the width / height handles at the edge midpoints', () => {
+    const h = ellipseHandles(rect(), frame, 30);
+    expect(h.center).toEqual({ x: 500, y: 400 });
+    expect(h.rx.x).toBeCloseTo(700); // half-width 200 px
+    expect(h.rx.y).toBeCloseTo(400);
+    expect(h.ry.x).toBeCloseTo(500);
+    expect(h.ry.y).toBeCloseTo(500); // half-height 100 px
+    expect(h.rotate.y).toBeCloseTo(400 - 100 - 30);
+    const r = ellipseHandles(rect({ rotation: 90 }), frame, 30);
+    expect(r.rx.x).toBeCloseTo(500);
+    expect(r.rx.y).toBeCloseTo(600);
+  });
+
+  it('resizes about the centre like the oval and keeps the type', () => {
+    const w = dragRadius(rect(), 'x', { x: 800, y: 420 }, frame);
+    expect(w.type).toBe('rect');
+    expect(w).toMatchObject({ cx: 0, cy: 0, rx: 300 / 800, ry: 0.125 });
+    const hgt = dragRadius(rect({ rotation: 90 }), 'y', { x: 300, y: 400 }, frame); // y axis points left
+    expect(hgt).toMatchObject({ cx: 0, cy: 0, rx: 0.25, ry: 200 / 800 });
+    // Same numbers as an ellipse with the same fields.
+    expect(dragRadius(ell(), 'x', { x: 800, y: 420 }, frame).rx).toBe(w.rx);
+    const start = rect();
+    const off = radiusGrabOffset(start, 'x', { x: 690, y: 400 }, frame);
+    expect(dragRadius(start, 'x', { x: 690, y: 400 }, frame, off).rx).toBeCloseTo(0.25);
+  });
+
+  it('moves, rotates and nudges a rectangle', () => {
+    const m = moveEllipse(rect(), { x: 580, y: 320 }, frame);
+    expect(m).toMatchObject({ type: 'rect', cx: 0.1, cy: -0.1 });
+    expect(rotationFromPointer(rect(), { x: 700, y: 400 }, frame)).toBe(90);
+    expect(translateEllipse(rect(), 0.1, -0.2)).toMatchObject({ type: 'rect', cx: 0.1, cy: -0.2 });
+  });
+
+  it('tests points in an unrotated rectangle, corners included', () => {
+    const r = rect();
+    expect(pointInRect(r, { x: 500, y: 400 }, frame)).toBe(true);
+    expect(pointInRect(r, { x: 695, y: 495 }, frame)).toBe(true); // near a corner: outside the oval
+    expect(pointInEllipse(ell(), { x: 695, y: 495 }, frame)).toBe(false);
+    expect(pointInRect(r, { x: 705, y: 400 }, frame)).toBe(false);
+    expect(pointInRect(r, { x: 500, y: 505 }, frame)).toBe(false);
+  });
+
+  it('respects rotation', () => {
+    const r = rect({ rotation: 90 }); // long side now vertical: 200 px wide, 400 px tall
+    expect(pointInRect(r, { x: 590, y: 590 }, frame)).toBe(true);
+    expect(pointInRect(r, { x: 610, y: 400 }, frame)).toBe(false);
+    expect(pointInRect(r, { x: 500, y: 610 }, frame)).toBe(false);
+    const d = rect({ rotation: 45, rx: 0.125, ry: 0.125 }); // a 200 px diamond
+    expect(pointInRect(d, { x: 500 + 130, y: 400 }, frame)).toBe(true); // half-diagonal is ~141 px
+    expect(pointInRect(d, { x: 590, y: 310 }, frame)).toBe(false); // the unrotated square's corner
+  });
+
+  it('enlarges tiny rectangles to the minimum half-side', () => {
+    const tiny = rect({ rx: 0.005, ry: 0.005 }); // 4 px half-side
+    expect(pointInRect(tiny, { x: 515, y: 415 }, frame)).toBe(false);
+    expect(pointInRect(tiny, { x: 515, y: 415 }, frame, 22)).toBe(true);
+  });
+
+  it('is hit-tested like the other shapes', () => {
+    const box = region(rect(), { id: 'box' });
+    const full = region({ type: 'full' }, { id: 'full' });
+    expect(hitTest([box], { x: 695, y: 495 }, frame)).toBe('box');
+    expect(hitTest([box], { x: 900, y: 100 }, frame)).toBeNull();
+    expect(hitTestAll([full, box], { x: 600, y: 450 }, frame)).toEqual([
+      { id: 'box', type: 'rect' },
+      { id: 'full', type: 'full' },
+    ]);
+    const tiny = region(rect({ rx: 0.005, ry: 0.005 }), { id: 'tiny' });
     expect(hitTest([tiny], { x: 515, y: 400 }, frame, 22)).toBe('tiny');
   });
 });

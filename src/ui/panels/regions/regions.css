@@ -13,6 +13,11 @@
   line-height: 1.15;
 }
 
+/* An odd last button spans the row instead of leaving a gap. */
+.rg-add .btn:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .rg-soon {
   flex-direction: column;
   gap: 0;

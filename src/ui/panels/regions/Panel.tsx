@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { defaultEllipse, newRegion } from '../../../model/defaults';
+import { defaultEllipse, defaultRect, newRegion } from '../../../model/defaults';
 import { addRegion, duplicateRegion, moveRegion, removeRegion, setRegionVisible, updateRegion } from '../../../model/ops';
 import type { Region } from '../../../model/types';
 import { startPlacing } from '../../../state/edit';
@@ -19,6 +19,17 @@ function addEllipse(): void {
     return;
   }
   const region = newRegion(defaultEllipse(), nextRegionName(profile.value, 'ellipse'));
+  applyEdit((p) => addRegion(p, region));
+  selectedRegionId.value = region.id;
+}
+
+function addRectangle(): void {
+  // Same as addEllipse: tap to place with a photo, otherwise on the fixation point.
+  if (image.value) {
+    startPlacing('rect');
+    return;
+  }
+  const region = newRegion(defaultRect(), nextRegionName(profile.value, 'rect'));
   applyEdit((p) => addRegion(p, region));
   selectedRegionId.value = region.id;
 }
@@ -186,6 +197,9 @@ export function RegionsPanel() {
       <div class="rg-add" role="group" aria-label="Add a region">
         <button type="button" class="btn" onClick={addEllipse}>
           + Spot (ellipse)
+        </button>
+        <button type="button" class="btn" onClick={addRectangle}>
+          + Spot (rectangle)
         </button>
         <button type="button" class="btn" onClick={addWholeImage}>
           + Whole image

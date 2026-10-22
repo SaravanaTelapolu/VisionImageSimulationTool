@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { lengthToPixels, toPixel } from '../../model/coords';
 import { removeRegion, updateShape } from '../../model/ops';
-import type { EllipseShape, ImageFrame, Region, Vec2 } from '../../model/types';
+import type { ImageFrame, Region, Vec2 } from '../../model/types';
 import { cancelPlacing, placeShapeAt, placingShape } from '../../state/edit';
 import { applyEdit, endEdit, imageFrame, profile, selectedRegionId } from '../../state/store';
 import '../../state/masks'; // starts the mask decode/cache sync
@@ -10,10 +10,12 @@ import { BrushLayer } from './brush';
 import { FreehandLayer, PathEditor } from './freehand';
 import { ToolBanner } from './freehand/ToolBanner';
 import {
+  type CentredShape,
   dragRadius,
   ellipseAxes,
   ellipseHandles,
   hitTestAll,
+  isCentredShape,
   moveEllipse,
   pickTapTarget,
   radiusGrabOffset,
@@ -29,9 +31,9 @@ const CYAN = '#4dd0e1';
 /** Visible handle dot diameter and minimum touch target, in screen pixels. */
 const DOT = 14;
 const HIT = 44;
-/** Gap between the ellipse's top edge and the rotation handle, in screen pixels. */
+/** Gap between the spot's top edge and the rotation handle, in screen pixels. */
 const ROTATE_GAP = 36;
-/** Tiny ellipses are tappable as if they had at least this radius, in screen pixels. */
+/** Tiny ellipses and rectangles are tappable as if they had at least this radius, in screen pixels. */
 const MIN_TAP_RADIUS = 22;
 /** Finger travel that turns a press into a drag (body move) or cancels a tap, in screen pixels. */
 const BODY_DRAG_SLOP = 6;
@@ -47,7 +49,7 @@ interface Drag {
   id: number;
   kind: DragKind;
   regionId: string;
-  start: EllipseShape | null;
+  start: CentredShape | null;
   startClient: Vec2;
   moved: boolean;
   /** move: centre minus pointer (image px). rx / ry: radius minus pointer distance along the axis. */
@@ -70,8 +72,8 @@ function selectedRegion(): Region | undefined {
 }
 
 /**
- * Draws every visible region and, for the selected ellipse, its handles. Handles taps (select /
- * deselect / place a new ellipse) and handle drags. Pass it to `<Viewport overlay={...}>`.
+ * Draws every visible region and, for the selected ellipse or rectangle, its handles. Handles taps
+ * (select / deselect / place a new spot) and handle drags. Pass it to `<Viewport overlay={...}>`.
  */
 export function RegionOverlay({ info }: { info: ViewportInfo }) {
   const frame = imageFrame.value;
@@ -130,7 +132,7 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
       }
       d.moved = true;
       const p = infoRef.current.clientToImage(client.x, client.y);
-      let next: EllipseShape;
+      let next: CentredShape;
       switch (d.kind) {
         case 'move':
           next = moveEllipse(start, { x: p.x + d.grabVec.x, y: p.y + d.grabVec.y }, f);
@@ -200,7 +202,8 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
     };
     // While placing a spot, the fixation crosshair must not swallow the tap: take the press before it does.
     const onFixationCapture = (e: PointerEvent) => {
-      if (placingShape.peek() !== 'ellipse') return;
+      const tool = placingShape.peek();
+      if (tool !== 'ellipse' && tool !== 'rect') return;
       if (!(e.target instanceof Element) || !e.target.closest('.fixation')) return;
       e.stopPropagation();
       onDown(e);
@@ -224,7 +227,7 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
     };
   }, [placing]);
 
-  // Keyboard (desktop): arrows nudge the selected ellipse, Delete removes, Escape deselects / cancels.
+  // Keyboard (desktop): arrows nudge the selected ellipse or rectangle, Delete removes, Escape deselects / cancels.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || isTextTarget(e.target)) return;
@@ -243,7 +246,7 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
         selectedRegionId.value = null;
         return;
       }
-      if (r.shape.type !== 'ellipse') return;
+      if (!isCentredShape(r.shape)) return;
       const step = e.shiftKey ? NUDGE_BIG : NUDGE;
       let dx = 0;
       let dy = 0;
@@ -256,11 +259,9 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
       const f = imageFrame.peek();
       if (!f) return;
       const moved = translateEllipse(r.shape, dx, dy);
-      if (moved.type === 'ellipse') {
-        const c = toPixel(f, { x: moved.cx, y: moved.cy });
-        const clamped = moveEllipse(moved, c, f);
-        applyEdit((p) => updateShape(p, r.id, clamped), `nudge:${r.id}`);
-      }
+      const c = toPixel(f, { x: moved.cx, y: moved.cy });
+      const clamped = moveEllipse(moved, c, f);
+      applyEdit((p) => updateShape(p, r.id, clamped), `nudge:${r.id}`);
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key.startsWith('Arrow')) endEdit();
@@ -278,7 +279,7 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
     if (active.current.size > 1 || drag.current) return; // a second finger: leave it to the viewport (pinch)
     const f = imageFrame.peek();
     const r = selectedRegion();
-    if (!f || !r || r.shape.type !== 'ellipse') return;
+    if (!f || !r || !isCentredShape(r.shape)) return;
     e.stopPropagation(); // keep the viewport from panning / counting a double-tap
     e.preventDefault();
     const start = r.shape;
@@ -314,18 +315,18 @@ export function RegionOverlay({ info }: { info: ViewportInfo }) {
           r.visible ? <RegionOutline key={r.id} region={r} frame={frame} selected={r === selected} px={px} /> : null,
         )}
       </g>
-      {selected && selected.visible && selected.shape.type === 'ellipse' && !placing && (
-        <EllipseHandlesView shape={selected.shape} frame={frame} px={px} begin={begin} />
+      {selected && selected.visible && isCentredShape(selected.shape) && !placing && (
+        <SpotHandlesView shape={selected.shape} frame={frame} px={px} begin={begin} />
       )}
       {selected && selected.visible && selected.shape.type === 'path' && !placing && (
         <PathEditor regionId={selected.id} shape={selected.shape} info={info} />
       )}
       <BrushLayer info={info} />
       <FreehandLayer info={info} />
-      {placing === 'ellipse' && (
+      {(placing === 'ellipse' || placing === 'rect') && (
         <ToolBanner
           info={info}
-          text="Tap where the spot is"
+          text={placing === 'rect' ? 'Tap where the rectangle is' : 'Tap where the spot is'}
           buttonLabel="Cancel"
           buttonAriaLabel="Cancel placing"
           onButton={cancelPlacing}
@@ -367,6 +368,21 @@ function RegionOutline({
             cy={c.y}
             rx={lengthToPixels(frame, s.rx)}
             ry={lengthToPixels(frame, s.ry)}
+            transform={`rotate(${s.rotation} ${c.x} ${c.y})`}
+            {...common}
+          />
+        );
+      }
+      case 'rect': {
+        const c = toPixel(frame, { x: s.cx, y: s.cy });
+        const rxPx = lengthToPixels(frame, s.rx);
+        const ryPx = lengthToPixels(frame, s.ry);
+        return (
+          <rect
+            x={c.x - rxPx}
+            y={c.y - ryPx}
+            width={2 * rxPx}
+            height={2 * ryPx}
             transform={`rotate(${s.rotation} ${c.x} ${c.y})`}
             {...common}
           />
@@ -431,13 +447,14 @@ function Handle({ at, hitR, dotR, strokeW, fill, label, cursor, onPointerDown }:
   );
 }
 
-function EllipseHandlesView({
+/** Handles for a centred shape; the shape type picks the body outline and the aria-label wording. */
+function SpotHandlesView({
   shape,
   frame,
   px,
   begin,
 }: {
-  shape: EllipseShape;
+  shape: CentredShape;
   frame: ImageFrame;
   px: (n: number) => number;
   begin: (kind: Exclude<DragKind, 'tap'>) => (e: PointerEvent) => void;
@@ -452,28 +469,30 @@ function EllipseHandlesView({
   const full = px(HIT / 2);
   // When the radius handle sits close to the centre, shrink its target so the centre stays reachable.
   const radiusHit = (rPx: number) => Math.min(full, Math.max(px(12), rPx * 0.7));
-  const c = shape;
+  // The ellipse labels are used by tests and scripts/help-capture: keep them exactly as they are.
+  const noun = shape.type === 'rect' ? 'rectangle' : 'ellipse';
+  const body = {
+    transform: `rotate(${shape.rotation} ${h.center.x} ${h.center.y})`,
+    fill: 'transparent',
+    style: { pointerEvents: 'all', touchAction: 'none', cursor: 'move' },
+    onPointerDown: begin('move'),
+  };
   return (
     <g>
       {/* Body: drag to move; a tap falls through to selection. */}
-      <ellipse
-        cx={h.center.x}
-        cy={h.center.y}
-        rx={rxPx}
-        ry={ryPx}
-        transform={`rotate(${c.rotation} ${h.center.x} ${h.center.y})`}
-        fill="transparent"
-        style={{ pointerEvents: 'all', touchAction: 'none', cursor: 'move' }}
-        onPointerDown={begin('move')}
-      />
+      {shape.type === 'rect' ? (
+        <rect x={h.center.x - rxPx} y={h.center.y - ryPx} width={2 * rxPx} height={2 * ryPx} {...body} />
+      ) : (
+        <ellipse cx={h.center.x} cy={h.center.y} rx={rxPx} ry={ryPx} {...body} />
+      )}
       <g pointer-events="none">
         <line x1={topEdge.x} y1={topEdge.y} x2={h.rotate.x} y2={h.rotate.y} stroke={DARK} stroke-width={px(5)} stroke-linecap="round" />
         <line x1={topEdge.x} y1={topEdge.y} x2={h.rotate.x} y2={h.rotate.y} stroke={CYAN} stroke-width={px(2)} stroke-linecap="round" />
       </g>
-      <Handle at={h.rotate} hitR={full} dotR={dotR} strokeW={strokeW} fill={CYAN} label="Rotate the ellipse" cursor="grab" onPointerDown={begin('rotate')} />
-      <Handle at={h.rx} hitR={radiusHit(rxPx)} dotR={dotR} strokeW={strokeW} fill={ACCENT} label="Change the ellipse width" cursor="ew-resize" onPointerDown={begin('rx')} />
-      <Handle at={h.ry} hitR={radiusHit(ryPx)} dotR={dotR} strokeW={strokeW} fill={ACCENT} label="Change the ellipse height" cursor="ns-resize" onPointerDown={begin('ry')} />
-      <Handle at={h.center} hitR={full} dotR={dotR} strokeW={strokeW} fill={WHITE} label="Move the ellipse" cursor="move" onPointerDown={begin('move')} />
+      <Handle at={h.rotate} hitR={full} dotR={dotR} strokeW={strokeW} fill={CYAN} label={`Rotate the ${noun}`} cursor="grab" onPointerDown={begin('rotate')} />
+      <Handle at={h.rx} hitR={radiusHit(rxPx)} dotR={dotR} strokeW={strokeW} fill={ACCENT} label={`Change the ${noun} width`} cursor="ew-resize" onPointerDown={begin('rx')} />
+      <Handle at={h.ry} hitR={radiusHit(ryPx)} dotR={dotR} strokeW={strokeW} fill={ACCENT} label={`Change the ${noun} height`} cursor="ns-resize" onPointerDown={begin('ry')} />
+      <Handle at={h.center} hitR={full} dotR={dotR} strokeW={strokeW} fill={WHITE} label={`Move the ${noun}`} cursor="move" onPointerDown={begin('move')} />
     </g>
   );
 }

@@ -58,6 +58,22 @@ describe('RegionsPanel', () => {
     expect(root.textContent).not.toContain('Add a spot where');
   });
 
+  it('adds a rectangle at the fixation point without a photo and selects it', () => {
+    mount();
+    const order = Array.from(root.querySelectorAll('.rg-add button')).map((b) => b.textContent?.trim());
+    expect(order.slice(0, 2)).toEqual(['+ Spot (ellipse)', '+ Spot (rectangle)']);
+    act(() => button('Spot (rectangle)').click());
+    const r = profile.value.regions[0];
+    expect(r?.shape).toMatchObject({ type: 'rect', cx: 0, cy: 0, rx: 0.12, ry: 0.09, rotation: 0 });
+    expect(r?.name).toBe('Rectangle 1');
+    expect(selectedRegionId.value).toBe(r?.id);
+    expect(root.textContent).toContain('Rectangle 1');
+    act(() => button('Spot (rectangle)').click());
+    expect(profile.value.regions[1]?.name).toBe('Rectangle 2');
+    act(() => byLabel('Duplicate Rectangle 1').click());
+    expect(profile.value.regions.find((x) => x.name === 'Rectangle 1 copy')?.shape.type).toBe('rect');
+  });
+
   it('offers Edit effects for the selected region and switches tab', () => {
     mount();
     act(() => button('Whole image').click());

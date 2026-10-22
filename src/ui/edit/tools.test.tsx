@@ -3,7 +3,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { newProfile } from '../../model/defaults';
-import { cancelPlacing, placingShape, redrawingPathId, startRedrawing } from '../../state/edit';
+import { cancelPlacing, placeShapeAt, placingShape, redrawingPathId, startRedrawing } from '../../state/edit';
 import { maskCacheSize, maskData, resetMaskCache, setMaskCodec } from '../../state/masks';
 import { canUndo, profile, resetProfile, selectedRegionId, setWorkingImage, undo, image } from '../../state/store';
 import { RegionsPanel } from '../panels/regions/Panel';
@@ -144,6 +144,38 @@ describe('regions panel tools', () => {
     act(() => button('Done').click());
     expect(placingShape.value).toBeNull();
     expect(button('Paint or erase')).toBeTruthy();
+  });
+
+  it('+ Spot (rectangle) with a photo waits for a tap, which places a rectangle there', () => {
+    act(() => {
+      render(<RegionsPanel />, root);
+    });
+    act(() => button('+ Spot (rectangle)').click());
+    expect(placingShape.value).toBe('rect');
+    expect(profile.value.regions).toHaveLength(0);
+    let placed: ReturnType<typeof placeShapeAt> = null;
+    act(() => {
+      placed = placeShapeAt({ x: 520, y: 240 });
+    });
+    const r = profile.value.regions[0];
+    expect(r?.id).toBe((placed as { id: string } | null)?.id);
+    expect(r?.name).toBe('Rectangle 1');
+    expect(r?.shape).toMatchObject({ type: 'rect', rx: 0.12, ry: 0.09, rotation: 0 });
+    if (r?.shape.type === 'rect') {
+      expect(r.shape.cx).toBeCloseTo(120 / 600); // fixation at (400, 300), shorter side 600
+      expect(r.shape.cy).toBeCloseTo(-60 / 600);
+    }
+    expect(selectedRegionId.value).toBe(r?.id);
+    expect(placingShape.value).toBeNull();
+    expect(root.textContent).toContain('Rectangle 1');
+    undo();
+    expect(profile.value.regions).toHaveLength(0);
+  });
+
+  it('placing an ellipse still names it Spot N', () => {
+    placingShape.value = 'ellipse';
+    expect(placeShapeAt({ x: 400, y: 300 })?.name).toBe('Spot 1');
+    expect(profile.value.regions[0]?.shape.type).toBe('ellipse');
   });
 
   it('shows Redraw outline for a selected freehand region', () => {

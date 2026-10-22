@@ -1,17 +1,18 @@
 // Editing-mode state: placing a new shape by tapping on the image.
 import { signal } from '@preact/signals';
 import { fromPixel } from '../model/coords';
-import { defaultEllipse, newRegion } from '../model/defaults';
+import { defaultEllipse, defaultRect, newRegion } from '../model/defaults';
 import { addRegion } from '../model/ops';
 import type { Region, Shape, Vec2 } from '../model/types';
 import type { BrushMode } from '../render/maskRaster';
+import { nextRegionName } from '../ui/panels/regions/helpers';
 import { applyEdit, endEdit, imageFrame, profile, selectedRegionId } from './store';
 
-export type PlacingKind = 'ellipse' | 'path' | 'brush';
+export type PlacingKind = 'ellipse' | 'rect' | 'path' | 'brush';
 
 /**
- * The active image tool. 'ellipse': the next tap adds a spot. 'path': one-finger drag draws a
- * freehand outline. 'brush': one-finger drag paints on the selected mask region.
+ * The active image tool. 'ellipse' / 'rect': the next tap adds an oval / rectangle spot. 'path':
+ * one-finger drag draws a freehand outline. 'brush': one-finger drag paints on the selected mask region.
  */
 export const placingShape = signal<null | PlacingKind>(null);
 
@@ -53,11 +54,12 @@ export const brushSoftness = signal(0.5);
 export function placeShapeAt(point: Vec2): Region | null {
   const kind = placingShape.peek();
   const frame = imageFrame.peek();
-  if (kind !== 'ellipse' || !frame) return null;
+  if ((kind !== 'ellipse' && kind !== 'rect') || !frame) return null;
   const u = fromPixel(frame, point);
-  const base = defaultEllipse();
-  const shape: Shape = base.type === 'ellipse' ? { ...base, cx: u.x, cy: u.y } : base;
-  const region = newRegion(shape, `Spot ${profile.peek().regions.length + 1}`);
+  const base = kind === 'rect' ? defaultRect() : defaultEllipse();
+  const shape: Shape = base.type === 'ellipse' || base.type === 'rect' ? { ...base, cx: u.x, cy: u.y } : base;
+  const name = kind === 'rect' ? nextRegionName(profile.peek(), 'rect') : `Spot ${profile.peek().regions.length + 1}`;
+  const region = newRegion(shape, name);
   applyEdit((p) => addRegion(p, region));
   endEdit();
   selectedRegionId.value = region.id;

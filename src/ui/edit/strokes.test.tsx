@@ -220,6 +220,18 @@ describe('fixation crosshair while a tool is on', () => {
     expect(placingShape.value).toBeNull();
   });
 
+  it('a tap on the crosshair places a rectangle too', () => {
+    const cross = addCrosshair();
+    act(() => {
+      placingShape.value = 'rect';
+    });
+    fire(cross, 'pointerdown', 1, 400, 300);
+    up(400, 300);
+    expect(profile.value.regions[0]?.shape.type).toBe('rect');
+    expect(profile.value.regions[0]?.name).toBe('Rectangle 1');
+    expect(placingShape.value).toBeNull();
+  });
+
   it('a drag starting on the crosshair draws the freehand outline', () => {
     const cross = addCrosshair();
     act(() => {
@@ -240,5 +252,80 @@ describe('fixation crosshair while a tool is on', () => {
     move(450, 300);
     up(450, 300);
     expect(maskData.value.get(id)?.data[192 * 512 + 256]).toBe(255);
+  });
+});
+
+describe('rectangle spot on the image', () => {
+  const handle = (label: string): Element => {
+    const h = host.querySelector(`[aria-label="${label}"]`);
+    if (!h) throw new Error(`no handle ${label}`);
+    return h;
+  };
+
+  it('shows the rectangle banner while placing, then places it under the tap', () => {
+    act(() => {
+      placingShape.value = 'rect';
+    });
+    expect(host.textContent).toContain('Tap where the rectangle is');
+    down(500, 300);
+    up(500, 300);
+    const r = profile.value.regions[0];
+    expect(r?.shape).toMatchObject({ type: 'rect', cx: 100 / 600, cy: 0 });
+    expect(selectedRegionId.value).toBe(r?.id);
+    expect(host.textContent).not.toContain('Tap where the rectangle is');
+  });
+
+  it('draws a rotated outline and rectangle handles; the ellipse wording stays for ovals', () => {
+    act(() => {
+      placingShape.value = 'rect';
+    });
+    down(400, 300);
+    up(400, 300);
+    const outline = host.querySelector('g[pointer-events="none"] rect');
+    expect(outline?.getAttribute('width')).toBe(String(2 * 0.12 * 600));
+    expect(outline?.getAttribute('transform')).toBe('rotate(0 400 300)');
+    for (const l of ['Move the rectangle', 'Change the rectangle width', 'Change the rectangle height', 'Rotate the rectangle']) {
+      expect(handle(l)).toBeTruthy();
+    }
+    expect(host.querySelector('[aria-label="Move the ellipse"]')).toBeNull();
+
+    act(() => {
+      placingShape.value = 'ellipse';
+    });
+    down(200, 200);
+    up(200, 200);
+    for (const l of ['Move the ellipse', 'Change the ellipse width', 'Change the ellipse height', 'Rotate the ellipse']) {
+      expect(handle(l)).toBeTruthy();
+    }
+  });
+
+  it('the width handle resizes about the centre and the type stays rect', () => {
+    act(() => {
+      placingShape.value = 'rect';
+    });
+    down(400, 300);
+    up(400, 300);
+    const w = handle('Change the rectangle width');
+    // Handle sits at the right edge midpoint: 400 + 0.12 * 600 = 472.
+    // jsdom has no onpointerdown property, so Preact listens for the event name as written ("PointerDown").
+    fire(w, 'PointerDown', 1, 472, 300);
+    move(520, 320);
+    up(520, 320);
+    expect(profile.value.regions[0]?.shape).toMatchObject({ type: 'rect', cx: 0, cy: 0, rx: 120 / 600, ry: 0.09 });
+    undo();
+    expect(profile.value.regions[0]?.shape).toMatchObject({ type: 'rect', rx: 0.12 });
+  });
+
+  it('arrow keys nudge a selected rectangle', () => {
+    act(() => {
+      placingShape.value = 'rect';
+    });
+    down(400, 300);
+    up(400, 300);
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+    });
+    expect(profile.value.regions[0]?.shape).toMatchObject({ type: 'rect', cx: 0.005, cy: 0 });
   });
 });
