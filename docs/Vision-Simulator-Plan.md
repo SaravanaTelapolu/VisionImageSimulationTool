@@ -43,6 +43,7 @@ The core idea is an **eye map**: a set of affected regions defined relative to w
 | Shape | How it is drawn | Use |
 | --- | --- | --- |
 | Ellipse | Tap to place, drag handles to resize and rotate | Most scars and blind spots |
+| Rectangle (v1.1) | Same as the ellipse; `RectShape` with `rx`/`ry` half-sizes | Straight-edged patches, windows, screens |
 | Freehand area | Draw a closed outline with a finger | Irregular scars |
 | Brush mask | Paint and erase with an adjustable brush | Fine edges, patchy areas |
 | Whole image | One toggle | Overall haze or dimness |
@@ -137,7 +138,7 @@ The photo flows left to right through three passes; the eye map is rasterised on
 ### Rendering pipeline
 
 1. **Effect maps (CPU, Canvas 2D).** Each region is drawn as a feathered shape into two RGBA textures. Each channel holds one effect's strength from 0 to 1. Map A: blur, distortion, contrast loss, dimming. Map B: dark spot, missing area, colour fade, double image. Overlaps use the maximum value. Maps are rebuilt only when a region changes.
-2. **Distortion pass.** Texture coordinates are displaced by a smooth sine-and-noise field, scaled by the distortion channel. Size change is computed from each ellipse's centre, for up to 8 ellipses passed as uniforms.
+2. **Distortion pass.** Texture coordinates are displaced by a smooth sine-and-noise field, scaled by the distortion channel. Size change is computed from each ellipse's centre, for up to 8 ellipses passed as uniforms. (v1.1: Size change works on ellipses and rectangles; a rectangle uses a box lens, a max-norm radius instead of the elliptical one.)
 3. **Variable blur pass.** A blur pyramid is built once per image at radii of 2, 4, 8, 16 and 32 px, using separable Gaussian passes. Each pixel blends the two levels nearest its blur value. The largest level also supplies the smeared texture for "missing area".
 4. **Tone and spots pass.** Applies contrast loss, dimming, colour fade, the offset ghost for double image, and finally the dark spot.
 5. **Output.** The preview renders at up to 1024 px. Export re-runs the same passes at full size, with all pixel radii scaled to match.
@@ -171,7 +172,7 @@ Coordinates are relative to the fixation point and measured in units of the imag
 }
 ```
 
-Other shape types: `path` holds a list of points; `mask` holds a PNG data URL of a painted mask; `full` covers the whole image.
+Other shape types: `rect` (v1.1) has the same fields as `ellipse` (`cx`, `cy`, `rx`, `ry`, `rotation`, with `rx`/`ry` the half-width and half-height); `path` holds a list of points; `mask` holds a PNG data URL of a painted mask; `full` covers the whole image.
 
 ### Code layout
 
@@ -200,7 +201,7 @@ Eight phases, each a working, deployed app. After phase 2 there is already somet
    - WebGL2 setup, blur pyramid, one whole-image blur slider, PNG export.
    - Done when: the slider redraws smoothly on my phone and the export matches the preview.
 3. **Phase 2: Ellipse regions (first useful version)**
-   - Fixation crosshair, ellipse regions with move, resize, rotate and feather.
+   - Fixation crosshair, ellipse regions with move, resize, rotate and feather. (v1.1 later adds a rectangle spot that edits the same way.)
    - Effect maps; blur and dark spot per region; region list with hide and delete.
    - Done when: I can make a rough simulation of my right eye and export it to show the doctor.
 4. **Phase 3: All effects and undo**

@@ -75,6 +75,24 @@ describe('buildRenderParams', () => {
     expect(params.lenses[0]!.amount).toBeCloseTo(0.2);
   });
 
+  it('gives a rectangle spot with size change a box lens', () => {
+    const r = newRegion({ type: 'rect', cx: 0.1, cy: -0.05, rx: 0.1, ry: 0.08, rotation: 30 }, 'Box');
+    const region: Region = { ...r, effects: { ...r.effects, sizeChange: 0.2 } };
+    const p: Profile = { ...newProfile('Test'), regions: [region] };
+    const frame: ImageFrame = { width: 1000, height: 500, fixation: { x: 500, y: 250 } };
+    const maps = buildMapsForFrame(p.regions, frame, undefined, 256);
+    const lenses = buildRenderParams(p, frame, maps).lenses;
+    expect(lenses).toHaveLength(1);
+    expect(lenses[0]!.box).toBe(true);
+    expect(lenses[0]!.cx).toBeCloseTo(550);
+    expect(lenses[0]!.rx).toBeCloseTo(50);
+    expect(lenses[0]!.ry).toBeCloseTo(40);
+    expect(lenses[0]!.rotation).toBeCloseTo((30 * Math.PI) / 180);
+    // An oval spot stays a non-box lens.
+    const oval = buildRenderParams(spotProfile(0.2), frame, maps).lenses;
+    expect(oval[0]!.box).toBeFalsy();
+  });
+
   it('has no lenses without size change, and maps are sized by the cap', () => {
     const p = spotProfile(0);
     const frame: ImageFrame = { width: 1000, height: 500, fixation: { x: 500, y: 250 } };

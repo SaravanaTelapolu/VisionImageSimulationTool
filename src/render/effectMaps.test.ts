@@ -7,6 +7,7 @@ import {
   MAX_BLUR_PX,
   type Effects,
   type EllipseShape,
+  type RectShape,
   type Region,
   type Shape,
 } from '../model/types';
@@ -143,6 +144,43 @@ describe('buildEffectMaps: ellipse', () => {
 
   it('ignores degenerate ellipses', () => {
     const m = buildEffectMaps([region(ellipse({ rx: 0 }), { dimming: 1 })], frame, W, H);
+    expect(m.a.every((v) => v === 0)).toBe(true);
+  });
+});
+
+describe('buildEffectMaps: rect', () => {
+  function rect(partial: Partial<RectShape> = {}): RectShape {
+    return { type: 'rect', cx: 0, cy: 0, rx: 0.2, ry: 0.1, rotation: 0, ...partial }; // 120 x 60 px box
+  }
+
+  it('is full inside the box, empty outside (feather 0)', () => {
+    const m = buildEffectMaps([region(rect(), { dimming: 1 })], frame, W, H);
+    expect(at(m, 200, 150, 3)).toBe(255); // centre
+    expect(at(m, 255, 150, 3)).toBe(255); // inside, edge at x = 260
+    expect(at(m, 262, 150, 3)).toBe(0);
+    expect(at(m, 200, 150 + 28, 3)).toBe(255); // ry = 30
+    expect(at(m, 200, 150 + 33, 3)).toBe(0);
+    expect(at(m, 5, 5, 3)).toBe(0);
+  });
+
+  it('covers the corners that an ellipse of the same size would miss', () => {
+    const r = buildEffectMaps([region(rect(), { dimming: 1 })], frame, W, H);
+    const e = buildEffectMaps([region(ellipse(), { dimming: 1 })], frame, W, H);
+    expect(at(r, 255, 175, 3)).toBe(255); // near the top-right-ish corner of the box (dx 55, dy 25)
+    expect(at(e, 255, 175, 3)).toBe(0);
+  });
+
+  it('a rotated rect covers a point inside its rotated outline that the unrotated one misses', () => {
+    const base = buildEffectMaps([region(rect(), { dimming: 1 })], frame, W, H);
+    const rot = buildEffectMaps([region(rect({ rotation: 45 }), { dimming: 1 })], frame, W, H);
+    // Long axis points toward bottom-right (+x, +y) when rotated clockwise 45 degrees.
+    expect(at(base, 200 + 35, 150 + 35, 3)).toBe(0);
+    expect(at(rot, 200 + 35, 150 + 35, 3)).toBe(255);
+    expect(at(rot, 200 + 35, 150 - 35, 3)).toBe(0);
+  });
+
+  it('ignores degenerate rects', () => {
+    const m = buildEffectMaps([region(rect({ ry: 0 }), { dimming: 1 })], frame, W, H);
     expect(m.a.every((v) => v === 0)).toBe(true);
   });
 });

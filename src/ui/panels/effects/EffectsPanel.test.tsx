@@ -2,7 +2,7 @@
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { defaultEllipse, newProfile, newRegion } from '../../../model/defaults';
+import { defaultEllipse, defaultRect, newProfile, newRegion } from '../../../model/defaults';
 import { addRegion } from '../../../model/ops';
 import { activeTab, canUndo, profile, resetProfile, selectedRegionId, undo } from '../../../state/store';
 import { EffectsPanel } from './Panel';
@@ -93,7 +93,16 @@ describe('EffectsPanel', () => {
     expect(canUndo.value).toBe(false);
   });
 
-  it('disables size change for non-ellipses with a note', () => {
+  it('enables size change for a rectangle spot', () => {
+    const rect = newRegion(defaultRect(), 'Box');
+    resetProfile(addRegion(newProfile(), rect));
+    selectedRegionId.value = rect.id;
+    mount();
+    expect(sliderByLabel('Size change').disabled).toBe(false);
+    expect(sliderByLabel('Soft edge (feather)').disabled).toBe(false);
+  });
+
+  it('disables size change for non-spot shapes with a note', () => {
     const full = newRegion({ type: 'full' }, 'Whole image');
     resetProfile(addRegion(newProfile(), full));
     selectedRegionId.value = full.id;

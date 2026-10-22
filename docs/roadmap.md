@@ -13,9 +13,9 @@ Items for later versions. The current version is tracked in [development-coding-
 
 ## Planned features
 
-- **Rectangle spot ("+ Spot (rectangle)").** Two ready-to-build plans; pick one:
-  - [Option A](feature-rect-spot-option-A.md): quick, a four-corner freehand outline (1–2 h; does not stay rectangular, no rotate, no size change).
-  - [Option B](feature-rect-spot-option-B.md): a real rectangle shape that edits like the oval (about half a day; recommended).
+- **Rectangle spot ("+ Spot (rectangle)").** Built (Option B, branch `feature/rect-spot`, pending review). Plans:
+  - [Option A](feature-rect-spot-option-A.md): quick, a four-corner freehand outline (not chosen).
+  - [Option B](feature-rect-spot-option-B.md): a real rectangle shape that edits like the oval (built; see [handoff](feature-rect-spot-handoff.md) and [review](rect-spot-review.md)).
 
 ## After first phone tests
 

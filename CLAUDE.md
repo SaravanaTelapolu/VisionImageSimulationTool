@@ -17,7 +17,7 @@ TypeScript (strict) · Vite 6 · Preact + @preact/signals · WebGL2 shaders · I
 - `src/model/` profile types (`types.ts` is the shared contract), coords, defaults, validation, ops, undo history
 - `src/render/` effect-map builder (pure TS; `pathCoverage.ts` for freehand), map Web Worker (`mapWorker*.ts`), WebGL renderer (`createRenderer.ts`, `gl/`, `shaders/`; design notes at the top of createRenderer.ts), `types.ts` contract
 - `src/state/` signals: `store.ts` (profile, image, undo), `render.ts` (live preview loop + export/timeline render API), `edit.ts`, `masks.ts`, `profiles.ts`, `ui.ts`
-- `src/ui/` components: viewport, edit tools (ellipse, freehand, brush), panels (regions, effects, compare, export, profiles), calibration, present mode, controls
+- `src/ui/` components: viewport, edit tools (ellipse, rectangle, freehand, brush), panels (regions, effects, compare, export, profiles), calibration, present mode, controls
 - `src/storage/` IndexedDB + JSON import/export · `src/export/` compose, caption, share · `src/assets/` test images · `src/image/` photo loading · `src/pwa/` service worker + install prompt
 - `public/help.html` user Help page (static; keep it in step with UI changes); its GIFs/screenshots in `public/help/media/` are recorded by `scripts/help-capture/` (`npm run help:capture`, needs ffmpeg)
 - `deploy/iis/` IIS web.config, install script and readme; `npm run package:iis` (scripts/package-iis.ps1) builds them into `release/VisionSimulator-iis-<version>.zip`

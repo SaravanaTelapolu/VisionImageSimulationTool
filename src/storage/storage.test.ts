@@ -217,6 +217,18 @@ describe('import', () => {
     expect(res.imported).toEqual([p]);
   });
 
+  it('round-trips a profile with a rectangle region', async () => {
+    const p = makeProfile('Rect', '2026-01-01T00:00:00.000Z');
+    const box = newRegion({ type: 'rect', cx: 0.05, cy: -0.02, rx: 0.12, ry: 0.07, rotation: 20 }, 'Box');
+    p.regions = [...p.regions, { ...box, effects: { ...box.effects, sizeChange: 0.2 } }];
+    const { blob } = profileToJsonBlob(p);
+    const res = await importProfilesFromFile(blob, new Set());
+    expect(res.errors).toEqual([]);
+    expect(res.warnings).toEqual([]);
+    expect(res.imported).toEqual([p]);
+    expect(res.imported[0]!.regions[2]!.shape).toEqual({ type: 'rect', cx: 0.05, cy: -0.02, rx: 0.12, ry: 0.07, rotation: 20 });
+  });
+
   it('imports a bundle of several profiles', async () => {
     const a = makeProfile('A', '2026-01-01T00:00:00.000Z');
     const b = makeProfile('B', '2026-01-02T00:00:00.000Z');

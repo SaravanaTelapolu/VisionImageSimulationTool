@@ -25,7 +25,7 @@ The orchestrator rewrites the two lines above after every merge or step. `BUILD_
 - v0.2 items all merged: D05 per-region dark-spot shade, Q3 default viewing distance, Q5 full-resolution tiled export, Eye choice (Left/Right + defaultEye), Blur100.
 - Help page: `public/help.html` (static, hand-written, precached; its media in `public/help/media/` is not precached). The GIFs and screenshots are recorded from the production build by `scripts/help-capture/capture.spec.ts` and converted by `make-gifs.mjs` (`npm run help:capture`; needs ffmpeg and Playwright's ffmpeg: `npx playwright install ffmpeg`). Re-run after UI changes and check the clips.
 - Agent worktrees in `.claude/worktrees/` are all merged; they can be removed.
-- Next ideas: docs/roadmap.md (phone testing, iPhone, far vision). Ready-to-build plans for a rectangle spot: docs/feature-rect-spot-option-A.md (quick) and docs/feature-rect-spot-option-B.md (proper, recommended); each has a start prompt at the end.
+- Next ideas: docs/roadmap.md (phone testing, iPhone, far vision). Rectangle spot: Option B is built on branch feature/rect-spot (see docs/feature-rect-spot-handoff.md and docs/rect-spot-review.md); Option A (docs/feature-rect-spot-option-A.md) was not chosen.
 
 ## Known gotchas
 
