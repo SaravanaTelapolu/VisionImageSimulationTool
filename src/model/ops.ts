@@ -32,6 +32,7 @@ function cloneRegion(region: Region): Region {
 function offsetShape(shape: Shape, d: number): Shape {
   switch (shape.type) {
     case 'ellipse':
+    case 'rect':
       return { ...shape, cx: shape.cx + d, cy: shape.cy + d };
     case 'mask':
       return { ...shape, x: shape.x + d, y: shape.y + d };

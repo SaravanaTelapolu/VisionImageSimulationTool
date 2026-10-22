@@ -39,6 +39,11 @@ export function defaultEllipse(): Shape {
   return { type: 'ellipse', cx: 0, cy: 0, rx: 0.12, ry: 0.09, rotation: 0 };
 }
 
+/** Same size as the default ellipse; rx / ry are the half-width / half-height. */
+export function defaultRect(): Shape {
+  return { type: 'rect', cx: 0, cy: 0, rx: 0.12, ry: 0.09, rotation: 0 };
+}
+
 /** A blank profile. `name` defaults to the automatic name for `eye` ("Left eye" / "Right eye"). */
 export function newProfile(
   name?: string,

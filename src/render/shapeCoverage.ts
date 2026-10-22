@@ -126,6 +126,94 @@ function ellipseSampler(
   };
 }
 
+/**
+ * Rectangle spot: rx / ry are the half-width / half-height. Hard edge: the product of two one-pixel
+ * anti-aliased ramps (one per axis). Feather f: the product of two smoothstep fall-offs over the outer
+ * fraction f of each half-size, so the fade has the same meaning as the ellipse's and the corners come
+ * out rounded (no diagonal crease, which a plain box distance would give).
+ */
+function rectSampler(
+  shape: Extract<Shape, { type: 'rect' }>,
+  feather: number,
+  frame: ImageFrame,
+  g: MapGeometry,
+): CoverageSampler | null {
+  const c = toPixel(frame, { x: shape.cx, y: shape.cy });
+  const rx = lengthToPixels(frame, shape.rx);
+  const ry = lengthToPixels(frame, shape.ry);
+  if (!(rx > 0) || !(ry > 0) || !Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
+  const theta = (shape.rotation * Math.PI) / 180;
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  const hx = Math.abs(rx * cos) + Math.abs(ry * sin);
+  const hy = Math.abs(rx * sin) + Math.abs(ry * cos);
+  const b = mapBounds(g, c.x - hx, c.y - hy, c.x + hx, c.y + hy);
+  if (b.x0 > b.x1 || b.y0 > b.y1) return null;
+
+  const f = clamp01(feather);
+  const inner = 1 - f;
+  const hard = f < 1e-6;
+  const pixel = (g.sx + g.sy) / 2;
+  // Corners of the outline grown by one map pixel (so the row span keeps the anti-aliased fringe of a hard
+  // edge), in image pixels, in order round the outline. Frame: u right, v down, rotated clockwise on screen.
+  const grow = hard ? pixel : 0;
+  const cornersX = new Float64Array(4);
+  const cornersY = new Float64Array(4);
+  const signs: [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  signs.forEach(([su, sv], k) => {
+    const u = su * (rx + grow);
+    const v = sv * (ry + grow);
+    cornersX[k] = c.x + u * cos - v * sin;
+    cornersY[k] = c.y + u * sin + v * cos;
+  });
+  const fall = (t: number) => (t <= inner ? 1 : t >= 1 ? 0 : 1 - smoothstep(inner, 1, t));
+
+  return {
+    ...b,
+    rowSpan(j, out) {
+      // The rectangle is convex, so the covered part of a row is one run between its outline crossings.
+      const y = (j + 0.5) * g.sy;
+      let left = Infinity;
+      let right = -Infinity;
+      for (let k = 0; k < 4; k++) {
+        const ax = cornersX[k]!;
+        const ay = cornersY[k]!;
+        const bx = cornersX[(k + 1) % 4]!;
+        const by = cornersY[(k + 1) % 4]!;
+        const lo = Math.min(ay, by);
+        const hi = Math.max(ay, by);
+        if (y < lo || y > hi) continue;
+        if (hi - lo < 1e-9) {
+          left = Math.min(left, ax, bx);
+          right = Math.max(right, ax, bx);
+          continue;
+        }
+        const x = ax + ((y - ay) / (by - ay)) * (bx - ax);
+        if (x < left) left = x;
+        if (x > right) right = x;
+      }
+      if (left > right) return false;
+      // One map pixel of margin on each side covers rounding to map-pixel centres.
+      const i0 = Math.max(b.x0, Math.floor(left / g.sx - 0.5) - 1);
+      const i1 = Math.min(b.x1, Math.ceil(right / g.sx - 0.5) + 1);
+      if (i0 > i1) return false;
+      out[0] = i0;
+      out[1] = i1;
+      return true;
+    },
+    sample(i, j) {
+      const dx = (i + 0.5) * g.sx - c.x;
+      const dy = (j + 0.5) * g.sy - c.y;
+      // Rotate into the rectangle frame (clockwise-on-screen rotation, +y down).
+      const au = Math.abs(dx * cos + dy * sin);
+      const av = Math.abs(-dx * sin + dy * cos);
+      if (hard) return clamp01(0.5 + (rx - au) / pixel) * clamp01(0.5 + (ry - av) / pixel);
+      if (au >= rx || av >= ry) return 0;
+      return fall(au / rx) * fall(av / ry);
+    },
+  };
+}
+
 function pathSampler(
   shape: Extract<Shape, { type: 'path' }>,
   feather: number,
@@ -226,6 +314,8 @@ export function createCoverageSampler(
   switch (shape.type) {
     case 'ellipse':
       return ellipseSampler(shape, feather, frame, g);
+    case 'rect':
+      return rectSampler(shape, feather, frame, g);
     case 'path':
       return pathSampler(shape, feather, frame, g);
     case 'mask':

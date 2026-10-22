@@ -23,7 +23,7 @@ export type ValidationResult =
   | { ok: true; profile: Profile; warnings: string[] }
   | { ok: false; errors: string[] };
 
-/** Smallest accepted ellipse radius / mask size, in shorter-side units. */
+/** Smallest accepted ellipse radius / rectangle half-size / mask size, in shorter-side units. */
 export const MIN_SHAPE_SIZE = 0.001;
 export const MIN_PATH_POINTS = 3;
 /** Import size bounds: a corrupted or hostile file must not be able to freeze the app. */
@@ -191,7 +191,8 @@ function validateShape(ctx: Ctx, raw: unknown, label: string): Shape | undefined
   switch (type) {
     case 'full':
       return { type: 'full' };
-    case 'ellipse': {
+    case 'ellipse':
+    case 'rect': {
       const cx = reqNum(ctx, raw, 'cx', `${label}.cx`);
       const cy = reqNum(ctx, raw, 'cy', `${label}.cy`);
       const rxIn = reqNum(ctx, raw, 'rx', `${label}.rx`);
@@ -199,7 +200,7 @@ function validateShape(ctx: Ctx, raw: unknown, label: string): Shape | undefined
       const rotation = optNum(ctx, raw, 'rotation', 0, -Infinity, Infinity, `${label}.rotation`);
       if (cx === undefined || cy === undefined || rxIn === undefined || ryIn === undefined) return undefined;
       return {
-        type: 'ellipse',
+        type,
         cx,
         cy,
         rx: rxIn > 0 ? rxIn : (ctx.warnings.push(`${label}.rx: ${round(rxIn)} must be > 0; set to ${MIN_SHAPE_SIZE}.`), MIN_SHAPE_SIZE),
@@ -258,7 +259,7 @@ function validateShape(ctx: Ctx, raw: unknown, label: string): Shape | undefined
       return { type: 'mask', dataUrl: dataUrl as string, x, y, width, height };
     }
     default:
-      ctx.errors.push(`${label}.type: unknown shape type ${JSON.stringify(type)} (expected ellipse, path, mask or full).`);
+      ctx.errors.push(`${label}.type: unknown shape type ${JSON.stringify(type)} (expected ellipse, rect, path, mask or full).`);
       return undefined;
   }
 }

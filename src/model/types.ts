@@ -11,7 +11,7 @@ export const BLUR_REFERENCE_SHORT_SIDE = 768;
 /** Raised from 40 to 100 in v0.2 (stored values are px, so existing profiles look the same). */
 export const MAX_BLUR_PX = 100;
 export const MAX_SIZE_CHANGE = 0.3;
-/** Size change is applied per ellipse as a shader uniform, so only this many are honoured. */
+/** Size change is applied per spot (ellipse or rectangle) as a shader uniform, so only this many are honoured. */
 export const MAX_SIZE_CHANGE_LENSES = 8;
 export const UNDO_LIMIT = 100;
 
@@ -32,7 +32,7 @@ export interface Effects {
   fillIn: number;
   /** Distortion (metamorphopsia) amplitude 0..1, scaled by globals.distortMaxAmplitude. */
   distortion: number;
-  /** -MAX_SIZE_CHANGE..+MAX_SIZE_CHANGE; negative shrinks, positive enlarges. Ellipses only. */
+  /** -MAX_SIZE_CHANGE..+MAX_SIZE_CHANGE; negative shrinks, positive enlarges. Ellipses and rectangles only. */
   sizeChange: number;
   contrastLoss: number;
   dimming: number;
@@ -45,6 +45,20 @@ export type EffectKey = keyof Effects;
 
 export interface EllipseShape {
   type: 'ellipse';
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  /** Degrees, clockwise on screen. */
+  rotation: number;
+}
+
+/**
+ * Rectangle spot (v1.1). `rx` / `ry` are the HALF-width / half-height, named like the ellipse's radii
+ * on purpose so the move / resize / rotate handle maths is shared. Rotation is about the centre.
+ */
+export interface RectShape {
+  type: 'rect';
   cx: number;
   cy: number;
   rx: number;
@@ -73,7 +87,7 @@ export interface FullShape {
   type: 'full';
 }
 
-export type Shape = EllipseShape | PathShape | MaskShape | FullShape;
+export type Shape = EllipseShape | RectShape | PathShape | MaskShape | FullShape;
 export type ShapeType = Shape['type'];
 
 export interface Region {

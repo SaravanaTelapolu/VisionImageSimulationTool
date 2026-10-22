@@ -4,6 +4,7 @@ import type { Profile, ShapeType } from '../../../model/types';
 
 const BASE_NAMES: Record<ShapeType, string> = {
   ellipse: 'Spot',
+  rect: 'Rectangle',
   path: 'Area',
   mask: 'Brush area',
   full: 'Whole image',
@@ -40,6 +41,8 @@ export function shapeLabel(type: ShapeType): string {
   switch (type) {
     case 'ellipse':
       return 'Spot';
+    case 'rect':
+      return 'Rectangle';
     case 'path':
       return 'Freehand';
     case 'mask':
