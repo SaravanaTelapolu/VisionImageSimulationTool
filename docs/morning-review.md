@@ -3,6 +3,12 @@
 Everything the overnight build decided without you. Nothing here blocked the build.
 Tick or answer inline; the next session reads this file.
 
+## New (2026-10-22 night): rectangle spot
+
+- **Rectangle spot (Option B) built overnight on branch `feature/rect-spot`** (not merged, not pushed).
+  Decisions and how to accept: [rect-spot-review.md](rect-spot-review.md). Key one: profile version stays 1,
+  so v1.0.x apps refuse profiles that contain a rectangle ("unknown shape type").
+
 ## Where things stand (2026-10-21, v1.0)
 
 - **v1.0 released.** All v0.2 review items are merged (D05 per-region dark-spot shade, Q3 default viewing distance, Q5 full-resolution export, eye choice, blur up to 100), plus a step-by-step **Help page** (`public/help.html`, linked from the ⋯ menu and the start screen) with animated GIFs, and a README with illustrations. `main` is tagged `v1.0` and deploys the live site.
