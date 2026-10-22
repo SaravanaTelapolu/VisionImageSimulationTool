@@ -46,6 +46,9 @@ export class GLProgram {
   set1f(name: string, v: number): void {
     this.gl.uniform1f(this.loc(name), v);
   }
+  set1fv(name: string, v: Float32Array): void {
+    this.gl.uniform1fv(this.loc(name), v);
+  }
   set2f(name: string, x: number, y: number): void {
     this.gl.uniform2f(this.loc(name), x, y);
   }

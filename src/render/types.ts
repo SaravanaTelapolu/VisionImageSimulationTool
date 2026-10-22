@@ -15,18 +15,24 @@ export interface EffectMaps {
   c: Uint8Array;
 }
 
-/** A size-change lens derived from an ellipse region, in output-image pixels. */
+/** A size-change lens derived from a spot (ellipse or rectangle) region, in output-image pixels. */
 export interface SizeChangeLens {
   cx: number;
   cy: number;
+  /** Half-axes (ellipse) or half-width / half-height (rectangle). */
   rx: number;
   ry: number;
   /** Radians, clockwise on screen. */
   rotation: number;
   /** -0.3..0.3; negative shrinks, positive enlarges. */
   amount: number;
-  /** 0..1 fraction of the ellipse size. */
+  /** 0..1 fraction of the spot size. */
   feather: number;
+  /**
+   * True for a rectangle: the lens radius is the box norm max(|u|, |v|) in the lens's normalised
+   * frame instead of the elliptical hypot(u, v).
+   */
+  box: boolean;
 }
 
 export interface RenderParams {

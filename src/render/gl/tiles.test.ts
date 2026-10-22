@@ -61,11 +61,14 @@ describe('tile reach (margin maths)', () => {
   });
 
   it('adds lens, distortion and ghost reach', () => {
-    const lens: SizeChangeLens = { cx: 100, cy: 100, rx: 400, ry: 200, rotation: 0, amount: -0.3, feather: 0 };
+    const lens: SizeChangeLens = { cx: 100, cy: 100, rx: 400, ry: 200, rotation: 0, amount: -0.3, feather: 0, box: false };
     const withLens = tileReach(params(maps(), [lens]), W, H, plan);
     expect(withLens.warpPx).toBeCloseTo((0.3 / 0.7) * 400, 6);
     const grow = tileReach(params(maps(), [{ ...lens, amount: 0.3 }]), W, H, plan);
     expect(grow.warpPx).toBeCloseTo((0.3 / 0.7) * 400, 6); // bounded by the same |a| / (1 - |a|)
+    // A rectangle lens reaches its corners: radius = half-diagonal.
+    const box = tileReach(params(maps(), [{ ...lens, box: true }]), W, H, plan);
+    expect(box.warpPx).toBeCloseTo((0.3 / 0.7) * Math.hypot(400, 200), 6);
 
     const g = { ...defaultGlobals(), distortMaxAmplitude: 0.01, ghostOffset: [0.03, 0.04] as [number, number] };
     const dist = tileReach(params(maps({ a: [0, 255] }), [], g), W, H, plan);
@@ -73,6 +76,15 @@ describe('tile reach (margin maths)', () => {
     const ghost = tileReach(params(maps({ b: [0, 0, 0, 10] }), [], g), W, H, plan);
     expect(ghost.warpPx).toBeCloseTo(0.05 * H, 6);
     expect(ghost.marginPx).toBeGreaterThanOrEqual(Math.ceil(ghost.warpPx + ghost.blurPx));
+  });
+
+  it('keeps a rectangle lens whose corner, but not its inscribed circle, reaches the core', () => {
+    // Axis-aligned 200 x 200 half-size box at (0, 0): its corner region reaches (180, 180);
+    // max(rx, ry) = 200 would miss a core starting at (160, 160) (distance ~226), hypot does not.
+    const lens: SizeChangeLens = { cx: 0, cy: 0, rx: 200, ry: 200, rotation: 0, amount: 0.3, feather: 0, box: true };
+    const core = { x: 160, y: 160, width: 100, height: 100 };
+    expect(tileReach(params(maps(), [lens]), W, H, plan, core).warpPx).toBeCloseTo((0.3 / 0.7) * Math.hypot(200, 200), 6);
+    expect(tileReach(params(maps(), [{ ...lens, box: false }]), W, H, plan, core).warpPx).toBe(0);
   });
 });
 

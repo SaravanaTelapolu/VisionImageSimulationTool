@@ -50,6 +50,7 @@ uniform vec2 uGhost;       // px
 uniform int uLensCount;
 uniform vec4 uLensA[MAX_LENSES]; // cx, cy (px), 1/rx, 1/ry (1/px)
 uniform vec4 uLensB[MAX_LENSES]; // cos(rot), sin(rot), amount, feather
+uniform float uLensBox[MAX_LENSES]; // 1 = rectangle (box-norm radius), 0 = ellipse
 out vec4 outColor;
 
 // Blur at full-image position q: tile levels are read at (q - uOrigin) / uSize, shared
@@ -108,7 +109,8 @@ vec2 applyLenses(vec2 p) {
     vec4 B = uLensB[i];
     vec2 d = p - A.xy;
     vec2 local = vec2(B.x * d.x + B.y * d.y, -B.y * d.x + B.x * d.y) * A.zw;
-    float w = lensWeight(length(local), B.w);
+    float r = uLensBox[i] > 0.5 ? max(abs(local.x), abs(local.y)) : length(local);
+    float w = lensWeight(r, B.w);
     float s = abs(B.z * w);
     if (s > 0.0) {
       float k = s * s;

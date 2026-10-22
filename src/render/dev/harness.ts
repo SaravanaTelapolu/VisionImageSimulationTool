@@ -187,6 +187,7 @@ function buildLenses(W: number, H: number): SizeChangeLens[] {
       rotation: (state.rotation * Math.PI) / 180,
       amount: state.sizeChange,
       feather: state.feather,
+      box: false, // the harness only draws ellipses
     },
   ];
 }

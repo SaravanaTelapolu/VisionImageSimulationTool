@@ -164,7 +164,7 @@ describe('levelFactor / planPyramid', () => {
 });
 
 describe('lens maths', () => {
-  const lens: SizeChangeLens = { cx: 100, cy: 100, rx: 50, ry: 25, rotation: 0, amount: 0.25, feather: 0.4 };
+  const lens: SizeChangeLens = { cx: 100, cy: 100, rx: 50, ry: 25, rotation: 0, amount: 0.25, feather: 0.4, box: false };
 
   it('lensWeight is 1 inside, 0 outside and smooth in the feather band', () => {
     expect(lensWeight(0, 0.4)).toBe(1);
@@ -181,6 +181,13 @@ describe('lens maths', () => {
     const rotated = { ...lens, rotation: Math.PI / 2 }; // long axis now points down (+y)
     expect(lensRadius(rotated, 100, 150)).toBeCloseTo(1);
     expect(lensRadius(rotated, 125, 100)).toBeCloseTo(1);
+  });
+
+  it('lensRadius uses the box norm for a rectangle lens', () => {
+    const box = { ...lens, box: true };
+    expect(lensRadius(box, 140, 120)).toBeCloseTo(0.8); // max(40 / 50, 20 / 25)
+    expect(lensRadius(lens, 140, 120)).toBeCloseTo(Math.hypot(0.8, 0.8));
+    expect(lensRadius({ ...box, rotation: Math.PI / 2 }, 120, 140)).toBeCloseTo(0.8);
   });
 
   it('enlarges by sampling closer to the centre, and is identity outside', () => {
@@ -219,11 +226,11 @@ describe('scaleRenderParams', () => {
       maps,
       globals,
       fixation: { x: 10, y: 20 },
-      lenses: [{ cx: 1, cy: 2, rx: 3, ry: 4, rotation: 0.5, amount: 0.1, feather: 0.2 }],
+      lenses: [{ cx: 1, cy: 2, rx: 3, ry: 4, rotation: 0.5, amount: 0.1, feather: 0.2, box: true }],
     };
     const s = scaleRenderParams(p, 2);
     expect(s.fixation).toEqual({ x: 20, y: 40 });
-    expect(s.lenses[0]).toEqual({ cx: 2, cy: 4, rx: 6, ry: 8, rotation: 0.5, amount: 0.1, feather: 0.2 });
+    expect(s.lenses[0]).toEqual({ cx: 2, cy: 4, rx: 6, ry: 8, rotation: 0.5, amount: 0.1, feather: 0.2, box: true });
     expect(s.maps).toBe(maps);
     expect(s.globals).toBe(globals);
     expect(p.fixation).toEqual({ x: 10, y: 20 }); // input untouched

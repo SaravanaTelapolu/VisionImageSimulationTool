@@ -103,9 +103,9 @@ export const EFFECT_GROUPS: readonly EffectGroup[] = [
 /** Every effect key, in group order. */
 export const EFFECT_ORDER: readonly EffectKey[] = EFFECT_GROUPS.flatMap((g) => g.keys);
 
-/** Size change is applied per ellipse (a lens in the shader), so only ellipses support it. */
+/** Size change is applied per spot (a lens in the shader), so only ellipses and rectangles support it. */
 export function isEffectEnabled(key: EffectKey, shape: ShapeType): boolean {
-  if (key === 'sizeChange') return shape === 'ellipse';
+  if (key === 'sizeChange') return shape === 'ellipse' || shape === 'rect';
   return true;
 }
 
@@ -114,7 +114,7 @@ export function isFeatherEnabled(shape: ShapeType): boolean {
   return shape !== 'full' && shape !== 'mask';
 }
 
-export const SIZE_CHANGE_NOTE = 'Size change works on spots (ellipses) only.';
+export const SIZE_CHANGE_NOTE = 'Size change works on spots (ovals and rectangles) only.';
 
 /** Per-region dark-spot colour (D05), shown in the Spots group right after Dark spot. */
 export const DARK_SPOT_SHADE_DEF: SliderDef = {

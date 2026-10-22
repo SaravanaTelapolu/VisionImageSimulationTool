@@ -12,7 +12,8 @@ export function lensWeight(r: number, feather: number): number {
 
 /**
  * Where output pixel `p` samples the source under a set of size-change lenses (all in the same
- * pixel space). Mirrors applyLenses() in shaders/effects.ts.
+ * pixel space). Mirrors applyLenses() in shaders/effects.ts. The normalised radius is elliptical
+ * (hypot) for ovals and the box norm (max of |u|, |v|) for rectangles.
  *
  * Overlap rule (L8): lenses do not compound. Each lens on its own would move the sample point by
  * d_i = (p - c_i) * (1 / (1 + a_i * w_i) - 1), where a_i is its amount and w_i its feathered
@@ -35,7 +36,8 @@ export function warpByLenses(p: { x: number; y: number }, lenses: readonly SizeC
     const s = Math.sin(l.rotation);
     const lx = (c * dx + s * dy) / l.rx;
     const ly = (-s * dx + c * dy) / l.ry;
-    const w = lensWeight(Math.hypot(lx, ly), Math.max(0, Math.min(1, l.feather)));
+    const r = l.box ? Math.max(Math.abs(lx), Math.abs(ly)) : Math.hypot(lx, ly);
+    const w = lensWeight(r, Math.max(0, Math.min(1, l.feather)));
     const strength = Math.abs(amount * w);
     if (!(strength > 0)) continue;
     const k = 1 / (1 + amount * w) - 1;
@@ -48,8 +50,9 @@ export function warpByLenses(p: { x: number; y: number }, lenses: readonly SizeC
 }
 
 /**
- * Size-change lenses for the distortion pass: visible ellipse regions with a non-zero sizeChange,
- * in image pixels, rotation in radians, amount clamped to +-MAX_SIZE_CHANGE. Only the first
+ * Size-change lenses for the distortion pass: visible spot (ellipse or rectangle) regions with a
+ * non-zero sizeChange, in image pixels, rotation in radians, amount clamped to +-MAX_SIZE_CHANGE,
+ * `box` set for rectangles. Only the first
  * MAX_SIZE_CHANGE_LENSES (in region order) are returned.
  */
 export function collectLenses(regions: Region[], frame: ImageFrame): SizeChangeLens[] {
@@ -57,7 +60,7 @@ export function collectLenses(regions: Region[], frame: ImageFrame): SizeChangeL
   for (const region of regions) {
     if (lenses.length >= MAX_SIZE_CHANGE_LENSES) break;
     const shape = region.shape;
-    if (!region.visible || shape.type !== 'ellipse') continue;
+    if (!region.visible || (shape.type !== 'ellipse' && shape.type !== 'rect')) continue;
     const change = region.effects.sizeChange;
     if (!Number.isFinite(change) || change === 0) continue;
     const rx = lengthToPixels(frame, shape.rx);
@@ -72,6 +75,7 @@ export function collectLenses(regions: Region[], frame: ImageFrame): SizeChangeL
       rotation: (shape.rotation * Math.PI) / 180,
       amount: Math.max(-MAX_SIZE_CHANGE, Math.min(MAX_SIZE_CHANGE, change)),
       feather: Math.max(0, Math.min(1, region.feather)),
+      box: shape.type === 'rect',
     });
   }
   return lenses;

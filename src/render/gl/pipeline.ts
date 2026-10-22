@@ -77,6 +77,7 @@ export class GLPipeline {
   private readonly tapBuffer = new Float32Array(MAX_KERNEL_PAIRS * 2);
   private readonly lensA = new Float32Array(MAX_SIZE_CHANGE_LENSES * 4);
   private readonly lensB = new Float32Array(MAX_SIZE_CHANGE_LENSES * 4);
+  private readonly lensBox = new Float32Array(MAX_SIZE_CHANGE_LENSES);
   private readonly pixel = new Uint8Array(4);
 
   private source: Target | null = null; // texture only; fbo unused but harmless
@@ -449,11 +450,13 @@ export class GLPipeline {
       const rot = finite(l.rotation, 0);
       this.lensA.set([l.cx * sx, l.cy * sy, 1 / (l.rx * sr), 1 / (l.ry * sr)], count * 4);
       this.lensB.set([Math.cos(rot), Math.sin(rot), amount, Math.min(Math.max(finite(l.feather, 0), 0), 1)], count * 4);
+      this.lensBox[count] = l.box ? 1 : 0;
       count++;
     }
     p.set1i('uLensCount', count);
     p.set4fv('uLensA', this.lensA);
     p.set4fv('uLensB', this.lensB);
+    p.set1fv('uLensBox', this.lensBox);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, W, H);

@@ -109,12 +109,13 @@ export function tileReach(
   }
 
   // Lenses: centre + d / (1 + amount * w) moves a point by at most |amount| / (1 - |amount|) of
-  // its distance from the centre (shrinking), and points move only inside the ellipse.
+  // its distance from the centre (shrinking), and points move only inside the spot: the ellipse
+  // (radius max(rx, ry)) or the rectangle (radius hypot(rx, ry), its half-diagonal).
   let lensPx = 0;
   for (const l of params.lenses) {
     const amt = Math.min(Math.abs(Number.isFinite(l.amount) ? l.amount : 0), MAX_SIZE_CHANGE);
     if (amt === 0) continue;
-    const r = Math.max(Math.abs(l.rx), Math.abs(l.ry));
+    const r = l.box ? Math.hypot(l.rx, l.ry) : Math.max(Math.abs(l.rx), Math.abs(l.ry));
     if (!Number.isFinite(r)) continue;
     if (rect) {
       // Skip lenses whose bounding circle misses the core.

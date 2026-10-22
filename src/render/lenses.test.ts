@@ -12,6 +12,7 @@ function region(shape: Shape, effects: Partial<Effects>, extra: Partial<Region> 
 }
 
 const ell = (over: object = {}): Shape => ({ type: 'ellipse', cx: 0.1, cy: -0.05, rx: 0.2, ry: 0.1, rotation: 90, ...over }) as Shape;
+const rect = (over: object = {}): Shape => ({ type: 'rect', cx: 0.1, cy: -0.05, rx: 0.2, ry: 0.1, rotation: 90, ...over }) as Shape;
 
 describe('collectLenses', () => {
   it('converts an ellipse region to pixels, radians and amount', () => {
@@ -23,6 +24,18 @@ describe('collectLenses', () => {
     expect(lens.rotation).toBeCloseTo(Math.PI / 2);
     expect(lens.amount).toBeCloseTo(0.2);
     expect(lens.feather).toBeCloseTo(0.25);
+    expect(lens.box).toBe(false);
+  });
+
+  it('converts a rectangle region the same way, with box set', () => {
+    const lens = collectLenses([region(rect(), { sizeChange: -0.2 })], frame)[0]!;
+    expect(lens.cx).toBeCloseTo(300 + 0.1 * 600);
+    expect(lens.cy).toBeCloseTo(250 - 0.05 * 600);
+    expect(lens.rx).toBeCloseTo(120);
+    expect(lens.ry).toBeCloseTo(60);
+    expect(lens.rotation).toBeCloseTo(Math.PI / 2);
+    expect(lens.amount).toBeCloseTo(-0.2);
+    expect(lens.box).toBe(true);
   });
 
   it('keeps negative amounts and clamps to +-MAX_SIZE_CHANGE', () => {
@@ -33,7 +46,7 @@ describe('collectLenses', () => {
     expect(lenses.map((l) => l.amount)).toEqual([-0.1, MAX_SIZE_CHANGE, -MAX_SIZE_CHANGE]);
   });
 
-  it('skips hidden regions, non-ellipses and zero size change', () => {
+  it('skips hidden regions, non-spots and zero size change', () => {
     const lenses = collectLenses(
       [
         region(ell(), { sizeChange: 0.2 }, { visible: false }),
@@ -41,6 +54,8 @@ describe('collectLenses', () => {
         region({ type: 'path', points: [[0, 0], [1, 0], [1, 1]] }, { sizeChange: 0.2 }),
         region(ell(), { sizeChange: 0, blur: 10 }),
         region(ell({ rx: 0 }), { sizeChange: 0.2 }),
+        region(rect({ ry: 0 }), { sizeChange: 0.2 }),
+        region(rect(), { sizeChange: 0.2 }, { visible: false }),
         region(ell({ cx: 0.3 }), { sizeChange: 0.1 }),
       ],
       frame,
@@ -82,6 +97,7 @@ describe('warpByLenses (overlap rule, L8)', () => {
     rotation: 0,
     amount: 0.3,
     feather: 0,
+    box: false,
     ...over,
   });
   /** Apparent magnification at a point offset `d` px to the right of (500, 500). */
@@ -122,6 +138,34 @@ describe('warpByLenses (overlap rule, L8)', () => {
       prev = q;
     }
     expect(worst).toBeLessThan(3); // one output pixel step never jumps more than a few source pixels
+  });
+
+  it('a box lens warps up to its corners and nothing outside the box', () => {
+    const box = lens({ box: true }); // 400 x 400 square centred at (500, 500)
+    const corner = { x: 690, y: 690 }; // normalised (0.95, 0.95): inside the box, outside the circle
+    const q = warpByLenses(corner, [box]);
+    expect(q.x).toBeCloseTo(500 + 190 / 1.3, 6);
+    expect(q.y).toBeCloseTo(500 + 190 / 1.3, 6);
+    expect(warpByLenses(corner, [lens()])).toEqual(corner); // the ellipse lens does not reach it
+    // Outside the box but inside its circumscribed circle (radius 200 * sqrt 2): untouched.
+    const beside = { x: 710, y: 600 };
+    expect(Math.hypot(beside.x - 500, beside.y - 500)).toBeLessThan(200 * Math.SQRT2);
+    expect(warpByLenses(beside, [box])).toEqual(beside);
+  });
+
+  it('a rotated box lens measures in its own frame', () => {
+    const box = lens({ box: true, rx: 200, ry: 50, rotation: Math.PI / 2 }); // long side now vertical
+    expect(warpByLenses({ x: 540, y: 680 }, [box])).not.toEqual({ x: 540, y: 680 });
+    expect(warpByLenses({ x: 560, y: 500 }, [box])).toEqual({ x: 560, y: 500 });
+  });
+
+  it('feathers a box lens by the box norm', () => {
+    const box = lens({ box: true, feather: 0.5 });
+    // (650, 650) and (650, 500) have the same box radius 0.75, so the same magnification ratio.
+    const a = warpByLenses({ x: 650, y: 650 }, [box]);
+    const b = warpByLenses({ x: 650, y: 500 }, [box]);
+    expect(a.x).toBeCloseTo(b.x, 6);
+    expect(150 / (a.x - 500)).toBeCloseTo(1 + 0.3 * lensWeight(0.75, 0.5), 6);
   });
 
   it('agrees with lensWeight at the feather edge', () => {

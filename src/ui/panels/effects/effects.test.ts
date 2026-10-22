@@ -35,10 +35,10 @@ describe('effect definitions', () => {
       expect(EFFECT_DEFS[k]).toMatchObject({ min: 0, max: 1, scale: 100, unit: '%' });
     }
   });
-  it('enables size change only for ellipses', () => {
-    const types: ShapeType[] = ['ellipse', 'path', 'mask', 'full'];
+  it('enables size change only for spots (ellipses and rectangles)', () => {
+    const types: ShapeType[] = ['ellipse', 'rect', 'path', 'mask', 'full'];
     for (const t of types) {
-      expect(isEffectEnabled('sizeChange', t)).toBe(t === 'ellipse');
+      expect(isEffectEnabled('sizeChange', t)).toBe(t === 'ellipse' || t === 'rect');
       expect(isEffectEnabled('blur', t)).toBe(true);
     }
   });

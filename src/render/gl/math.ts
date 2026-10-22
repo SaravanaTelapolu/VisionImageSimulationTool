@@ -166,7 +166,7 @@ export function planPyramid(
 }
 
 /**
- * Lens weight from the normalised elliptical radius r (1 = on the ellipse) and feather (0..1,
+ * Lens weight from the normalised radius r (1 = on the spot's edge) and feather (0..1,
  * fraction of the size): 1 inside 1 - feather, smoothly to 0 at the edge, 0 outside.
  */
 export function lensWeight(r: number, feather: number): number {
@@ -178,7 +178,10 @@ export function lensWeight(r: number, feather: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** Normalised elliptical radius of point (x, y) for a lens (rotation is clockwise on screen, +y down). */
+/**
+ * Normalised radius of point (x, y) for a lens (rotation is clockwise on screen, +y down):
+ * elliptical, or the box norm for a rectangle lens. Matches warpByLenses() and the shader.
+ */
 export function lensRadius(lens: SizeChangeLens, x: number, y: number): number {
   const dx = x - lens.cx;
   const dy = y - lens.cy;
@@ -186,7 +189,7 @@ export function lensRadius(lens: SizeChangeLens, x: number, y: number): number {
   const s = Math.sin(lens.rotation);
   const u = (c * dx + s * dy) / Math.max(lens.rx, 1e-6);
   const v = (-s * dx + c * dy) / Math.max(lens.ry, 1e-6);
-  return Math.hypot(u, v);
+  return lens.box ? Math.max(Math.abs(u), Math.abs(v)) : Math.hypot(u, v);
 }
 
 /**
@@ -239,7 +242,7 @@ export function scaleRenderParams(params: RenderParams, sx: number, sy = sx): Re
       ...l,
       cx: l.cx * sx,
       cy: l.cy * sy,
-      // Non-uniform scaling of a rotated ellipse is not an ellipse; aspect-preserving scales are exact.
+      // Non-uniform scaling of a rotated ellipse or rectangle is not one; aspect-preserving scales are exact.
       rx: l.rx * sr,
       ry: l.ry * sr,
     })),
