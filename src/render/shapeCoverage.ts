@@ -166,7 +166,10 @@ function rectSampler(
     cornersX[k] = c.x + u * cos - v * sin;
     cornersY[k] = c.y + u * sin + v * cos;
   });
-  const fall = (t: number) => (t <= inner ? 1 : t >= 1 ? 0 : 1 - smoothstep(inner, 1, t));
+  const invRx = 1 / rx;
+  const invRy = 1 / ry;
+  const innerX = rx * inner;
+  const innerY = ry * inner;
 
   return {
     ...b,
@@ -209,7 +212,11 @@ function rectSampler(
       const av = Math.abs(-dx * sin + dy * cos);
       if (hard) return clamp01(0.5 + (rx - au) / pixel) * clamp01(0.5 + (ry - av) / pixel);
       if (au >= rx || av >= ry) return 0;
-      return fall(au / rx) * fall(av / ry);
+      // Flat interior first (the common case), then the fade on whichever axes are in their edge band.
+      if (au <= innerX && av <= innerY) return 1;
+      const fu = au <= innerX ? 1 : 1 - smoothstep(inner, 1, au * invRx);
+      const fv = av <= innerY ? 1 : 1 - smoothstep(inner, 1, av * invRy);
+      return fu * fv;
     },
   };
 }
