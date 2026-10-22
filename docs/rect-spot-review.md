@@ -21,6 +21,7 @@ _Updated at the end of the build: see "Result" at the bottom._
 | 5 | **Feather for rectangles = product of two per-axis fades** (plan design 3). Corners come out rounded and fade a bit more than the edge midpoints. | Avoids a visible diagonal crease from a plain box distance. Check by eye at 30 % and 100 % feather. | |
 | 6 | **Row-span speed-up included** for rectangles (only the covered part of each map row is scanned). | Keeps several large rotated rectangles cheap on a phone. A unit test checks that it never drops a covered pixel (rotations 0–135°, hard and soft edges). | |
 | 7 | **Parallel work through sub-agents in this one checkout** (each owns disjoint files), not separate sessions or git worktrees. | Separate sessions/worktrees each need their own `node_modules` (an earlier build damaged `node_modules` that way — see progress log 2026-10-20 22:20) and a merge afterwards. Disjoint files in one checkout gave the same parallelism with less risk. Renderer and UI agents ran on Opus, the docs agent on Sonnet. | |
+| 7b | **Model tiers after your 23:05 note ("use Sonnet when feasible"):** the editing-UI agent was already well along on Opus, so it was left to finish instead of being restarted (restarting would cost more). Every agent started after the note runs on Sonnet. | Saves tokens without throwing away work. | |
 | 8 | **Version number not bumped, no tag, no IIS package.** | Plan: only after your go-ahead. Suggested: `npm version 1.1.0 --no-git-tag-version`, tag `v1.1.0`. | |
 
 ## Result
