@@ -126,6 +126,7 @@
   .pair { display: grid; gap: 24px; align-items: start; }
   @media (min-width: 760px) { .pair { grid-template-columns: minmax(0, 1fr) 300px; } }
   figure { margin: 0; }
+  .clips { display: grid; gap: 24px; }
   figure.clip img {
     width: 100%; max-width: 300px; margin: 0 auto;
     border-radius: 14px; border: 1px solid var(--line); background: #111;
@@ -305,16 +306,16 @@
           <p><span class="ui">+ Whole image</span> adds a region that covers everything, for problems that affect the whole view (for example an overall haze or dimness).</p>
           <div class="note"><strong>Tip</strong>A new spot shows nothing until it has an effect. Add a little blur first, so you can see where it is while you shape it.</div>
         </div>
-        <figure class="clip">
-          <img src="help/media/02-spot.gif" alt="Animation: adding a spot on a page of text, then dragging its dots to move, resize and rotate it." width="360" height="838" loading="lazy">
-          <figcaption>Add a spot, then move, resize and rotate it.</figcaption>
-        </figure>
-        <!-- Future clip: after running `npm run help:capture`, add this figure inside this .pair (clip 02b-rect, recorded by scripts/help-capture/capture.spec.ts):
-        <figure class="clip">
-          <img src="help/media/02b-rect.gif" alt="Animation: adding a rectangle spot on a page of text, then dragging its dots to move, resize and rotate it." width="360" height="838" loading="lazy">
-          <figcaption>A rectangle spot works the same way.</figcaption>
-        </figure>
-        -->
+        <div class="clips">
+          <figure class="clip">
+            <img src="help/media/02-spot.gif" alt="Animation: adding a spot on a page of text, then dragging its dots to move, resize and rotate it." width="360" height="838" loading="lazy">
+            <figcaption>Add a spot, then move, resize and rotate it.</figcaption>
+          </figure>
+          <figure class="clip">
+            <img src="help/media/02b-rect.gif" alt="Animation: adding a rectangle spot on a page of text, then dragging its dots to resize and rotate it." width="360" height="838" loading="lazy">
+            <figcaption>A rectangle spot works the same way.</figcaption>
+          </figure>
+        </div>
 
       </div>
     </section>

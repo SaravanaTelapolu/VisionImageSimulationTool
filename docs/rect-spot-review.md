@@ -8,7 +8,7 @@ Plan followed: [feature-rect-spot-option-B.md](feature-rect-spot-option-B.md). L
 
 ## Where it stands
 
-_Updated at the end of the build: see "Result" at the bottom._
+**Done and checked; waiting for your review on branch `feature/rect-spot`** (not merged, not pushed). See "Result" at the bottom.
 
 ## Decisions
 
@@ -22,8 +22,36 @@ _Updated at the end of the build: see "Result" at the bottom._
 | 6 | **Row-span speed-up included** for rectangles (only the covered part of each map row is scanned). | Keeps several large rotated rectangles cheap on a phone. A unit test checks that it never drops a covered pixel (rotations 0–135°, hard and soft edges). | |
 | 7 | **Parallel work through sub-agents in this one checkout** (each owns disjoint files), not separate sessions or git worktrees. | Separate sessions/worktrees each need their own `node_modules` (an earlier build damaged `node_modules` that way — see progress log 2026-10-20 22:20) and a merge afterwards. Disjoint files in one checkout gave the same parallelism with less risk. Renderer and UI agents ran on Opus, the docs agent on Sonnet. | |
 | 7b | **Model tiers after your 23:05 note ("use Sonnet when feasible"):** the editing-UI agent was already well along on Opus, so it was left to finish instead of being restarted (restarting would cost more). Every agent started after the note runs on Sonnet. | Saves tokens without throwing away work. | |
+| 9 | **Only the new Help clip `02b-rect` was recorded**; the other clips were not re-recorded. | Re-recording everything changes ~10 large GIFs for no gain. Side effect: older clips that show the Regions panel show the previous 4-button layout (the new layout has 5 buttons, "Brush" spanning the row). Re-run `npm run help:capture` if you want them all current. | |
+| 10 | **Rectangle outline keeps the app's round line joins** (corners of the yellow outline look very slightly rounded). | Matches the existing mask / whole-image outlines. One-line change to square corners if you prefer. | |
+| 11 | **Size change feather on a rectangle uses the box distance** (plan design 4), so at high feather the *magnification* fades with straight edges and a faint diagonal at the corners, while blur/dark spot fade with rounded corners. | Plan design; only visible when comparing Size change against other effects at high feather. Could be matched later if it bothers you. | |
 | 8 | **Version number not bumped, no tag, no IIS package.** | Plan: only after your go-ahead. Suggested: `npm version 1.1.0 --no-git-tag-version`, tag `v1.1.0`. | |
 
 ## Result
 
-_(filled in at the end)_
+- **Built:** "+ Spot (rectangle)" in the Regions tab. You can place it by tapping, then move, resize and rotate it (with snapping) using the same dots as the oval, or nudge it with the arrow keys. The edge can be hard (anti-aliased) or soft (rounded corners), and every effect works inside it, including Size change. It also works with rename, hide, duplicate, reorder, delete, undo, save/load, JSON export/import, image export and full-resolution tiled export.
+- **Checks (2026-10-23 ~00:15):**
+  - `npm run typecheck` is clean.
+  - `npm test` passes 725/725 (51 files).
+  - `npm run build` is OK.
+  - Playwright e2e passes 12/12, including a new rectangle test on desktop and phone size.
+  - The Help clip `02b-rect` was recorded and embedded in Help → "Mark the affected area".
+- **Checked by hand in the browser, at phone size:**
+  - Placing a rectangle and rotating it (snaps to 45°).
+  - Blur and Size change +30 % inside the rotated outline.
+  - A dark spot with 100 % soft edge fades evenly with rounded corners.
+  - No console errors.
+  - At 360 px width, all buttons are 44 px tall and nothing scrolls sideways.
+- **Reviews:**
+  - An independent code review found no defects; it brute-force checked about 900 random rectangles for coverage gaps.
+  - An audit for other oval-only code found nothing missing.
+  - A speed check put rectangle maps within about 1–1.7× of ovals; they also cover 27 % more area at the same size.
+- **Not checked:** a real phone (touch drag feel, speed), and full-resolution export of a rotated rectangle by eye. The tiling maths is unit-tested.
+- **Release notes draft:** [release-notes-v1.1.0.md](release-notes-v1.1.0.md).
+- **To ship (only on your go-ahead):**
+  1. `git checkout main`
+  2. `git merge --ff-only feature/rect-spot`
+  3. `npm version 1.1.0 --no-git-tag-version`
+  4. Commit, then tag `v1.1.0`.
+  5. Push `main` and the tag. Pushing `main` deploys the live site.
+  6. Optionally run `npm run package:iis`.

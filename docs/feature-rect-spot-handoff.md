@@ -1,7 +1,7 @@
 # Handoff — rectangle spot (Option B) build
 
-HEARTBEAT: 2026-10-23T00:05
-STATUS: IN PROGRESS
+HEARTBEAT: 2026-10-23T00:20
+STATUS: COMPLETE — awaiting Saravana's review (do not merge or push without the go-ahead)
 
 Plan: [feature-rect-spot-option-B.md](feature-rect-spot-option-B.md). Decisions for Saravana: [rect-spot-review.md](rect-spot-review.md).
 
@@ -29,7 +29,7 @@ Plan: [feature-rect-spot-option-B.md](feature-rect-spot-option-B.md). Decisions 
 | P8 | Perf check: map build time for several large rotated rects vs ellipses (scratch script, not committed) | scratchpad only | Sonnet agent | done: rect within ~1.0–1.7x of ellipse (noisy, rect covers 4/π more area); interior early-out applied |
 | P9 | Release-notes draft v1.1.0 | docs/release-notes-v1.1.0.md | Sonnet agent | done (draft) |
 | P10 | Audit follow-ups: EffectsPanel test title, effectMaps rect tests, storage round-trip, preview lens test, CLAUDE.md/plan/roadmap/handoff wording | those test files + CLAUDE.md, docs/Vision-Simulator-Plan.md, docs/roadmap.md, docs/handoff.md | Sonnet agent | done (b0a82fa) |
-| P5 | Integrate: typecheck, all unit tests, build, e2e, browser check, help:capture (if ffmpeg), progress log, morning-review, commit | docs/*, CLAUDE.md | orchestrator | pending |
+| P5 | Integrate: typecheck, all unit tests, build, e2e, browser check, help:capture (if ffmpeg), progress log, morning-review, commit | docs/*, CLAUDE.md | orchestrator | done |
 
 ## Log
 
@@ -40,3 +40,4 @@ Plan: [feature-rect-spot-option-B.md](feature-rect-spot-option-B.md). Decisions 
 - 2026-10-22 23:15 — Saravana asked for Sonnet where feasible and 5–7 parallel jobs: started P6–P9 on Sonnet (P3 still on Opus). If interrupted: P6/P7/P8 are read-only and can simply be re-run; P9 check docs/release-notes-v1.1.0.md.
 - 2026-10-22 23:40 — P3 done and committed (0b40ebb). P7 audit: nothing missing in live code. Started P10 (Sonnet). Orchestrator now running full unit tests + build + e2e (P5).
 - 2026-10-23 00:05 — P5: npm test 718 pass (before P10's extra tests), build OK, Playwright e2e 12/12 (incl. rectangle test desktop+mobile). Browser check (dev server, phone size): place, rotate (snaps 45°), blur + Size change +30 % inside rotated outline, feather 100 % dark spot fades with rounded corners, no console errors; 360 px: buttons 44 px, no horizontal scroll. Recording help clip 02b-rect only (`npx playwright test -c scripts/help-capture/playwright.config.ts -g 02b-rect` then `node scripts/help-capture/make-gifs.mjs 02b-rect`; ffmpeg in WinGet Gyan.FFmpeg folder). Remaining: embed GIF in help.html #spot, final test run, fill Result in rect-spot-review.md.
+- 2026-10-23 00:20 — P5 done: 02b-rect GIF recorded and embedded (help.html `.clips` column), final typecheck / 725 unit tests / build green, e2e 12/12 earlier. Review doc Result filled in. Nothing left except Saravana's decisions.
