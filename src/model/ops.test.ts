@@ -159,6 +159,13 @@ describe('duplicateRegion', () => {
     const f = duplicateRegion(p, 'c');
     expect(findRegion(f.profile, f.newId!)?.shape).toEqual({ type: 'full' });
   });
+  it('offsets a rectangle like an ellipse and keeps its size and rotation', () => {
+    const rect: Shape = { type: 'rect', cx: 0.1, cy: 0.2, rx: 0.15, ry: 0.05, rotation: 30 };
+    const withRect = addRegion(p, region('r', rect));
+    const d = duplicateRegion(withRect, 'r');
+    expect(findRegion(d.profile, d.newId!)?.shape).toEqual({ ...rect, cx: 0.1 + DUPLICATE_OFFSET, cy: 0.2 + DUPLICATE_OFFSET });
+    expect(findRegion(d.profile, 'r')?.shape).toEqual(rect);
+  });
   it('carries the region’s dark-spot shade to the copy and to duplicated profiles (D05)', () => {
     const shaded = updateRegion(p, 'a', { darkSpotShade: 0.65 });
     const { profile, newId } = duplicateRegion(shaded, 'a');

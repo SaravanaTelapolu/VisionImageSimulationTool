@@ -378,6 +378,42 @@ describe('validateProfile: defaults and cleanup', () => {
   });
 });
 
+describe('validateProfile: rectangle spots (v1.1)', () => {
+  const withRect = (shape: Record<string, unknown>) =>
+    mutate((p) => (p.regions[0].shape = shape));
+
+  it('round-trips a rectangle through serialize and parse with no warnings', () => {
+    const p = fullProfile();
+    p.regions.push({
+      id: 'e', name: 'Rectangle 1', darkSpotShade: 0, visible: true, feather: 0.3,
+      effects: { ...emptyEffects(), sizeChange: 0.2 },
+      shape: { type: 'rect', cx: 0.05, cy: -0.1, rx: 0.15, ry: 0.05, rotation: 30 },
+    });
+    const r = parseProfileJson(serializeProfile(p));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.profile).toEqual(p);
+      expect(r.warnings).toEqual([]);
+    }
+  });
+
+  it('raises non-positive half-sizes with a warning and fills a missing rotation', () => {
+    const r = ok(withRect({ type: 'rect', cx: 0, cy: 0, rx: 0, ry: -1 }));
+    expect(r.profile.regions[0]!.shape).toEqual({ type: 'rect', cx: 0, cy: 0, rx: 0.001, ry: 0.001, rotation: 0 });
+    expect(r.warnings.filter((w) => /\.r[xy]/.test(w))).toHaveLength(2);
+    expect(r.warnings.some((w) => w.includes('rotation'))).toBe(true);
+  });
+
+  it('rejects a rectangle with missing or non-numeric geometry', () => {
+    expect(fail(withRect({ type: 'rect', cy: 0, rx: 0.1, ry: 0.1 })).join()).toContain('cx');
+    expect(fail(withRect({ type: 'rect', cx: 0, cy: 0, rx: 'wide', ry: 0.1 })).join()).toContain('rx');
+  });
+
+  it('lists rect among the expected shape types', () => {
+    expect(fail(mutate((p) => (p.regions[0].shape = { type: 'star' }))).join()).toContain('ellipse, rect, path');
+  });
+});
+
 describe('migrateProfile', () => {
   it('passes v1 through', () => {
     const m = migrateProfile(fullProfile());
