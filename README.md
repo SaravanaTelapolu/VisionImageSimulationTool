@@ -27,7 +27,7 @@ More clips — opening a photo, the brush, profiles and check-ups — are in the
 ## Use it in five steps
 
 1. **Open a photo.** Choose one, take one with the camera, or try a built-in test image such as the **Amsler grid**. Pick the eye to simulate: **Left** or **Right**.
-2. **Mark the area.** **Regions** tab → **+ Spot**, then tap where your vision is affected. Drag the dots to move, resize and rotate it. Use **Freehand** or **Brush** for other shapes, **+ Whole image** for problems everywhere.
+2. **Mark the area.** **Regions** tab → **+ Spot**, then tap where your vision is affected. Drag the dots to move, resize and rotate it. Prefer straight edges? Tap **+ Spot (rectangle)** instead; it works the same way. Use **Freehand** or **Brush** for other shapes, **+ Whole image** for problems everywhere.
 3. **Pick the effects.** **Effects** tab: move the sliders until it looks like what you see. Tap **Flip** (under the picture) to compare with the original.
 4. **Check it with your eye.** The **Calibration guide** (⋯ menu) walks you through it: cover your good eye, notice what looks wrong, then match the simulation.
 5. **Show or share it.** **Compare** tab → **Present full screen** during the appointment, or **Export** tab → **Prepare images** → **Share** / **Download**.
@@ -43,7 +43,7 @@ Save the result in the **Profiles** tab, and make a **New check-up** each time t
 | Dark spot | A black or grey patch where nothing can be seen; shade set per region. |
 | Missing area | A gap the brain fills in with the surroundings, so no dark patch shows. |
 | Distortion | Straight lines look wavy or bent. |
-| Size change | Objects look smaller or bigger inside a spot. |
+| Size change | Objects look smaller or bigger inside a spot (oval or rectangle). |
 | Contrast loss | A washed-out, foggy look. |
 | Dimming | Everything looks darker. |
 | Colour fade | Colours look weaker and greyer. |

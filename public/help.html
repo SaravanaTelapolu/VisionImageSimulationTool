@@ -287,7 +287,7 @@
       <h2><span class="num">2</span>Mark the affected area with a spot</h2>
       <div class="pair">
         <div>
-          <p>A <b>region</b> is an area of the picture where your vision is different. The quickest region is a <b>spot</b> (an oval).</p>
+          <p>A <b>region</b> is an area of the picture where your vision is different. The quickest region is a <b>spot</b>: an oval, or a rectangle if the affected area has straight edges.</p>
           <ol class="steps">
             <li>Open the <span class="ui plain">Regions</span> tab and tap <span class="ui">+ Spot (ellipse)</span>.</li>
             <li>Tap the picture where your vision is affected. The spot appears there, with a yellow outline.</li>
@@ -300,6 +300,8 @@
             </li>
             <li>Tap <span class="ui">Edit effects →</span> (or the <span class="ui plain">Effects</span> tab) to decide what happens inside the spot.</li>
           </ol>
+          <p><b>Want a rectangle instead of an oval?</b> Tap <span class="ui">+ Spot (rectangle)</span> (right after <span class="ui">+ Spot (ellipse)</span>), then tap the picture where it should go. It works exactly like the oval spot and stays a rectangle: the <b>white dot</b> in the middle moves it, the <b>yellow dots</b> on the edges make it wider or taller, and the <b>blue dot</b> rotates it. Its list name is <b>Rectangle 1</b>, <b>Rectangle 2</b> and so on. A soft edge fades evenly all round, with rounded corners.</p>
+          <p>You can also nudge a selected spot (oval or rectangle) with the arrow keys on a keyboard; hold <b>Shift</b> for bigger steps.</p>
           <p><span class="ui">+ Whole image</span> adds a region that covers everything, for problems that affect the whole view (for example an overall haze or dimness).</p>
           <div class="note"><strong>Tip</strong>A new spot shows nothing until it has an effect. Add a little blur first, so you can see where it is while you shape it.</div>
         </div>
@@ -307,6 +309,13 @@
           <img src="help/media/02-spot.gif" alt="Animation: adding a spot on a page of text, then dragging its dots to move, resize and rotate it." width="360" height="838" loading="lazy">
           <figcaption>Add a spot, then move, resize and rotate it.</figcaption>
         </figure>
+        <!-- Future clip: after running `npm run help:capture`, add this figure inside this .pair (clip 02b-rect, recorded by scripts/help-capture/capture.spec.ts):
+        <figure class="clip">
+          <img src="help/media/02b-rect.gif" alt="Animation: adding a rectangle spot on a page of text, then dragging its dots to move, resize and rotate it." width="360" height="838" loading="lazy">
+          <figcaption>A rectangle spot works the same way.</figcaption>
+        </figure>
+        -->
+
       </div>
     </section>
 
@@ -339,7 +348,7 @@
           <tr><td><b>Dark spot</b></td><td>A dark or grey patch where nothing can be seen.</td><td>Part of the view is blocked by a shadow. Use <b>Dark spot shade</b> (right below it) to choose black or grey for this region.</td></tr>
           <tr><td><b>Missing area</b></td><td>A gap that the brain fills in with the surroundings, so no dark patch shows.</td><td>Things vanish but you don't see a dark patch, e.g. letters missing from a word.</td></tr>
           <tr><td><b>Distortion</b></td><td>Straight lines look wavy or bent.</td><td>The Amsler grid lines look curved.</td></tr>
-          <tr><td><b>Size change</b></td><td>Objects look smaller (minus) or bigger (plus) inside the spot.</td><td>One eye sees things a different size. Works on spots (ovals) only.</td></tr>
+          <tr><td><b>Size change</b></td><td>Objects look smaller (minus) or bigger (plus) inside the spot.</td><td>One eye sees things a different size. Works on spots (ovals and rectangles) only.</td></tr>
           <tr><td><b>Contrast loss</b></td><td>A washed-out, foggy look.</td><td>Things look faded, as if through mist.</td></tr>
           <tr><td><b>Dimming</b></td><td>Everything looks darker.</td><td>The area looks like it's in shadow.</td></tr>
           <tr><td><b>Colour fade</b></td><td>Colours look weaker and greyer.</td><td>Colours look less bright with that eye.</td></tr>
@@ -569,7 +578,7 @@
       </details>
       <details>
         <summary>Size change is greyed out</summary>
-        <div><p>Size change works on spots (ovals) only, not on freehand, brush or whole-image regions.</p></div>
+        <div><p>Size change works on spots (ovals and rectangles) only, not on freehand, brush or whole-image regions.</p></div>
       </details>
       <details>
         <summary>Saving or sharing is slow, or the image is smaller than expected</summary>

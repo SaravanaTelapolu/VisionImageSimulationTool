@@ -23,10 +23,11 @@ Plan: [feature-rect-spot-option-B.md](feature-rect-spot-option-B.md). Decisions 
 | P1t | Unit tests for validate/ops/helpers rect cases | src/model/validate.test.ts, src/model/ops.test.ts, src/ui/panels/regions/helpers.test.ts | orchestrator | done (9df83c9) |
 | P2 | B2 Size change for rectangles (box lens) | src/render/types.ts, src/render/lenses.ts(+test), src/render/shaders/effects.ts, src/render/gl/pipeline.ts, src/render/gl/tiles.ts(+test), src/ui/panels/effects/effectDefs.ts(+test) | Opus agent | running (agent started 22:40) |
 | P3 | UI: handles maths, overlay, placing, panel button + CSS | src/ui/edit/geometry.ts(+test), src/ui/edit/RegionOverlay.tsx, src/state/edit.ts, src/ui/panels/regions/Panel.tsx, src/ui/panels/regions/regions.css, src/ui/panels/regions/RegionsPanel.test.tsx, src/ui/edit/tools.test.tsx | Opus agent | running (agent started 22:40) |
-| P4 | Docs/Help/e2e text: help.html `#spot` + effects table + FAQ, README, e2e smoke test, help-capture `02b-rect` test | public/help.html, README.md, tests/e2e/smoke.spec.ts, scripts/help-capture/capture.spec.ts | Sonnet agent | running (agent started 22:40) |
+| P4 | Docs/Help/e2e text: help.html `#spot` + effects table + FAQ, README, e2e smoke test, help-capture `02b-rect` test | public/help.html, README.md, tests/e2e/smoke.spec.ts, scripts/help-capture/capture.spec.ts | Sonnet agent | done (text; clip + e2e run pending in P5) |
 | P5 | Integrate: typecheck, all unit tests, build, e2e, browser check, help:capture (if ffmpeg), progress log, morning-review, commit | docs/*, CLAUDE.md | orchestrator | pending |
 
 ## Log
 
 - 2026-10-22 22:40 — Branch `feature/rect-spot` from `main` (243f506). P1 done and committed. Starting P2, P3, P4 as parallel agents.
 - 2026-10-22 22:50 — P1t done (9df83c9). Decisions doc started: docs/rect-spot-review.md. If agents were lost to an interruption, their uncommitted edits are still in the working tree: check `git status`, finish rather than redo.
+- 2026-10-22 23:00 — P4 done: Help #spot/effects/FAQ, README, e2e smoke test, help-capture 02b-rect (GIF figure left commented in help.html until help:capture is run).

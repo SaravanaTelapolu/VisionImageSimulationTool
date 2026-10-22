@@ -271,6 +271,35 @@ test('02-spot', async ({ browser }) => {
   await clip.end();
 });
 
+test('02b-rect', async ({ browser }) => {
+  const clip = await Clip.open(browser, '02b-rect');
+  const page = clip.page;
+  await loadTestImage(page, 'reading');
+  await openTab(page, 'Regions');
+  await clip.begin('Regions → + Spot (rectangle)');
+  await clip.tap(page.getByRole('button', { name: '+ Spot (rectangle)' }));
+  clip.cap('Tap where vision is affected');
+  const at = await clip.imagePoint(0.4, 0.33);
+  await clip.tapAt(at.x, at.y);
+  // Give the new rectangle a visible effect so its outline and result show.
+  await openTab(page, 'Effects');
+  await slider(page, 'Blur').fill('25');
+  await openTab(page, 'Regions');
+  await clip.pause(600);
+  clip.cap('Drag the middle to move it');
+  let h = await handle(page, 'Move the rectangle');
+  await clip.drag(h, { x: h.x + 30, y: h.y + 20 });
+  clip.cap('Yellow dots change width and height');
+  h = await handle(page, 'Change the rectangle width');
+  await clip.drag(h, { x: h.x + 35, y: h.y });
+  h = await handle(page, 'Change the rectangle height');
+  await clip.drag(h, { x: h.x, y: h.y + 25 });
+  clip.cap('Blue dot rotates it');
+  h = await handle(page, 'Rotate the rectangle');
+  await clip.drag(h, { x: h.x + 35, y: h.y + 15 });
+  await clip.end();
+});
+
 test('03-effects', async ({ browser }) => {
   const clip = await Clip.open(browser, '03-effects');
   const page = clip.page;

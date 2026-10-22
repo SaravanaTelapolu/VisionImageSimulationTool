@@ -204,6 +204,49 @@ test('amsler grid: add a spot, blur it, flip, undo and export PNGs', async ({ pa
   expect(errors).toEqual([]);
 });
 
+test('rectangle spot: add it, name it, and blur changes the preview', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+  await loadAmsler(page);
+
+  // Regions -> Spot (rectangle) -> tap the image.
+  await openTab(page, 'Regions');
+  await page.getByRole('button', { name: '+ Spot (rectangle)' }).click();
+  // The "Tap where the rectangle is" banner is shown while placing (its text may wrap, so check its button).
+  await expect(page.getByRole('button', { name: 'Cancel placing' })).toBeVisible();
+  const box = await page.locator('.viewport-content').boundingBox();
+  expect(box).not.toBeNull();
+  // Tap away from the centre, where the fixation crosshair sits.
+  await page.mouse.click(box!.x + box!.width * 0.3, box!.y + box!.height * 0.35);
+  const regions = page.getByRole('list', { name: 'Regions' });
+  await expect(regions.getByRole('listitem')).toHaveCount(1);
+  await expect(regions.getByText('Rectangle 1')).toBeVisible();
+  // The rectangle has the same handles as the oval spot.
+  await expect(page.getByRole('application', { name: 'Move the rectangle' })).toBeVisible();
+  await expect(page.getByRole('application', { name: 'Change the rectangle width' })).toBeVisible();
+  await expect(page.getByRole('application', { name: 'Change the rectangle height' })).toBeVisible();
+  await expect(page.getByRole('application', { name: 'Rotate the rectangle' })).toBeVisible();
+
+  // Effects -> blur to the maximum (keyboard on the range input).
+  const withRect = await settledShot(page);
+  await openTab(page, 'Effects');
+  const blur = page.getByRole('slider', { name: 'Blur', exact: true });
+  await blur.focus();
+  await blur.press('End');
+  const max = await blur.getAttribute('max');
+  await expect(blur).toHaveValue(max!);
+  await expect
+    .poll(async () => pixelDiff(page, withRect, await settledShot(page)), {
+      message: 'the preview should change when blur is raised on the rectangle',
+    })
+    .toBeGreaterThan(CHANGED_PIXELS);
+  await expectPreviewRunning(page);
+
+  expect(errors).toEqual([]);
+});
+
 test('export hands every file to the share sheet when it is available', async ({ page }) => {
   const errors = watchErrors(page);
   await page.addInitScript(() => {
