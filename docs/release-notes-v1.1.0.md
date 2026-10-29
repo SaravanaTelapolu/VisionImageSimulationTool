@@ -1,7 +1,6 @@
 # Vision Simulator 1.1.0 — release notes
 
-> **DRAFT. Pending Saravana's review.** Version 1.1.0 is **not released and not pushed**. The work is on the
-> branch `feature/rect-spot`. The version number is still 1.0.1 and there is no tag yet. Nothing here is live.
+> Released 2026-10-29 as tag `v1.1.0` (`feature/rect-spot` merged into `main`).
 
 ## What's new
 

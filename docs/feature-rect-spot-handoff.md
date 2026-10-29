@@ -1,7 +1,7 @@
 # Handoff — rectangle spot (Option B) build
 
 HEARTBEAT: 2026-10-23T00:20
-STATUS: COMPLETE — awaiting Saravana's review (do not merge or push without the go-ahead)
+STATUS: RELEASED — merged into `main` and tagged `v1.1.0` on 2026-10-29 at Saravana's go-ahead; branch deleted
 
 Plan: [feature-rect-spot-option-B.md](feature-rect-spot-option-B.md). Decisions for Saravana: [rect-spot-review.md](rect-spot-review.md).
 
